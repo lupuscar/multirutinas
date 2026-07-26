@@ -1,60 +1,41 @@
+# users/admin.py
 from django.contrib import admin
+from django.contrib.auth.admin import UserAdmin as BaseUserAdmin
+from django.contrib.auth import get_user_model
+from .models import Profile
 
-from .models import Sesion, SesionEjercicio, SerieRealizada
+User = get_user_model()
 
+# 1. Definimos un Inline para el perfil
+class ProfileInline(admin.StackedInline):
+    model = Profile
+    can_delete = False
+    verbose_name_plural = 'Perfil Deportivo'
+    fk_name = 'user'
 
-class SesionEjercicioInline(admin.TabularInline):
-    """
-    Inline simple dentro de Sesion. No incluye las series realizadas
-    (Django admin no soporta inlines anidados de serie); para editar
-    las series de un ejercicio concreto, se hace desde SesionEjercicioAdmin.
-    """
-    model = SesionEjercicio
-    extra = 1
-    fields = ("orden", "ejercicio", "rutina_ejercicio", "notas")
-    autocomplete_fields = ("ejercicio", "rutina_ejercicio")
-    ordering = ("orden",)
+# 2. Definimos una nueva vista de Admin para el Usuario que incluye el Inline
+class UserAdmin(BaseUserAdmin):
+    inlines = [ProfileInline]
 
+    # Opcional: Mostrar campos del perfil en la lista general de usuarios
+    list_display = BaseUserAdmin.list_display + ('get_peso', 'get_altura')
 
-@admin.register(Sesion)
-class SesionAdmin(admin.ModelAdmin):
-    list_display = ("usuario", "fecha", "rutina", "lugar", "completada")
-    list_filter = ("completada", "lugar", "fecha")
-    search_fields = ("usuario__username", "rutina__nombre")
-    autocomplete_fields = ("usuario", "rutina")
-    date_hierarchy = "fecha"
-    inlines = (SesionEjercicioInline,)
-    readonly_fields = ("creada_en",)
+    @admin.display(description='Peso (kg)')
+    def get_peso(self, instance):
+        return getattr(instance.profile, 'peso', None) if hasattr(instance, 'profile') else None
 
-
-class SerieRealizadaInline(admin.TabularInline):
-    model = SerieRealizada
-    extra = 1
-    fields = ("numero_serie", "repeticiones_realizadas", "peso_kg", "rpe", "al_fallo", "notas")
-    ordering = ("numero_serie",)
+    @admin.display(description='Altura (cm)')
+    def get_altura(self, instance):
+        return getattr(instance.profile, 'altura', None) if hasattr(instance, 'profile') else None
 
 
-@admin.register(SesionEjercicio)
-class SesionEjercicioAdmin(admin.ModelAdmin):
-    """
-    Aquí se editan las series realizadas de un ejercicio concreto de una sesión.
-    """
-    list_display = ("sesion", "ejercicio", "orden", "rutina_ejercicio")
-    search_fields = ("sesion__usuario__username", "ejercicio__nombre")
-    autocomplete_fields = ("sesion", "ejercicio", "rutina_ejercicio")
-    inlines = (SerieRealizadaInline,)
+# 3. Desregistramos el Admin por defecto y registramos el personalizado
+admin.site.unregister(User)
+admin.site.register(User, UserAdmin)
 
-
-@admin.register(SerieRealizada)
-class SerieRealizadaAdmin(admin.ModelAdmin):
-    """Registro independiente para poder buscar/filtrar series sueltas."""
-    list_display = (
-        "sesion_ejercicio",
-        "numero_serie",
-        "repeticiones_realizadas",
-        "peso_kg",
-        "rpe",
-        "al_fallo",
-    )
-    list_filter = ("al_fallo", "rpe")
-    search_fields = ("sesion_ejercicio__ejercicio__nombre", "sesion_ejercicio__sesion__usuario__username")
+# 4. (Opcional) Registrar también el modelo Profile de forma independiente si prefieres gestionarlo por separado
+@admin.register(Profile)
+class ProfileAdmin(admin.ModelAdmin):
+    list_display = ('user', 'peso', 'altura', 'nivel', 'imc')
+    list_filter = ('nivel',)
+    search_fields = ('user__username', 'user__email')

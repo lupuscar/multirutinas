@@ -51,18 +51,20 @@ Linux / WSL
 
 ```bash
 source .venv/bin/activate
+# 3. Instalar Django
+pip install --upgrade pip
+pip install django
+
 ```
-
-Windows
-
-```powershell
-.venv\Scripts\activate
-```
-
 ### 4. Instalar dependencias
 
 ```bash
 pip install -r requirements.txt
+python manage.py makemigrations
+python manage.py migrate
+python manage.py createsuperuser
+
+
 ```
 
 ### 5. Configurar variables de entorno
