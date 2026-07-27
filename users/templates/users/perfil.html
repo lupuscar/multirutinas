@@ -1,0 +1,22 @@
+<h2>Perfil de {{ perfil.user.username }}</h2>
+
+<!-- Alerta de información incompleta -->
+{% if not perfil.peso or not perfil.altura %}
+    <div style="background-color: #fff3cd; color: #856404; padding: 12px; border-radius: 5px; margin-bottom: 15px;">
+        ⚠️ <strong>Atención:</strong> Tu perfil está incompleto. Por favor, completa tu peso y altura para poder calcular tu IMC y personalizar tus rutinas.
+    </div>
+{% endif %}
+
+<!-- Datos del perfil -->
+<ul>
+    <li><strong>Peso:</strong> {{ perfil.peso|default:"No especificado" }} kg</li>
+    <li><strong>Altura:</strong> {{ perfil.altura|default:"No especificada" }} cm</li>
+    <li>
+        <strong>IMC:</strong> 
+        {% if perfil.imc %}
+            {{ perfil.imc }}
+        {% else %}
+            <em>(Completa peso y altura para calcular)</em>
+        {% endif %}
+    </li>
+</ul>
