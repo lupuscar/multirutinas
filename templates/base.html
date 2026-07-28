@@ -131,6 +131,11 @@
                         <i class="fa-solid fa-dumbbell text-lg"></i>
                         <span class="sidebar-text ml-4 font-medium">Ejercicio</span>
                     </a>
+                                        <!-- Rutina -->
+                    <a href="{% url 'rutinas:rutinas' %}" class="flex items-center px-4 py-3 rounded-lg transition-colors group {% if request.resolver_match.url_name == 'rutinas' %}bg-brand-light text-white{% else %}text-gray-600 dark:text-gray-300 hover:bg-brand-light hover:text-white{% endif %}">
+                        <i class="fa-solid fa-calendar-alt text-lg"></i>
+                        <span class="sidebar-text ml-4 font-medium">Rutinas</span>
+                    </a>
                 </nav>
             </div>
 

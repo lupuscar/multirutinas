@@ -43,6 +43,7 @@ INSTALLED_APPS = [
     'users',
     'ejercicios',
     'dashboard',
+    'rutinas',
 ]
 
 MIDDLEWARE = [
