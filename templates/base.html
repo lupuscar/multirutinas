@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{% block title %}App Deportiva{% endblock %}</title>
     
-    <!-- Tailwind CSS (CDN) -->
+    <!-- Tailwind CSS (Actualmente usando CDN para desarrollo) -->
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
         tailwind.config = {
@@ -23,10 +23,19 @@
         }
     </script>
     
+
     <!-- FontAwesome (CDN) -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 
-    <!-- CSS Personalizado para controlar el colapso del Sidebar sin Alpine -->
+    <!-- LIBRERÍA AGREGADA: Alpine.js (Vital para que funcionen las pestañas de tu perfil) -->
+    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+    
+    <!-- Estilo agregado para que los formularios ocultos no parpadeen al cargar la página -->
+    <style>
+        [x-cloak] { display: none !important; }
+    </style>
+
+    <!-- CSS Personalizado para controlar el colapso del Sidebar -->
     <style>
         /* Estado Colapsado por defecto/cookie */
         .sidebar-collapsed #sidebar {

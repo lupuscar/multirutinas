@@ -21,7 +21,10 @@ class ProfileForm(forms.ModelForm):
         model = Profile
         fields = ['foto_perfil', 'peso', 'altura', 'fecha_nacimiento', 'nivel']
         widgets = {
-            'fecha_nacimiento': forms.DateInput(attrs={'type': 'date'}),
+           'fecha_nacimiento': forms.DateInput(
+                format='%Y-%m-%d',
+                attrs={'type': 'date'}
+                ),
         }
         labels = {
             'foto_perfil': 'Foto de perfil',
