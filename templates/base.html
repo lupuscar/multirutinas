@@ -1,6 +1,18 @@
 <!DOCTYPE html>
-<!-- Configuramos Alpine.js para manejar el modo oscuro a nivel global -->
-<html lang="es" x-data="{ darkMode: false }" :class="{ 'dark': darkMode }">
+<!-- 
+  Configuramos Alpine.js para:
+  1. Leer localStorage o el sistema operativo al cargar.
+  2. Proveer la función toggleTheme() para cambiar y guardar la preferencia.
+-->
+<html lang="es" 
+      x-data="{ 
+          darkMode: localStorage.getItem('theme') === 'dark' || (!('theme' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches),
+          toggleTheme() {
+              this.darkMode = !this.darkMode;
+              localStorage.setItem('theme', this.darkMode ? 'dark' : 'light');
+          }
+      }" 
+      :class="{ 'dark': darkMode }">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -76,8 +88,8 @@
                     <i class="fa-solid fa-bars text-xl"></i>
                 </button>
 
-                <!-- Botón para Modo Claro / Oscuro -->
-                <button @click="darkMode = !darkMode" class="text-gray-500 hover:text-yellow-500 dark:hover:text-blue-300 focus:outline-none transition-colors">
+                <!-- Botón para Modo Claro / Oscuro actualizado -->
+                <button @click="toggleTheme()" class="text-gray-500 hover:text-yellow-500 dark:hover:text-blue-300 focus:outline-none transition-colors">
                     <i class="fa-solid" :class="darkMode ? 'fa-sun' : 'fa-moon'"></i>
                 </button>
             </header>
