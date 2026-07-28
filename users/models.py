@@ -2,11 +2,18 @@ from django.db import models
 from django.conf import settings
 
 class Profile(models.Model):
-    # Enlace uno a uno con el modelo de usuario configurado en tu proyecto
     user = models.OneToOneField(
         settings.AUTH_USER_MODEL,
         on_delete=models.CASCADE,
         related_name='profile'
+    )
+    
+    # Campo nuevo para la foto de perfil
+    foto_perfil = models.ImageField(
+        upload_to='perfiles/', 
+        null=True, 
+        blank=True,
+        help_text="Foto de perfil del usuario"
     )
     
     # Datos físicos
@@ -41,7 +48,6 @@ class Profile(models.Model):
 
     @property
     def imc(self):
-        """Calcula el Índice de Masa Corporal de forma dinámica."""
         if self.peso and self.altura:
             altura_m = self.altura / 100
             return round(float(self.peso) / (altura_m ** 2), 2)

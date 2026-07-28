@@ -1,22 +1,151 @@
-<h2>Perfil de {{ perfil.user.username }}</h2>
+{% extends 'base.html' %}
 
-<!-- Alerta de información incompleta -->
-{% if not perfil.peso or not perfil.altura %}
-    <div style="background-color: #fff3cd; color: #856404; padding: 12px; border-radius: 5px; margin-bottom: 15px;">
-        ⚠️ <strong>Atención:</strong> Tu perfil está incompleto. Por favor, completa tu peso y altura para poder calcular tu IMC y personalizar tus rutinas.
+{% block title %}Mi Perfil - FitApp{% endblock %}
+
+{% block content %}
+<!-- Contenedor principal con estado de pestañas -->
+<div x-data="{ tab: 'ver' }" class="max-w-4xl mx-auto">
+    
+    <!-- Cabecera del Perfil -->
+    <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-sm p-6 mb-6 flex items-center gap-6 transition-colors duration-300">
+        <div class="relative">
+            {% if perfil.foto_perfil %}
+                <img src="{{ perfil.foto_perfil.url }}" alt="Foto de {{ request.user.username }}" class="w-24 h-24 rounded-full object-cover border-4 border-brand-light/20">
+            {% else %}
+                <div class="w-24 h-24 rounded-full bg-gray-200 dark:bg-gray-700 flex items-center justify-center border-4 border-brand-light/20">
+                    <i class="fa-solid fa-user text-4xl text-gray-400"></i>
+                </div>
+            {% endif %}
+        </div>
+        <div>
+            <h1 class="text-3xl font-bold text-gray-900 dark:text-white">{{ request.user.first_name|default:request.user.username }} {{ request.user.last_name }}</h1>
+            <p class="text-gray-500 dark:text-gray-400 mt-1">{{ request.user.email|default:"Sin correo registrado" }}</p>
+            <span class="inline-block mt-2 px-3 py-1 bg-brand-light/10 text-brand-light text-xs font-bold rounded-full uppercase tracking-wide">
+                {{ perfil.get_nivel_display }}
+            </span>
+        </div>
     </div>
-{% endif %}
 
-<!-- Datos del perfil -->
-<ul>
-    <li><strong>Peso:</strong> {{ perfil.peso|default:"No especificado" }} kg</li>
-    <li><strong>Altura:</strong> {{ perfil.altura|default:"No especificada" }} cm</li>
-    <li>
-        <strong>IMC:</strong> 
-        {% if perfil.imc %}
-            {{ perfil.imc }}
-        {% else %}
-            <em>(Completa peso y altura para calcular)</em>
-        {% endif %}
-    </li>
-</ul>
+    <!-- Navegación de Pestañas -->
+    <div class="flex space-x-4 mb-6 border-b border-gray-200 dark:border-gray-700">
+        <button @click="tab = 'ver'" 
+                :class="{ 'border-brand-light text-brand-light dark:text-brand-light': tab === 'ver', 'border-transparent text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300': tab !== 'ver' }"
+                class="pb-3 border-b-2 font-medium transition-colors">
+            <i class="fa-solid fa-address-card mr-2"></i>Ver Detalles
+        </button>
+        <button @click="tab = 'editar'" 
+                :class="{ 'border-brand-light text-brand-light dark:text-brand-light': tab === 'editar', 'border-transparent text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300': tab !== 'editar' }"
+                class="pb-3 border-b-2 font-medium transition-colors">
+            <i class="fa-solid fa-pen-to-square mr-2"></i>Editar Perfil
+        </button>
+    </div>
+
+    <!-- Contenido de las Pestañas -->
+    <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-sm p-8 transition-colors duration-300">
+        
+        <!-- Pestaña: VER PERFIL -->
+        <div x-show="tab === 'ver'" class="space-y-6">
+            <h2 class="text-xl font-bold border-b border-gray-100 dark:border-gray-700 pb-2 mb-4">Estadísticas Físicas</h2>
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <!-- Tarjeta Métrica -->
+                <div class="bg-gray-50 dark:bg-gray-700/50 p-4 rounded-xl flex items-center justify-between">
+                    <div>
+                        <p class="text-sm text-gray-500 dark:text-gray-400 uppercase font-semibold">Peso</p>
+                        <p class="text-2xl font-bold">{{ perfil.peso|default:"--" }} <span class="text-base font-normal text-gray-500">kg</span></p>
+                    </div>
+                    <i class="fa-solid fa-weight-scale text-3xl text-brand-light opacity-50"></i>
+                </div>
+                
+                <div class="bg-gray-50 dark:bg-gray-700/50 p-4 rounded-xl flex items-center justify-between">
+                    <div>
+                        <p class="text-sm text-gray-500 dark:text-gray-400 uppercase font-semibold">Altura</p>
+                        <p class="text-2xl font-bold">{{ perfil.altura|default:"--" }} <span class="text-base font-normal text-gray-500">cm</span></p>
+                    </div>
+                    <i class="fa-solid fa-ruler-vertical text-3xl text-brand-light opacity-50"></i>
+                </div>
+
+                <div class="bg-gray-50 dark:bg-gray-700/50 p-4 rounded-xl flex items-center justify-between">
+                    <div>
+                        <p class="text-sm text-gray-500 dark:text-gray-400 uppercase font-semibold">IMC</p>
+                        <p class="text-2xl font-bold">{{ perfil.imc|default:"--" }}</p>
+                    </div>
+                    <i class="fa-solid fa-heart-pulse text-3xl text-brand-light opacity-50"></i>
+                </div>
+            </div>
+        </div>
+
+        <!-- Pestaña: EDITAR PERFIL -->
+        <div x-show="tab === 'editar'" style="display: none;">
+            <form method="post" enctype="multipart/form-data" class="space-y-6">
+                {% csrf_token %}
+                
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+                    <!-- Columna Datos Personales -->
+                    <div>
+                        <h3 class="text-lg font-bold text-brand-light mb-4 flex items-center"><i class="fa-solid fa-id-badge mr-2"></i>Datos Personales</h3>
+                        <div class="space-y-4">
+                            <!-- Renderizado manual básico para diseño Tailwind -->
+                            {% for field in user_form %}
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{{ field.label }}</label>
+                                {{ field }}
+                                {% if field.errors %}
+                                    <p class="text-red-500 text-xs mt-1">{{ field.errors.as_text }}</p>
+                                {% endif %}
+                            </div>
+                            {% endfor %}
+                        </div>
+                    </div>
+
+                    <!-- Columna Datos Físicos -->
+                    <div>
+                        <h3 class="text-lg font-bold text-brand-light mb-4 flex items-center"><i class="fa-solid fa-dumbbell mr-2"></i>Datos Deportivos</h3>
+                        <div class="space-y-4">
+                            {% for field in profile_form %}
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{{ field.label }}</label>
+                                {{ field }}
+                                {% if field.errors %}
+                                    <p class="text-red-500 text-xs mt-1">{{ field.errors.as_text }}</p>
+                                {% endif %}
+                            </div>
+                            {% endfor %}
+                        </div>
+                    </div>
+                </div>
+
+                <div class="pt-6 border-t border-gray-200 dark:border-gray-700 text-right">
+                    <button type="submit" class="bg-brand-light hover:bg-brand-dark text-white font-bold py-3 px-8 rounded-lg shadow-md transition-colors focus:ring-4 focus:ring-brand-light/50">
+                        <i class="fa-solid fa-floppy-disk mr-2"></i>Guardar Cambios
+                    </button>
+                </div>
+            </form>
+        </div>
+
+    </div>
+</div>
+
+<!-- Estilos extra para los inputs de los formularios generados por Django -->
+<style>
+    /* Forzamos a que los inputs de Django tengan el diseño de Tailwind */
+    input[type="text"], input[type="email"], input[type="number"], input[type="date"], select {
+        width: 100%;
+        padding: 0.5rem 0.75rem;
+        border-radius: 0.5rem;
+        border: 1px solid #d1d5db;
+        background-color: #f9fafb;
+        color: #111827;
+        transition: border-color 0.15s ease-in-out, box-shadow 0.15s ease-in-out;
+    }
+    .dark input[type="text"], .dark input[type="email"], .dark input[type="number"], .dark input[type="date"], .dark select {
+        background-color: #374151;
+        border-color: #4b5563;
+        color: #f9fafb;
+    }
+    input:focus, select:focus {
+        outline: none;
+        border-color: #4f46e5;
+        box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.2);
+    }
+</style>
+{% endblock %}

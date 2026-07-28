@@ -121,5 +121,8 @@ USE_TZ = True
 STATIC_URL = 'static/'
 STATICFILES_DIRS = [BASE_DIR / 'static']
 STATIC_ROOT = BASE_DIR / 'staticfiles'
+# Configuración para archivos subidos por los usuarios (Media)
+MEDIA_URL = '/media/'
+MEDIA_ROOT = BASE_DIR / 'media'
 # LOGIN_URL = 'login'  # Nombre que le des a la URL de login
 # LOGIN_REDIRECT_URL = 'perfil'  # A dónde ir tras iniciar sesión
