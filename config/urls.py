@@ -7,6 +7,10 @@ from django.conf.urls.static import static
 urlpatterns = [
     path('admin/', admin.site.urls),
     path('usuario/', include('users.urls')),
+    path('ejercicios/', include('ejercicios.urls')),
+    path('dashboard/', include('dashboard.urls')),
+    # Añadimos las URLs de autenticación por defecto de Django
+    path('accounts/', include('django.contrib.auth.urls')), 
     path('', lambda request: redirect('users:perfil', permanent=False)),
 ]
 
