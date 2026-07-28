@@ -3,6 +3,7 @@ from django.contrib import admin
 from django.contrib.auth.admin import UserAdmin as BaseUserAdmin
 from django.contrib.auth import get_user_model
 from users.models import Profile
+from ejercicios.models import Ejercicio, RegistroEjercicio
 
 User = get_user_model()
 
@@ -46,3 +47,16 @@ class ProfileAdmin(admin.ModelAdmin):
     list_display = ('user', 'peso', 'altura', 'nivel', 'imc')
     list_filter = ('nivel',)
     search_fields = ('user__username', 'user__email')
+
+
+@admin.register(Ejercicio)
+class EjercicioAdmin(admin.ModelAdmin):
+    list_display = ('nombre', 'grupo_muscular', 'tipo', 'dificultad')
+    list_filter = ('grupo_muscular', 'tipo', 'dificultad')
+    search_fields = ('nombre',)
+
+@admin.register(RegistroEjercicio)
+class RegistroEjercicioAdmin(admin.ModelAdmin):
+    list_display = ('ejercicio', 'usuario', 'peso_kg', 'series', 'repeticiones', 'fecha')
+    list_filter = ('fecha', 'usuario')
+    search_fields = ('ejercicio__nombre', 'usuario__username')
