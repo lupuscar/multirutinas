@@ -5,64 +5,21 @@ Aplicación web desarrollada con **Django** para la gestión de rutinas, usuario
 ## 🚀 Tecnologías
 
 - Python 3.12+
-- Django 5.2 (preparado para Django 6)
-- AdminLTE 4
+- Django 6
 - Bootstrap 5
 - SQLite (desarrollo)
 - Git + GitHub
 - WSL2 + Ubuntu
 - Visual Studio Code
 
-## 📁 Estructura del proyecto
-
-```
-multirutinas/
-├── apps/
-├── config/
-├── static/
-├── templates/
-├── media/
-├── .env
-├── .env.example
-├── .gitignore
-├── manage.py
-├── requirements.txt
-└── README.md
-```
 
 ## ⚙️ Instalación
-
-### 1. Clonar el repositorio
-
 ```bash
-git clone https://github.com/lupuscar/multirutinas.git
-cd multirutinas
-```
 
-### 2. Crear el entorno virtual
-
-```bash
-python3 -m venv .venv
-```
-
-### 3. Activarlo
-
-Linux / WSL
-
-```bash
-source .venv/bin/activate
-# 3. Instalar Django
-pip install --upgrade pip
-pip install django
+chmod +x setup.sh
+./setup.sh
 
 ```
-### 4. Instalar dependencias
-
-```bash
-pip install -r requirements.txt
-
-```
-
 ### 5. Configurar variables de entorno
 
 Copiar el archivo de ejemplo:
@@ -73,29 +30,11 @@ cp .env.example .env
 
 Editar el archivo `.env` con los valores correspondientes.
 
-### 6. Aplicar migraciones
-
-```bash
-python manage.py migrate
-```
-
-### 7. Crear un superusuario
-
-```bash
-python manage.py createsuperuser
-```
-
-### 8. Ejecutar el servidor
-
-```bash
-python manage.py runserver
-```
 
 Abrir:
 
-```
 http://127.0.0.1:8000
-```
+
 
 Panel de administración:
 
