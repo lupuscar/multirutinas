@@ -1,13 +1,13 @@
 from django.db import models
 from django.contrib.auth.models import User
 
+# (Tu modelo Ejercicio se mantiene igual)
 class Ejercicio(models.Model):
-    # Opciones predefinidas (Choices)
     TIPO_CHOICES = [
         ('MAQ', 'Máquina'),
         ('LIB', 'Peso Libre'),
         ('CAL', 'Calistenia'),
-        ('CAR', 'Cardio'), # Extra útil
+        ('CAR', 'Cardio'),
     ]
     
     DIFICULTAD_CHOICES = [
@@ -26,19 +26,14 @@ class Ejercicio(models.Model):
         ('GLU', 'Glúteos'),
     ]
 
-    # Campos principales
     nombre = models.CharField(max_length=100, unique=True, verbose_name="Nombre del Ejercicio")
     definicion = models.TextField(verbose_name="Definición y técnica correcta")
     tipo = models.CharField(max_length=3, choices=TIPO_CHOICES, default='LIB', verbose_name="Tipo de Ejercicio")
-    
-    # Multimedia
     foto = models.ImageField(upload_to='ejercicios/fotos/', null=True, blank=True, verbose_name="Foto demostrativa")
-    video = models.URLField(max_length=200, null=True, blank=True, verbose_name="Enlace al Vídeo (YouTube, Vimeo...)")
-    
-    # Extras interesantes añadidos
+    video = models.URLField(max_length=200, null=True, blank=True, verbose_name="Enlace al Vídeo")
     dificultad = models.CharField(max_length=3, choices=DIFICULTAD_CHOICES, default='PRI', verbose_name="Dificultad")
     grupo_muscular = models.CharField(max_length=3, choices=GRUPO_MUSCULAR_CHOICES, verbose_name="Grupo Muscular Principal")
-    equipo_necesario = models.CharField(max_length=100, blank=True, null=True, help_text="Ej: Mancuernas, Banco inclinado, Polea...")
+    equipo_necesario = models.CharField(max_length=100, blank=True, null=True, help_text="Ej: Mancuernas, Polea...")
 
     class Meta:
         verbose_name = "Ejercicio"
@@ -50,27 +45,58 @@ class Ejercicio(models.Model):
 
 
 # =====================================================================
-# MODELO PARA REGISTRAR EL PESO (Donde validamos si usa Kg o no)
+# MODELO PADRE: REGISTRO GENERAL DE LA SESIÓN DE EJERCICIO
 # =====================================================================
 
 class RegistroEjercicio(models.Model):
     usuario = models.ForeignKey(User, on_delete=models.CASCADE, related_name='registros_ejercicios')
     ejercicio = models.ForeignKey(Ejercicio, on_delete=models.CASCADE, related_name='historial')
-    
     fecha = models.DateField(auto_now_add=True)
-    series = models.PositiveIntegerField(default=3, verbose_name="Series")
-    repeticiones = models.PositiveIntegerField(default=10, verbose_name="Repeticiones por serie")
-    
-    # Aquí es donde va el PESO. Puede quedar en nulo si es Calistenia.
-    peso_kg = models.DecimalField(max_digits=5, decimal_places=2, null=True, blank=True, 
-                                  help_text="Dejar en blanco si es Calistenia (peso corporal).")
-    
-    notas = models.TextField(blank=True, null=True, help_text="Ej: Me dolió un poco el hombro, o 'Subir peso la próxima vez'")
-
+    notas = models.TextField(blank=True, null=True, help_text="Ej: Sentí buena conexión mente-músculo.")
+    etiqueta = models.CharField(max_length=50, blank=True, help_text="Identificador opcional (ej. 'Mañana', 'Fuerza', 'Variante A')")
+    creado_en = models.DateTimeField(auto_now_add=True)
     class Meta:
         verbose_name = "Registro de Ejercicio"
         verbose_name_plural = "Registros de Ejercicios"
         ordering = ['-fecha']
+        
+    #MÉTODOS DE REPRESENTACIÓN DENTRO DEL ADMIN Y EL SISTEMA:
+    def __str__(self):
+            # Si el usuario escribió una etiqueta, la mostramos; si no, mostramos fecha y máquina
+            if self.etiqueta:
+                return f"{self.ejercicio.nombre} - {self.etiqueta} ({self.fecha})"
+            return f"{self.ejercicio.nombre} - {self.fecha} [{self.creado_en.strftime('%H:%M')}]"
+
+
+# =====================================================================
+# MODELO HIJO: DETALLE DE CADA SERIE INDIVIDUAL
+# =====================================================================
+   
+class Serie(models.Model):
+    registro = models.ForeignKey(RegistroEjercicio, on_delete=models.CASCADE, related_name='series_detalle')
+    # Dejamos editable=False o blank=True para permitir que se calcule automáticamente
+    numero_serie = models.PositiveIntegerField(verbose_name="Nº de Serie", blank=True, null=True)
+    repeticiones = models.PositiveIntegerField(default=10, verbose_name="Repeticiones")
+    peso_kg = models.DecimalField(max_digits=5, decimal_places=2, null=True, blank=True, 
+                                  verbose_name="Peso (kg)", help_text="Dejar en blanco si es Calistenia.")
+    
+
+    class Meta:
+        verbose_name = "Serie"
+        verbose_name_plural = "Series"
+        ordering = ['numero_serie']
+
+    def save(self, *args, **kwargs):
+        # Si la serie es nueva y no tiene número asignado todavía
+        if not self.numero_serie:
+            # Buscamos la última serie de este registro
+            ultimas_series = Serie.objects.filter(registro=self.registro).order_by('-numero_serie')
+            if ultimas_series.exists():
+                self.numero_serie = ultimas_series.first().numero_serie + 1
+            else:
+                self.numero_serie = 1
+        super().save(*args, **kwargs)
 
     def __str__(self):
-        return f"{self.ejercicio.nombre} - {self.peso_kg}kg el {self.fecha}"
+        peso_str = f"{self.peso_kg} kg" if self.peso_kg else "Peso corporal"
+        return f"Serie {self.numero_serie}: {self.repeticiones} reps x {peso_str}"
