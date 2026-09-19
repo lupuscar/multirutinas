@@ -49,3 +49,70 @@ def registrar_log(request=None, usuario=None, nivel='INFO', tipo='OTRO', mensaje
         # En caso de cualquier excepción, nunca rompemos la petición del usuario
         print(f"Error al registrar log de actividad: {e}")
         return None
+
+
+def enviar_correo_bienvenida(user, request=None):
+    """
+    Envía un correo electrónico de bienvenida en formato HTML y texto plano
+    al nuevo deportista registrado.
+    Es tolerante a fallos: no bloquea ni rompe el registro si el servidor SMTP falla.
+    """
+    if not user or not user.email:
+        return False
+
+    try:
+        protocol = 'https' if (request and request.is_secure()) else 'http'
+        if request:
+            domain = request.get_host()
+        else:
+            domain = '127.0.0.1:8000'
+
+        nombre = user.first_name or user.username or 'Atleta'
+        from django.urls import reverse
+        from django.core.mail import EmailMultiAlternatives
+        from django.template.loader import render_to_string
+        from django.conf import settings
+
+        login_url = f"{protocol}://{domain}{reverse('login')}"
+        perfil_url = f"{protocol}://{domain}{reverse('users:perfil')}"
+
+        context = {
+            'user': user,
+            'nombre': nombre,
+            'domain': domain,
+            'protocol': protocol,
+            'login_url': login_url,
+            'perfil_url': perfil_url,
+        }
+
+        asunto = f"¡Bienvenido a FitApp, {nombre}! 🏋️‍♂️ Tu entrenamiento empieza hoy"
+        mensaje_texto = render_to_string('emails/bienvenida.txt', context)
+        mensaje_html = render_to_string('emails/bienvenida.html', context)
+
+        email = EmailMultiAlternatives(
+            subject=asunto,
+            body=mensaje_texto,
+            from_email=settings.DEFAULT_FROM_EMAIL,
+            to=[user.email],
+        )
+        email.attach_alternative(mensaje_html, "text/html")
+        email.send(fail_silently=False)
+
+        registrar_log(
+            request=request,
+            usuario=user,
+            nivel='INFO',
+            tipo='REGISTRO',
+            mensaje=f"Correo de bienvenida enviado exitosamente a {user.email}"
+        )
+        return True
+    except Exception as e:
+        registrar_log(
+            request=request,
+            usuario=user,
+            nivel='WARNING',
+            tipo='OTRO',
+            mensaje=f"Fallo al enviar correo de bienvenida a {user.email}: {str(e)}"
+        )
+        return False
+

@@ -1,0 +1,30 @@
+¡BIENVENIDO A FITAPP, {{ nombre|upper }}!
+============================================================
+
+¡Tu transformación deportiva empieza hoy!
+
+Gracias por unirte a FitApp. Ya tienes todo listo para llevar tu entrenamiento al siguiente nivel, registrar cada serie y superar tus marcas personales.
+
+¿Qué puedes hacer ahora?
+------------------------------------------------------------
+1. PLANIFICA TUS RUTINAS:
+   Organiza tus ejercicios por días de la semana (Lunes a Domingo) sin duplicar esfuerzos.
+
+2. MODO GYM EN VIVO:
+   Entrena con tu móvil en la mano: registra series, repeticiones y descansos con aviso sonoro interactivo.
+
+3. SALÓN DE RÉCORDS (PRs) Y 1RM:
+   Calcula automáticamente tu repetición máxima con la fórmula de Epley y visualiza tu progresión de fuerza.
+
+4. COMPLETA TU PERFIL:
+   Indica tu peso, altura y objetivo deportivo para calcular tu IMC y tus metas semanales.
+
+Tus datos de acceso:
+- Correo / Usuario: {{ user.email }}
+- Enlace directo a tu perfil: {{ perfil_url }}
+- Iniciar sesión: {{ login_url }}
+
+¡Nos vemos en el gimnasio!
+El equipo de FitApp
+============================================================
+Este correo se envió automáticamente tras tu registro en FitApp.

@@ -5,7 +5,7 @@ from django.contrib import messages
 from django.db.models import Count
 
 from .models import Profile
-from .utils import registrar_log
+from .utils import registrar_log, enviar_correo_bienvenida
 from .forms import (
     RegistroUsuarioForm,
     UserUpdateForm,
@@ -38,6 +38,9 @@ def registro_view(request):
                 tipo='REGISTRO',
                 mensaje=f"Nuevo usuario registrado en la app: {user.username} ({user.email})"
             )
+            # Envío de correo de bienvenida (tolerante a fallos)
+            enviar_correo_bienvenida(user, request)
+
             # Iniciamos sesión automáticamente
             login(request, user, backend='users.backends.EmailOrUsernameModelBackend')
             messages.success(

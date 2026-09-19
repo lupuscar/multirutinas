@@ -1,6 +1,7 @@
 from django.test import TestCase, Client
 from django.contrib.auth import get_user_model
 from django.urls import reverse
+from django.core import mail
 from users.models import Profile
 
 User = get_user_model()
@@ -68,6 +69,27 @@ class UsersAuthTests(TestCase):
         self.assertEqual(carlos.username, 'carlos@fitapp.com')
         self.assertEqual(carlos.first_name, 'Carlos')
         self.assertTrue(hasattr(carlos, 'profile'))
+
+    def test_envio_correo_bienvenida_al_registrarse(self):
+        """Verifica que se envía el correo HTML de bienvenida al registrarse"""
+        mail.outbox = []
+        data = {
+            'first_name': 'Laura',
+            'email': 'laura@fitapp.com',
+            'password1': 'MiClaveSecreta99!',
+            'password2': 'MiClaveSecreta99!',
+        }
+        response = self.client.post(reverse('users:registro'), data)
+        self.assertRedirects(response, reverse('users:perfil'))
+
+        # Comprobar que se envió 1 correo
+        self.assertEqual(len(mail.outbox), 1)
+        email_enviado = mail.outbox[0]
+        self.assertEqual(email_enviado.to, ['laura@fitapp.com'])
+        self.assertIn('Laura', email_enviado.subject)
+        self.assertIn('Bienvenido a FitApp', email_enviado.subject)
+        # Comprobar que contiene alternativa HTML
+        self.assertTrue(any(content_type == 'text/html' for _, content_type in email_enviado.alternatives))
 
     def test_login_con_email(self):
         """Verifica que el usuario puede iniciar sesión usando su correo electrónico"""
