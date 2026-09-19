@@ -10,7 +10,7 @@ services:
     volumes:
       - postgres_data:/var/lib/postgresql/data
     networks:
-      - backend-isolated
+      - backend-network
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-multirutinas_user} -d ${POSTGRES_DB:-multirutinas_db}"]
       interval: 5s
@@ -37,7 +37,10 @@ services:
       db:
         condition: service_healthy
     networks:
-      - backend-isolated
+      - backend-network
+    dns:
+      - 1.1.1.1
+      - 8.8.8.8
 
   nginx:
     image: nginx:alpine
@@ -50,7 +53,7 @@ services:
     depends_on:
       - web
     networks:
-      - backend-isolated
+      - backend-network
       - proxy-network
     labels:
       - "traefik.enable=true"
@@ -67,9 +70,9 @@ volumes:
   logs_volume:
 
 networks:
-  backend-isolated:
+  backend-network:
     driver: bridge
-    internal: true
   proxy-network:
     external: true
     name: proxy-network
+
