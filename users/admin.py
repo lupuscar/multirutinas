@@ -53,25 +53,18 @@ class CustomUserAdmin(BaseUserAdmin):
         email_verificado = profile.email_verificado if profile else False
 
         if obj.is_active and email_verificado:
-            return format_html(
-                '<span style="display:inline-block; padding:3px 10px; font-weight:700; font-size:11px; border-radius:12px; color:#065f46; background-color:#d1fae5; border:1px solid #a7f3d0;">'
-                '🟢 Activo (Verificado)</span>'
-            )
+            color, bg, border, texto = '#065f46', '#d1fae5', '#a7f3d0', '🟢 Activo (Verificado)'
         elif not obj.is_active and not email_verificado:
-            return format_html(
-                '<span style="display:inline-block; padding:3px 10px; font-weight:700; font-size:11px; border-radius:12px; color:#92400e; background-color:#fef3c7; border:1px solid #fde68a;">'
-                '🟡 Pendiente Verificación</span>'
-            )
+            color, bg, border, texto = '#92400e', '#fef3c7', '#fde68a', '🟡 Pendiente Verificación'
         elif not obj.is_active and email_verificado:
-            return format_html(
-                '<span style="display:inline-block; padding:3px 10px; font-weight:700; font-size:11px; border-radius:12px; color:#991b1b; background-color:#fee2e2; border:1px solid #fecaca;">'
-                '🔴 Bloqueado / Deshabilitado</span>'
-            )
+            color, bg, border, texto = '#991b1b', '#fee2e2', '#fecaca', '🔴 Bloqueado / Deshabilitado'
         else:
-            return format_html(
-                '<span style="display:inline-block; padding:3px 10px; font-weight:700; font-size:11px; border-radius:12px; color:#1e40af; background-color:#dbeafe; border:1px solid #bfdbfe;">'
-                '🔵 Activo (Sin validar)</span>'
-            )
+            color, bg, border, texto = '#1e40af', '#dbeafe', '#bfdbfe', '🔵 Activo (Sin validar)'
+
+        return format_html(
+            '<span style="display:inline-block; padding:3px 10px; font-weight:700; font-size:11px; border-radius:12px; color:{}; background-color:{}; border:1px solid {};">{}</span>',
+            color, bg, border, texto
+        )
 
     @admin.action(description="🚫 Bloquear / Deshabilitar usuarios seleccionados")
     def bloquear_usuarios(self, request, queryset):

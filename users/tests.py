@@ -288,4 +288,17 @@ class UsersAuthTests(TestCase):
         self.assertIsNotNone(log_err.traceback)
         self.assertIn("ValueError", log_err.traceback)
 
+    def test_admin_changelist_vista_usuarios(self):
+        """Verifica que la lista de usuarios en Django Admin renderice los badges sin errores"""
+        User.objects.create_superuser(
+            username='superadmin',
+            email='superadmin@fitapp.com',
+            password='AdminPassword123!'
+        )
+        self.client.login(username='superadmin', password='AdminPassword123!')
+        response = self.client.get('/admin/auth/user/')
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'Estado de Cuenta')
+
+
 
