@@ -153,7 +153,7 @@ PASSWORD_RESET_TIMEOUT=3600
 
 ## 🧪 Pruebas Unitarias y Validación (Tests)
 
-El proyecto cuenta con una completa suite de pruebas automatizadas con 26 tests unitarios:
+El proyecto cuenta con una completa suite de pruebas automatizadas con 34 tests unitarios (100% pasando):
 
 ```bash
 python manage.py test users.tests dashboard.tests ejercicios.tests rutinas.tests
@@ -161,9 +161,9 @@ python manage.py test users.tests dashboard.tests ejercicios.tests rutinas.tests
 
 **Cobertura de pruebas:**
 - **`users.tests`:** Registro libre, unicidad de correo, actualización de perfil antropométrico (peso, altura), cambio seguro de clave, expiración de tokens de reseteo, generación de logs en login/logout, captura de intentos fallidos de autenticación y captura de excepciones 500 por el middleware.
-- **`dashboard.tests`:** Control de acceso, métricas a cero en perfiles nuevos, cálculo matemático del 1RM con fórmula de Epley, detección de mejores levantamientos (PRs) y recomendación de rutinas.
-- **`rutinas.tests`:** Creación de rutinas y días, guardado asíncrono AJAX de series en Modo Gym (series con peso y series con tiempo) y acciones de administración.
-- **`ejercicios.tests`:** Catálogo oficial, creación de ejercicios personalizados de usuario, permisos de edición/eliminación y vista de detalle con récords.
+- **`dashboard.tests`:** Control de acceso, métricas a cero en perfiles nuevos, cálculo matemático del 1RM con fórmula de Epley, detección de mejores levantamientos (PRs), recomendación por rotación de descanso y priorización algorítmica de la rutina programada para el día actual.
+- **`rutinas.tests`:** Creación y edición interactiva de rutinas, calendarización semanal de días (`dias_semana`), badges dinámicos y "¡Toca hoy!", guardado asíncrono AJAX de series en Modo Gym (fuerza y tiempo) y acciones de administración.
+- **`ejercicios.tests`:** Catálogo oficial ampliado con deportes (Pádel), danza contemporánea y actividades al aire libre (Running), formato legible de duraciones en series y detalle con récords.
 
 ---
 
