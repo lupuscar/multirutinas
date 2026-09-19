@@ -116,9 +116,13 @@ ALLOWED_HOSTS=127.0.0.1,localhost
 EMAIL_HOST=smtp-relay.brevo.com
 EMAIL_PORT=587
 EMAIL_USE_TLS=True
+EMAIL_USE_SSL=False
 EMAIL_HOST_USER=
 EMAIL_HOST_PASSWORD=
 DEFAULT_FROM_EMAIL=FitApp <no-reply@fitapp.com>
+
+# Caducidad de enlaces de recuperación de contraseña (segundos, por defecto 3600 = 1 hora)
+PASSWORD_RESET_TIMEOUT=3600
 ```
 
 

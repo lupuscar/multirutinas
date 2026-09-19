@@ -156,3 +156,10 @@ EMAIL_HOST_USER = os.getenv('EMAIL_HOST_USER', '')
 EMAIL_HOST_PASSWORD = os.getenv('EMAIL_HOST_PASSWORD', '')
 DEFAULT_FROM_EMAIL = os.getenv('DEFAULT_FROM_EMAIL') or (f'FitApp <{EMAIL_HOST_USER}>' if EMAIL_HOST_USER else 'FitApp <no-reply@fitapp.com>')
 EMAIL_TIMEOUT = 10  # Evita bloqueos indefinidos si el servidor SMTP no responde
+
+# =====================================================================
+# SEGURIDAD: CADUCIDAD DE ENLACES DE RECUPERACIÓN (PASSWORD RESET)
+# =====================================================================
+# Tiempo de validez del enlace en segundos. Por defecto 1 hora (3600 seg).
+# Una vez transcurrido este tiempo o si ya fue usado, el enlace expira automáticamente.
+PASSWORD_RESET_TIMEOUT = int(os.getenv('PASSWORD_RESET_TIMEOUT', 3600))

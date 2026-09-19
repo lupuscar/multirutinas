@@ -111,3 +111,22 @@ class UsersAuthTests(TestCase):
         res_done = self.client.get(reverse('password_reset_done'))
         self.assertEqual(res_done.status_code, 200)
         self.assertContains(res_done, '¡Revisa tu bandeja de entrada!')
+
+    def test_password_reset_token_caducidad_e_invalidez(self):
+        """Verifica que el token de recuperación expire según PASSWORD_RESET_TIMEOUT y tras cambio de clave"""
+        from django.contrib.auth.tokens import default_token_generator
+        from django.test.utils import override_settings
+
+        # 1. Token válido recién emitido
+        token = default_token_generator.make_token(self.user)
+        self.assertTrue(default_token_generator.check_token(self.user, token))
+
+        # 2. Token caducado cuando expira el tiempo límite
+        with override_settings(PASSWORD_RESET_TIMEOUT=-1):
+            self.assertFalse(default_token_generator.check_token(self.user, token))
+
+        # 3. Token queda invalidado inmediatamente en cuanto el usuario cambia su contraseña
+        self.user.set_password('OtraClaveDistinta999!')
+        self.user.save()
+        self.assertFalse(default_token_generator.check_token(self.user, token))
+
