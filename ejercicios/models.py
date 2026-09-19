@@ -26,9 +26,16 @@ class Ejercicio(models.Model):
         ('GLU', 'Glúteos'),
     ]
 
-    nombre = models.CharField(max_length=100, unique=True, verbose_name="Nombre del Ejercicio")
-    definicion = models.TextField(verbose_name="Definición y técnica correcta")
+    MODALIDAD_CHOICES = [
+        ('REPS_PESO', 'Repeticiones y Peso'),
+        ('TIEMPO', 'Tiempo / Duración'),
+    ]
+
+    nombre = models.CharField(max_length=100, verbose_name="Nombre del Ejercicio")
+    definicion = models.TextField(blank=True, default='', verbose_name="Definición y técnica correcta")
     tipo = models.CharField(max_length=3, choices=TIPO_CHOICES, default='LIB', verbose_name="Tipo de Ejercicio")
+    modalidad = models.CharField(max_length=10, choices=MODALIDAD_CHOICES, default='REPS_PESO', verbose_name="Modalidad de medición")
+    creado_por = models.ForeignKey(User, on_delete=models.CASCADE, null=True, blank=True, related_name='ejercicios_personalizados', verbose_name="Creado por")
     foto = models.ImageField(upload_to='ejercicios/fotos/', null=True, blank=True, verbose_name="Foto demostrativa")
     video = models.URLField(max_length=200, null=True, blank=True, verbose_name="Enlace al Vídeo")
     dificultad = models.CharField(max_length=3, choices=DIFICULTAD_CHOICES, default='PRI', verbose_name="Dificultad")
@@ -42,6 +49,7 @@ class Ejercicio(models.Model):
 
     def __str__(self):
         return f"{self.nombre} ({self.get_grupo_muscular_display()})"
+
 
 
 # =====================================================================
@@ -74,11 +82,12 @@ class RegistroEjercicio(models.Model):
    
 class Serie(models.Model):
     registro = models.ForeignKey(RegistroEjercicio, on_delete=models.CASCADE, related_name='series_detalle')
-    # Dejamos editable=False o blank=True para permitir que se calcule automáticamente
     numero_serie = models.PositiveIntegerField(verbose_name="Nº de Serie", blank=True, null=True)
-    repeticiones = models.PositiveIntegerField(default=10, verbose_name="Repeticiones")
+    repeticiones = models.PositiveIntegerField(default=10, blank=True, null=True, verbose_name="Repeticiones")
     peso_kg = models.DecimalField(max_digits=5, decimal_places=2, null=True, blank=True, 
                                   verbose_name="Peso (kg)", help_text="Dejar en blanco si es Calistenia.")
+    tiempo_segundos = models.PositiveIntegerField(verbose_name="Tiempo (segundos)", null=True, blank=True,
+                                                  help_text="Duración en segundos para ejercicios por tiempo.")
     
 
     class Meta:
@@ -95,8 +104,15 @@ class Serie(models.Model):
                 self.numero_serie = ultimas_series.first().numero_serie + 1
             else:
                 self.numero_serie = 1
-        super().save(*args, **kwargs)
+            super().save(*args, **kwargs)
+        else:
+            super().save(*args, **kwargs)
 
     def __str__(self):
+        if self.tiempo_segundos:
+            mins, secs = divmod(self.tiempo_segundos, 60)
+            tiempo_str = f"{mins}m {secs}s" if mins else f"{secs}s"
+            peso_str = f" x {self.peso_kg} kg" if self.peso_kg else ""
+            return f"Serie {self.numero_serie}: {tiempo_str}{peso_str}"
         peso_str = f"{self.peso_kg} kg" if self.peso_kg else "Peso corporal"
-        return f"Serie {self.numero_serie}: {self.repeticiones} reps x {peso_str}"
+        return f"Serie {self.numero_serie}: {self.repeticiones or 0} reps x {peso_str}"

@@ -47,6 +47,8 @@ class RutinaEjercicio(models.Model):
     orden = models.PositiveIntegerField(default=1, help_text="Orden en el que se realiza el ejercicio")
     series_objetivo = models.PositiveIntegerField(default=3, blank=True, null=True)
     repeticiones_objetivo = models.PositiveIntegerField(default=10, blank=True, null=True)
+    tiempo_objetivo_segundos = models.PositiveIntegerField(blank=True, null=True, help_text="Tiempo objetivo en segundos (ej. 45 para plancha)")
+
 
     class Meta:
         # Evita que el mismo ejercicio se agregue dos veces a la misma rutina por accidente

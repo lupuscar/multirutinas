@@ -1,0 +1,122 @@
+{% extends 'base.html' %}
+
+{% block title %}Mis Rutinas | FitApp{% endblock %}
+
+{% block content %}
+<div class="max-w-6xl mx-auto pb-12">
+    
+    <!-- Cabecera -->
+    <div class="mb-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div>
+            <h1 class="text-2xl sm:text-3xl font-black text-gray-900 dark:text-white flex items-center">
+                <i class="fa-solid fa-clipboard-list text-brand-light mr-3"></i> Mis Rutinas
+            </h1>
+            <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">
+                Entrenamientos personalizados listos para registrar en el gimnasio.
+            </p>
+        </div>
+        
+        <!-- Botón Nueva Rutina (destacado y táctil) -->
+        <a href="{% url 'rutinas:crear_rutina' %}" class="inline-flex items-center justify-center px-5 py-3 bg-brand-light hover:bg-brand-dark text-white font-bold text-sm rounded-xl shadow-lg shadow-brand-light/30 transition-all hover:scale-105 active:scale-95">
+            <i class="fa-solid fa-plus mr-2 text-base"></i> Nueva Rutina
+        </a>
+    </div>
+
+    <!-- Cuadrícula (Grid) Responsiva de Rutinas -->
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+        
+        {% for rutina in rutinas %}
+        <!-- Tarjeta de Rutina -->
+        <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-sm hover:shadow-md border border-gray-100 dark:border-gray-700/80 overflow-hidden flex flex-col transition-all">
+            
+            <!-- Cabecera de la Tarjeta -->
+            <div class="p-5 pb-3 flex items-start justify-between border-b border-gray-50 dark:border-gray-700/40">
+                <div>
+                    <h2 class="text-lg font-bold text-gray-900 dark:text-white tracking-tight">
+                        {{ rutina.nombre }}
+                    </h2>
+                    <div class="flex items-center space-x-2 mt-1">
+                        <span class="inline-flex items-center text-xs font-semibold text-brand-light bg-brand-light/10 px-2.5 py-0.5 rounded-full">
+                            <i class="fa-solid fa-dumbbell mr-1 text-[10px]"></i>
+                            {{ rutina.ejercicios.count }} ejercicios
+                        </span>
+                        <span class="text-xs text-gray-400">
+                            {{ rutina.creado_en|date:"d M Y" }}
+                        </span>
+                    </div>
+                </div>
+
+                <!-- Menú de Acciones (Editar / Borrar) -->
+                <div class="flex items-center space-x-1">
+                    <a href="{% url 'rutinas:editar_rutina' rutina.id %}" title="Editar rutina" 
+                       class="w-8 h-8 rounded-lg text-gray-400 hover:text-brand-light hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center justify-center transition-colors">
+                        <i class="fa-solid fa-pen-to-square text-sm"></i>
+                    </a>
+                    <form method="POST" action="{% url 'rutinas:eliminar_rutina' rutina.id %}" 
+                          onsubmit="return confirm('¿Seguro que deseas eliminar la rutina \'{{ rutina.nombre|escapejs }}\'?');">
+                        {% csrf_token %}
+                        <button type="submit" title="Eliminar rutina" 
+                                class="w-8 h-8 rounded-lg text-gray-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 flex items-center justify-center transition-colors">
+                            <i class="fa-solid fa-trash-can text-sm"></i>
+                        </button>
+                    </form>
+                </div>
+            </div>
+
+            <!-- Cuerpo / Descripción -->
+            <div class="p-5 pt-3 flex-1 flex flex-col justify-between space-y-4">
+                <p class="text-xs text-gray-600 dark:text-gray-400 line-clamp-2">
+                    {{ rutina.descripcion|default:"Sin descripción específica." }}
+                </p>
+
+                <!-- Vista previa de ejercicios -->
+                <div class="space-y-1.5 py-2 border-t border-gray-50 dark:border-gray-700/40">
+                    {% for re in rutina.rutinaejercicio_set.all|slice:":4" %}
+                    <div class="flex items-center justify-between text-xs text-gray-500 dark:text-gray-400">
+                        <span class="truncate flex items-center">
+                            <span class="w-4 text-gray-400 font-bold">{{ forloop.counter }}.</span>
+                            {{ re.ejercicio.nombre }}
+                        </span>
+                        <span class="font-medium text-gray-400 whitespace-nowrap ml-2">
+                            {% if re.ejercicio.modalidad == 'TIEMPO' %}
+                                {{ re.series_objetivo }}x{{ re.tiempo_objetivo_segundos|default:30 }}s
+                            {% else %}
+                                {{ re.series_objetivo }}x{{ re.repeticiones_objetivo|default:10 }}
+                            {% endif %}
+                        </span>
+                    </div>
+                    {% endfor %}
+                    {% if rutina.rutinaejercicio_set.count > 4 %}
+                    <p class="text-[11px] text-gray-400 font-medium italic">+ {{ rutina.rutinaejercicio_set.count|add:"-4" }} ejercicio(s) más...</p>
+                    {% endif %}
+                </div>
+
+                <!-- Botón de Iniciar Entrenamiento (Mobile-first Touch) -->
+                <a href="{% url 'rutinas:iniciar_rutina' rutina.id %}" 
+                   class="w-full py-3 px-4 rounded-xl bg-gradient-to-r from-brand-light to-indigo-600 hover:from-brand-dark hover:to-indigo-700 text-white font-bold text-sm shadow-md shadow-brand-light/20 flex items-center justify-center space-x-2 transition-transform active:scale-95">
+                    <i class="fa-solid fa-play text-xs"></i>
+                    <span>Entrenar Esta Rutina</span>
+                </a>
+            </div>
+
+        </div>
+        {% empty %}
+        <!-- Estado Vacío -->
+        <div class="col-span-full py-16 px-4 text-center bg-white dark:bg-gray-800 rounded-3xl border-2 border-dashed border-gray-200 dark:border-gray-700">
+            <div class="w-16 h-16 rounded-2xl bg-brand-light/10 text-brand-light flex items-center justify-center mx-auto mb-4">
+                <i class="fa-solid fa-dumbbell text-2xl"></i>
+            </div>
+            <h3 class="text-xl font-bold text-gray-800 dark:text-white">Aún no tienes ninguna rutina</h3>
+            <p class="text-sm text-gray-500 dark:text-gray-400 mt-2 max-w-sm mx-auto">
+                Crea tu primera rutina con tus ejercicios favoritos para empezar a registrar tus series y pesos fácilmente desde el móvil.
+            </p>
+            <a href="{% url 'rutinas:crear_rutina' %}" class="mt-6 inline-flex items-center px-6 py-3 bg-brand-light hover:bg-brand-dark text-white font-bold text-sm rounded-xl shadow-lg shadow-brand-light/30 transition-all">
+                <i class="fa-solid fa-plus mr-2"></i> Crear mi primera rutina
+            </a>
+        </div>
+        {% endfor %}
+
+    </div>
+
+</div>
+{% endblock %}

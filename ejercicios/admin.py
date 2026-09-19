@@ -8,8 +8,8 @@ class SerieInline(admin.TabularInline):
     min_num = 3 # Requiere al menos 1 serie grabada
     # 1. ORDEN DE LAS COLUMNAS EN LA TABLA:
     # Definimos el orden exacto de aparición. 'numero_serie' será la 1ª columna.
-    fields = ('numero_serie', 'repeticiones', 'peso_kg')
-    readonly_fields = ('numero_serie',)# Bloqueamos la edición manual del número de serie
+    fields = ('numero_serie', 'repeticiones', 'peso_kg', 'tiempo_segundos')
+    readonly_fields = ('numero_serie',)
     def get_formset(self, request, obj=None, **kwargs):
             """
             Sobrescribimos el FormSet para asignar dinámicamente los números de serie 
@@ -68,6 +68,6 @@ class RegistroEjercicioAdmin(admin.ModelAdmin):
 
 @admin.register(Ejercicio)
 class EjercicioAdmin(admin.ModelAdmin):
-    list_display = ('nombre', 'grupo_muscular', 'tipo', 'dificultad')
-    list_filter = ('grupo_muscular', 'tipo', 'dificultad')
+    list_display = ('nombre', 'modalidad', 'grupo_muscular', 'tipo', 'dificultad', 'creado_por')
+    list_filter = ('modalidad', 'grupo_muscular', 'tipo', 'dificultad')
     search_fields = ('nombre',)

@@ -1,10 +1,335 @@
 {% extends 'base.html' %}
 
-{% block title %}Dashboard{% endblock %}
+{% block title %}Mi Dashboard y Progreso | FitApp{% endblock %}
 
 {% block content %}
-<div class="space-y-6">
-    <h1 class="text-2xl font-bold">Mi Dashboard</h1>
-    <p>Aquí se mostrarán el Dashboard.</p>
+<!-- Chart.js CDN -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+<div x-data="dashboardAnalytics()" x-init="iniciarGraficos()" class="max-w-6xl mx-auto pb-16 space-y-6">
+
+    <!-- Cabecera -->
+    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div>
+            <h1 class="text-2xl sm:text-3xl font-black text-gray-900 dark:text-white flex items-center">
+                <i class="fa-solid fa-chart-line text-brand-light mr-3"></i> Tu Progreso
+            </h1>
+            <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">
+                Evolución de tus entrenamientos, récords y constancia.
+            </p>
+        </div>
+
+        <a href="{% url 'rutinas:lista_rutinas' %}" class="inline-flex items-center justify-center px-5 py-2.5 rounded-xl bg-brand-light hover:bg-brand-dark text-white font-bold text-sm shadow-md shadow-brand-light/30 transition-all hover:scale-105 active:scale-95">
+            <i class="fa-solid fa-play mr-2 text-xs"></i> Entrenar Hoy
+        </a>
+    </div>
+
+    <!-- ================================================================= -->
+    <!-- TARJETAS DE MÉTRICAS CLAVE (KPIs) -->
+    <!-- ================================================================= -->
+    <div class="grid grid-cols-2 lg:grid-cols-4 gap-4">
+        
+        <!-- Sesiones este mes -->
+        <div class="bg-white dark:bg-gray-800 rounded-2xl p-4 sm:p-5 border border-gray-100 dark:border-gray-700/80 shadow-sm flex flex-col justify-between">
+            <div class="flex items-center justify-between text-gray-400 mb-2">
+                <span class="text-xs font-bold uppercase tracking-wider">Este Mes</span>
+                <span class="w-8 h-8 rounded-xl bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 flex items-center justify-center text-sm">
+                    <i class="fa-solid fa-calendar-check"></i>
+                </span>
+            </div>
+            <div>
+                <span class="text-2xl sm:text-3xl font-black text-gray-900 dark:text-white">{{ dias_entrenados_mes }}</span>
+                <span class="text-xs text-gray-500 dark:text-gray-400 block mt-0.5">días entrenados</span>
+            </div>
+        </div>
+
+        <!-- Volumen Total -->
+        <div class="bg-white dark:bg-gray-800 rounded-2xl p-4 sm:p-5 border border-gray-100 dark:border-gray-700/80 shadow-sm flex flex-col justify-between">
+            <div class="flex items-center justify-between text-gray-400 mb-2">
+                <span class="text-xs font-bold uppercase tracking-wider">Carga Total</span>
+                <span class="w-8 h-8 rounded-xl bg-purple-50 dark:bg-purple-900/30 text-purple-600 dark:text-purple-400 flex items-center justify-center text-sm">
+                    <i class="fa-solid fa-weight-hanging"></i>
+                </span>
+            </div>
+            <div>
+                <span class="text-2xl sm:text-3xl font-black text-gray-900 dark:text-white">{{ volumen_total|floatformat:0 }}</span>
+                <span class="text-xs text-gray-500 dark:text-gray-400 block mt-0.5">kg acumulados</span>
+            </div>
+        </div>
+
+        <!-- Series Completadas -->
+        <div class="bg-white dark:bg-gray-800 rounded-2xl p-4 sm:p-5 border border-gray-100 dark:border-gray-700/80 shadow-sm flex flex-col justify-between">
+            <div class="flex items-center justify-between text-gray-400 mb-2">
+                <span class="text-xs font-bold uppercase tracking-wider">Series</span>
+                <span class="w-8 h-8 rounded-xl bg-emerald-50 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400 flex items-center justify-center text-sm">
+                    <i class="fa-solid fa-bolt"></i>
+                </span>
+            </div>
+            <div>
+                <span class="text-2xl sm:text-3xl font-black text-gray-900 dark:text-white">{{ total_series }}</span>
+                <span class="text-xs text-gray-500 dark:text-gray-400 block mt-0.5">series registradas</span>
+            </div>
+        </div>
+
+        <!-- Rutinas Creadas -->
+        <div class="bg-white dark:bg-gray-800 rounded-2xl p-4 sm:p-5 border border-gray-100 dark:border-gray-700/80 shadow-sm flex flex-col justify-between">
+            <div class="flex items-center justify-between text-gray-400 mb-2">
+                <span class="text-xs font-bold uppercase tracking-wider">Planes</span>
+                <span class="w-8 h-8 rounded-xl bg-amber-50 dark:bg-amber-900/30 text-amber-600 dark:text-amber-400 flex items-center justify-center text-sm">
+                    <i class="fa-solid fa-clipboard-list"></i>
+                </span>
+            </div>
+            <div>
+                <span class="text-2xl sm:text-3xl font-black text-gray-900 dark:text-white">{{ total_rutinas }}</span>
+                <span class="text-xs text-gray-500 dark:text-gray-400 block mt-0.5">rutinas activas</span>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- ================================================================= -->
+    <!-- GRÁFICA INTERACTIVA DE PROGRESIÓN POR EJERCICIO -->
+    <!-- ================================================================= -->
+    <div class="bg-white dark:bg-gray-800 rounded-3xl p-5 sm:p-6 border border-gray-100 dark:border-gray-700/80 shadow-sm space-y-4">
+        
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <div>
+                <h2 class="text-lg font-bold text-gray-900 dark:text-white flex items-center">
+                    <i class="fa-solid fa-arrow-trend-up text-brand-light mr-2"></i> Evolución de Carga y Rendimiento
+                </h2>
+                <p class="text-xs text-gray-500 dark:text-gray-400">Observa cómo aumentan tus cargas con el tiempo.</p>
+            </div>
+
+            <!-- Selector de Ejercicio -->
+            <div class="flex items-center space-x-2">
+                <select x-model="ejercicioSeleccionado" @change="actualizarGrafico()" 
+                        class="px-3.5 py-2 rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900 text-xs sm:text-sm font-bold text-gray-900 dark:text-white outline-none focus:ring-2 focus:ring-brand-light">
+                    {% for ej in ejercicios_con_datos %}
+                    <option value="{{ ej.id }}">{{ ej.nombre }} ({{ ej.get_grupo_muscular_display }})</option>
+                    {% empty %}
+                    <option value="">Aún no has registrado series</option>
+                    {% endfor %}
+                </select>
+
+                <!-- Toggle Métrica (Peso Máx vs Volumen) -->
+                <div class="hidden sm:flex bg-gray-100 dark:bg-gray-900 p-1 rounded-xl text-xs">
+                    <button type="button" @click="tipoMetrica = 'peso'; actualizarGrafico()" 
+                            :class="tipoMetrica === 'peso' ? 'bg-white dark:bg-gray-800 font-bold text-brand-light shadow-xs' : 'text-gray-500'" 
+                            class="px-3 py-1.5 rounded-lg transition-all">Peso Máx</button>
+                    <button type="button" @click="tipoMetrica = 'volumen'; actualizarGrafico()" 
+                            :class="tipoMetrica === 'volumen' ? 'bg-white dark:bg-gray-800 font-bold text-brand-light shadow-xs' : 'text-gray-500'" 
+                            class="px-3 py-1.5 rounded-lg transition-all">Volumen (kg)</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Canvas Gráfico -->
+        <div class="relative h-64 sm:h-80 w-full pt-2">
+            <canvas id="graficoProgresion"></canvas>
+            
+            <!-- Mensaje si no hay registros aún -->
+            <div x-show="!hayDatosGrafico" class="absolute inset-0 flex flex-col items-center justify-center bg-white/80 dark:bg-gray-800/80 rounded-2xl">
+                <i class="fa-solid fa-chart-simple text-4xl text-gray-300 dark:text-gray-600 mb-2"></i>
+                <p class="font-bold text-sm text-gray-700 dark:text-gray-300">Sin historial suficiente</p>
+                <p class="text-xs text-gray-400 mt-0.5">Completa series de este ejercicio en tus entrenamientos para ver tu progreso.</p>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- ================================================================= -->
+    <!-- HISTORIAL RECIENTE Y DISTRIBUCIÓN MUSCULAR -->
+    <!-- ================================================================= -->
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        
+        <!-- Historial de Últimas Sesiones (2 columnas) -->
+        <div class="lg:col-span-2 bg-white dark:bg-gray-800 rounded-3xl p-5 sm:p-6 border border-gray-100 dark:border-gray-700/80 shadow-sm space-y-4">
+            <h2 class="text-base font-bold text-gray-900 dark:text-white flex items-center">
+                <i class="fa-solid fa-clock-rotate-left text-brand-light mr-2"></i> Sesiones Recientes
+            </h2>
+
+            <div class="divide-y divide-gray-100 dark:divide-gray-700/50">
+                {% for sesion in sesiones_recientes %}
+                <div class="py-3.5 flex items-center justify-between">
+                    <div class="flex items-center space-x-3">
+                        <div class="w-10 h-10 rounded-xl bg-brand-light/10 text-brand-light flex items-center justify-center font-bold text-sm">
+                            <i class="fa-solid fa-dumbbell"></i>
+                        </div>
+                        <div>
+                            <span class="font-bold text-sm text-gray-900 dark:text-white block">{{ sesion.fecha|date:"l, d M Y"|capfirst }}</span>
+                            <span class="text-xs text-gray-500 dark:text-gray-400">{{ sesion.ejercicios_resumen }}</span>
+                        </div>
+                    </div>
+                    <div class="text-right">
+                        <span class="text-xs font-bold text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-900/30 px-2.5 py-1 rounded-full">
+                            {{ sesion.total_series }} series
+                        </span>
+                    </div>
+                </div>
+                {% empty %}
+                <div class="py-8 text-center text-gray-400 text-xs">
+                    No has registrado entrenamientos recientemente.
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+
+        <!-- Distribución por Grupo Muscular (1 columna) -->
+        <div class="bg-white dark:bg-gray-800 rounded-3xl p-5 sm:p-6 border border-gray-100 dark:border-gray-700/80 shadow-sm space-y-4">
+            <h2 class="text-base font-bold text-gray-900 dark:text-white flex items-center">
+                <i class="fa-solid fa-pie-chart text-brand-light mr-2"></i> Enfoque Muscular
+            </h2>
+
+            <div class="relative h-56 w-full flex items-center justify-center">
+                <canvas id="graficoMuscular"></canvas>
+                <div x-show="distribucion.length === 0" class="absolute inset-0 flex items-center justify-center text-xs text-gray-400">
+                    Sin datos aún.
+                </div>
+            </div>
+        </div>
+
+    </div>
+
 </div>
+
+<script>
+function dashboardAnalytics() {
+    return {
+        datosProgresion: JSON.parse('{{ datos_progresion_json|escapejs }}'),
+        distribucion: JSON.parse('{{ distribucion_json|escapejs }}'),
+        ejercicioSeleccionado: '',
+        tipoMetrica: 'peso',
+        hayDatosGrafico: false,
+        chartProgresion: null,
+        chartMuscular: null,
+
+        iniciarGraficos() {
+            // Seleccionamos el primer ejercicio si existe
+            const ids = Object.keys(this.datosProgresion);
+            if (ids.length > 0) {
+                this.ejercicioSeleccionado = ids[0];
+            }
+
+            this.$nextTick(() => {
+                this.renderizarGraficoProgresion();
+                this.renderizarGraficoMuscular();
+            });
+        },
+
+        renderizarGraficoProgresion() {
+            const ctx = document.getElementById('graficoProgresion');
+            if (!ctx) return;
+
+            const datosEj = this.datosProgresion[this.ejercicioSeleccionado];
+            if (!datosEj || !datosEj.fechas || datosEj.fechas.length === 0) {
+                this.hayDatosGrafico = false;
+                if (this.chartProgresion) this.chartProgresion.destroy();
+                return;
+            }
+
+            this.hayDatosGrafico = true;
+            const labels = datosEj.fechas;
+            const dataValores = this.tipoMetrica === 'peso' ? datosEj.pesos_max : datosEj.volumen;
+            const labelMetrica = this.tipoMetrica === 'peso' ? 'Peso Máximo Levantado (kg)' : 'Volumen Total (kg)';
+
+            if (this.chartProgresion) {
+                this.chartProgresion.destroy();
+            }
+
+            const esModoOscuro = document.documentElement.classList.contains('dark');
+            const colorTexto = esModoOscuro ? '#9ca3af' : '#6b7280';
+            const colorGrid = esModoOscuro ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0, 0, 0, 0.05)';
+
+            this.chartProgresion = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        label: labelMetrica,
+                        data: dataValores,
+                        borderColor: '#4f46e5',
+                        backgroundColor: 'rgba(79, 70, 229, 0.1)',
+                        borderWidth: 3,
+                        pointBackgroundColor: '#4f46e5',
+                        pointBorderColor: '#ffffff',
+                        pointBorderWidth: 2,
+                        pointRadius: 5,
+                        pointHoverRadius: 7,
+                        tension: 0.35,
+                        fill: true
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { display: false },
+                        tooltip: {
+                            backgroundColor: 'rgba(17, 24, 39, 0.9)',
+                            titleFont: { weight: 'bold' },
+                            padding: 10,
+                            displayColors: false
+                        }
+                    },
+                    scales: {
+                        x: {
+                            ticks: { color: colorTexto, font: { size: 11 } },
+                            grid: { color: colorGrid }
+                        },
+                        y: {
+                            ticks: { color: colorTexto, font: { size: 11 } },
+                            grid: { color: colorGrid }
+                        }
+                    }
+                }
+            });
+        },
+
+        renderizarGraficoMuscular() {
+            const ctx = document.getElementById('graficoMuscular');
+            if (!ctx || this.distribucion.length === 0) return;
+
+            const labels = this.distribucion.map(d => d.grupo);
+            const valores = this.distribucion.map(d => d.total);
+
+            if (this.chartMuscular) {
+                this.chartMuscular.destroy();
+            }
+
+            this.chartMuscular = new Chart(ctx, {
+                type: 'doughnut',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        data: valores,
+                        backgroundColor: [
+                            '#4f46e5', '#10b981', '#f59e0b', '#ec4899', '#06b6d4', '#8b5cf6', '#64748b'
+                        ],
+                        borderWidth: 0
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            position: 'bottom',
+                            labels: {
+                                boxWidth: 12,
+                                font: { size: 10 },
+                                color: document.documentElement.classList.contains('dark') ? '#9ca3af' : '#4b5563'
+                            }
+                        }
+                    },
+                    cutout: '70%'
+                }
+            });
+        },
+
+        actualizarGrafico() {
+            this.renderizarGraficoProgresion();
+        }
+    }
+}
+</script>
 {% endblock %}

@@ -3,73 +3,206 @@
 {% block title %}Catálogo de Ejercicios | FitApp{% endblock %}
 
 {% block content %}
-<div class="mb-8">
-    <h1 class="text-3xl font-bold text-gray-800 dark:text-white">Catálogo de Ejercicios</h1>
-    <p class="text-gray-600 dark:text-gray-400 mt-2">Explora y aprende la técnica correcta para cada movimiento.</p>
-</div>
+<div class="max-w-6xl mx-auto pb-16 space-y-6">
 
-<!-- Cuadrícula (Grid) Responsiva -->
-<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-    
-    {% for ejercicio in ejercicios %}
-    <!-- Tarjeta (Card) de Ejercicio -->
-    <div class="bg-white dark:bg-gray-800 rounded-xl shadow-md overflow-hidden hover:shadow-lg transition-shadow duration-300 flex flex-col">
-        
-        <!-- Imagen / Fallback -->
-        <div class="h-48 w-full bg-gray-200 dark:bg-gray-700 relative flex items-center justify-center overflow-hidden">
-            {% if ejercicio.foto %}
-                <img src="{{ ejercicio.foto.url }}" alt="{{ ejercicio.nombre }}" class="w-full h-full object-cover">
-            {% else %}
-                <div class="text-gray-400 dark:text-gray-500 flex flex-col items-center">
-                    <i class="fa-solid fa-dumbbell text-4xl mb-2"></i>
-                    <span class="text-sm font-medium">Sin imagen</span>
-                </div>
-            {% endif %}
-            
-            <!-- Etiqueta de Dificultad superpuesta -->
-            <span class="absolute top-3 right-3 px-2 py-1 text-xs font-bold rounded-full shadow-sm 
-                {% if ejercicio.dificultad == 'PRI' %}bg-green-100 text-green-700 
-                {% elif ejercicio.dificultad == 'INT' %}bg-yellow-100 text-yellow-700 
-                {% else %}bg-red-100 text-red-700{% endif %}">
-                {{ ejercicio.get_dificultad_display }}
-            </span>
-        </div>
-
-        <!-- Contenido de la Tarjeta -->
-        <div class="p-5 flex-1 flex flex-col">
-            <h2 class="text-xl font-bold text-gray-800 dark:text-white mb-2">{{ ejercicio.nombre }}</h2>
-            
-            <!-- Etiquetas de categorización -->
-            <div class="flex flex-wrap gap-2 mb-4">
-                <span class="px-2 py-1 bg-brand-light/10 text-brand-light text-xs font-semibold rounded-md border border-brand-light/20">
-                    <i class="fa-solid fa-layer-group mr-1"></i> {{ ejercicio.get_grupo_muscular_display }}
-                </span>
-                <span class="px-2 py-1 bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-300 text-xs font-semibold rounded-md">
-                    <i class="fa-solid fa-gear mr-1"></i> {{ ejercicio.get_tipo_display }}
-                </span>
-            </div>
-
-            <!-- Definición truncada -->
-            <p class="text-gray-600 dark:text-gray-400 text-sm mb-4 flex-1">
-                {{ ejercicio.definicion|truncatewords:20 }}
+    <!-- Cabecera -->
+    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div>
+            <h1 class="text-2xl sm:text-3xl font-black text-gray-900 dark:text-white flex items-center">
+                <i class="fa-solid fa-dumbbell text-brand-light mr-3"></i> Catálogo de Ejercicios
+            </h1>
+            <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">
+                Explora el catálogo o crea tus propios ejercicios para tus rutinas.
             </p>
-
-            <!-- Botón de acción / Ver detalles -->
-            <div class="mt-auto pt-4 border-t border-gray-100 dark:border-gray-700">
-                <a href="#" class="block w-full text-center px-4 py-2 bg-gray-50 hover:bg-brand-light hover:text-white dark:bg-gray-700/50 dark:hover:bg-brand-light text-brand-light dark:text-indigo-300 font-medium rounded-lg transition-colors">
-                    Ver Detalles
-                </a>
-            </div>
         </div>
+
+        {% if user.is_authenticated %}
+        <!-- Botón Crear Nuevo Ejercicio -->
+        <a href="{% url 'ejercicios:crear_ejercicio' %}" 
+           class="inline-flex items-center justify-center px-5 py-3 bg-brand-light hover:bg-brand-dark text-white font-bold text-sm rounded-xl shadow-lg shadow-brand-light/30 transition-all hover:scale-105 active:scale-95">
+            <i class="fa-solid fa-plus mr-2 text-base"></i> Nuevo Ejercicio
+        </a>
+        {% endif %}
     </div>
-    {% empty %}
-    <!-- Mensaje si no hay ejercicios en la BD -->
-    <div class="col-span-full py-12 text-center bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-dashed border-gray-300 dark:border-gray-700">
-        <i class="fa-solid fa-folder-open text-4xl text-gray-400 mb-3"></i>
-        <h3 class="text-lg font-medium text-gray-800 dark:text-white">Aún no hay ejercicios</h3>
-        <p class="text-gray-500 dark:text-gray-400 mt-1">Dirígete al panel de administración para añadir el primero.</p>
+
+    <!-- Barra de Filtros y Búsqueda -->
+    <div class="bg-white dark:bg-gray-800 rounded-2xl p-4 shadow-sm border border-gray-100 dark:border-gray-700/80 space-y-4">
+        
+        <!-- Pestañas de Origen (Todos / Mis Ejercicios / Oficiales) -->
+        <div class="flex items-center space-x-2 border-b border-gray-100 dark:border-gray-700/60 pb-3 text-xs sm:text-sm overflow-x-auto">
+            <a href="?origen=todos{% if grupo_actual %}&grupo={{ grupo_actual }}{% endif %}{% if modalidad_actual %}&modalidad={{ modalidad_actual }}{% endif %}{% if q %}&q={{ q }}{% endif %}" 
+               class="px-4 py-2 rounded-xl font-bold whitespace-nowrap transition-colors flex items-center space-x-1.5 {% if origen_actual == 'todos' %}bg-brand-light text-white shadow-sm{% else %}text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700{% endif %}">
+                <span>Todos los ejercicios</span>
+                <span class="px-2 py-0.5 rounded-full text-xs font-semibold {% if origen_actual == 'todos' %}bg-white/20 text-white{% else %}bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300{% endif %}">{{ total_todos }}</span>
+            </a>
+
+            {% if user.is_authenticated %}
+            <a href="?origen=mis_ejercicios{% if grupo_actual %}&grupo={{ grupo_actual }}{% endif %}{% if modalidad_actual %}&modalidad={{ modalidad_actual }}{% endif %}{% if q %}&q={{ q }}{% endif %}" 
+               class="px-4 py-2 rounded-xl font-bold whitespace-nowrap transition-colors flex items-center space-x-1.5 {% if origen_actual == 'mis_ejercicios' %}bg-brand-light text-white shadow-sm{% else %}text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700{% endif %}">
+                <i class="fa-solid fa-user-pen mr-1"></i>
+                <span>Mis Ejercicios</span>
+                <span class="px-2 py-0.5 rounded-full text-xs font-semibold {% if origen_actual == 'mis_ejercicios' %}bg-white/20 text-white{% else %}bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300{% endif %}">{{ total_mios }}</span>
+            </a>
+            {% endif %}
+
+            <a href="?origen=oficiales{% if grupo_actual %}&grupo={{ grupo_actual }}{% endif %}{% if modalidad_actual %}&modalidad={{ modalidad_actual }}{% endif %}{% if q %}&q={{ q }}{% endif %}" 
+               class="px-4 py-2 rounded-xl font-bold whitespace-nowrap transition-colors flex items-center space-x-1.5 {% if origen_actual == 'oficiales' %}bg-brand-light text-white shadow-sm{% else %}text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700{% endif %}">
+                <i class="fa-solid fa-certificate mr-1"></i>
+                <span>Catálogo Oficial</span>
+                <span class="px-2 py-0.5 rounded-full text-xs font-semibold {% if origen_actual == 'oficiales' %}bg-white/20 text-white{% else %}bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300{% endif %}">{{ total_oficiales }}</span>
+            </a>
+        </div>
+
+        <!-- Buscador y Selectores -->
+        <form method="GET" class="grid grid-cols-1 sm:grid-cols-12 gap-3">
+            <input type="hidden" name="origen" value="{{ origen_actual }}">
+
+            <!-- Input Búsqueda (6 cols) -->
+            <div class="sm:col-span-6 relative">
+                <i class="fa-solid fa-magnifying-glass absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400 text-sm"></i>
+                <input type="text" name="q" value="{{ q }}" placeholder="Buscar ejercicio por nombre..." 
+                       class="w-full pl-10 pr-4 py-2.5 rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900 text-sm text-gray-900 dark:text-white outline-none focus:ring-2 focus:ring-brand-light">
+            </div>
+
+            <!-- Selector Grupo Muscular (3 cols) -->
+            <div class="sm:col-span-3">
+                <select name="grupo" onchange="this.form.submit()" 
+                        class="w-full px-3 py-2.5 rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900 text-xs sm:text-sm text-gray-900 dark:text-white outline-none focus:ring-2 focus:ring-brand-light">
+                    <option value="">Todos los músculos</option>
+                    {% for codigo, nombre in grupos_musculares %}
+                    <option value="{{ codigo }}" {% if grupo_actual == codigo %}selected{% endif %}>{{ nombre }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <!-- Selector Modalidad (3 cols) -->
+            <div class="sm:col-span-3">
+                <select name="modalidad" onchange="this.form.submit()" 
+                        class="w-full px-3 py-2.5 rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900 text-xs sm:text-sm text-gray-900 dark:text-white outline-none focus:ring-2 focus:ring-brand-light">
+                    <option value="">Todas las modalidades</option>
+                    {% for codigo, nombre in modalidades %}
+                    <option value="{{ codigo }}" {% if modalidad_actual == codigo %}selected{% endif %}>{{ nombre }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+        </form>
+
     </div>
-    {% endfor %}
+
+    <!-- Cuadrícula (Grid) Responsiva de Tarjetas -->
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
+        
+        {% for ejercicio in ejercicios %}
+        <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-sm hover:shadow-md border border-gray-100 dark:border-gray-700/80 overflow-hidden flex flex-col transition-all">
+            
+            <!-- Imagen / Banner -->
+            <div class="h-44 w-full bg-gray-100 dark:bg-gray-700/60 relative flex items-center justify-center overflow-hidden">
+                {% if ejercicio.foto %}
+                    <img src="{{ ejercicio.foto.url }}" alt="{{ ejercicio.nombre }}" class="w-full h-full object-cover">
+                {% else %}
+                    <div class="text-gray-300 dark:text-gray-600 flex flex-col items-center">
+                        <i class="{% if ejercicio.modalidad == 'TIEMPO' %}fa-solid fa-stopwatch{% else %}fa-solid fa-dumbbell{% endif %} text-4xl mb-1.5"></i>
+                        <span class="text-xs font-semibold">FitApp</span>
+                    </div>
+                {% endif %}
+
+                <!-- Badge de Modalidad (Arriba a la izquierda) -->
+                <span class="absolute top-3 left-3 px-2.5 py-1 text-xs font-bold rounded-xl backdrop-blur-md shadow-sm 
+                    {% if ejercicio.modalidad == 'TIEMPO' %}bg-amber-500/90 text-white{% else %}bg-brand-light/90 text-white{% endif %}">
+                    {% if ejercicio.modalidad == 'TIEMPO' %}⏱️ Tiempo{% else %}🏋️ Peso + Reps{% endif %}
+                </span>
+
+                <!-- Badge de Dificultad (Arriba a la derecha) -->
+                <span class="absolute top-3 right-3 px-2.5 py-1 text-xs font-bold rounded-xl backdrop-blur-md shadow-sm
+                    {% if ejercicio.dificultad == 'PRI' %}bg-emerald-500/90 text-white
+                    {% elif ejercicio.dificultad == 'INT' %}bg-yellow-500/90 text-white
+                    {% else %}bg-rose-500/90 text-white{% endif %}">
+                    {{ ejercicio.get_dificultad_display }}
+                </span>
+            </div>
+
+            <!-- Contenido de la Tarjeta -->
+            <div class="p-5 flex-1 flex flex-col justify-between space-y-4">
+                
+                <div>
+                    <!-- Tipo y Propiedad -->
+                    <div class="flex items-center justify-between mb-1.5">
+                        <span class="text-xs font-bold text-gray-500 dark:text-gray-400">
+                            {{ ejercicio.get_grupo_muscular_display }} • {{ ejercicio.get_tipo_display }}
+                        </span>
+                        
+                        {% if ejercicio.creado_por %}
+                            <span class="text-[10px] font-bold px-2 py-0.5 rounded-md bg-indigo-50 dark:bg-indigo-950/40 text-indigo-600 dark:text-indigo-400 border border-indigo-200/50">
+                                Personalizado
+                            </span>
+                        {% else %}
+                            <span class="text-[10px] font-bold px-2 py-0.5 rounded-md bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-400">
+                                Oficial
+                            </span>
+                        {% endif %}
+                    </div>
+
+                    <!-- Título -->
+                    <h2 class="text-lg font-bold text-gray-900 dark:text-white tracking-tight">
+                        {{ ejercicio.nombre }}
+                    </h2>
+
+                    <!-- Definición -->
+                    <p class="text-xs text-gray-500 dark:text-gray-400 mt-1.5 line-clamp-2">
+                        {{ ejercicio.definicion|default:"Ejercicio listo para agregar a tus rutinas de entrenamiento." }}
+                    </p>
+                </div>
+
+                <!-- Botones de Acción -->
+                <div class="pt-3 border-t border-gray-100 dark:border-gray-700/60 flex items-center justify-between gap-2">
+                    
+                    <!-- Ver Detalles -->
+                    <a href="{% url 'ejercicios:detalle_ejercicio' ejercicio.id %}" 
+                       class="flex-1 py-2 px-3 text-center rounded-xl bg-gray-50 dark:bg-gray-700/50 hover:bg-brand-light hover:text-white text-gray-700 dark:text-gray-300 font-bold text-xs transition-colors">
+                        Ver Ficha
+                    </a>
+
+                    <!-- Acciones del creador (Editar / Eliminar) -->
+                    {% if ejercicio.creado_por == user or user.is_superuser %}
+                    <a href="{% url 'ejercicios:editar_ejercicio' ejercicio.id %}" title="Editar ejercicio"
+                       class="w-8 h-8 rounded-xl bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 hover:text-brand-light flex items-center justify-center transition-colors">
+                        <i class="fa-solid fa-pen-to-square text-xs"></i>
+                    </a>
+
+                    <form method="POST" action="{% url 'ejercicios:eliminar_ejercicio' ejercicio.id %}" 
+                          onsubmit="return confirm('¿Seguro que deseas eliminar el ejercicio \'{{ ejercicio.nombre|escapejs }}\'?');">
+                        {% csrf_token %}
+                        <button type="submit" title="Eliminar ejercicio"
+                                class="w-8 h-8 rounded-xl bg-red-50 dark:bg-red-900/20 text-red-500 hover:bg-red-100 flex items-center justify-center transition-colors">
+                            <i class="fa-solid fa-trash-can text-xs"></i>
+                        </button>
+                    </form>
+                    {% endif %}
+
+                </div>
+
+            </div>
+
+        </div>
+        {% empty %}
+        <!-- Estado Vacío -->
+        <div class="col-span-full py-16 px-4 text-center bg-white dark:bg-gray-800 rounded-3xl border-2 border-dashed border-gray-200 dark:border-gray-700">
+            <div class="w-16 h-16 rounded-2xl bg-brand-light/10 text-brand-light flex items-center justify-center mx-auto mb-4">
+                <i class="fa-solid fa-dumbbell text-2xl"></i>
+            </div>
+            <h3 class="text-xl font-bold text-gray-800 dark:text-white">No se encontraron ejercicios</h3>
+            <p class="text-sm text-gray-500 dark:text-gray-400 mt-2 max-w-sm mx-auto">
+                Prueba cambiando los filtros de búsqueda o crea tu propio ejercicio personalizado.
+            </p>
+            {% if user.is_authenticated %}
+            <a href="{% url 'ejercicios:crear_ejercicio' %}" class="mt-6 inline-flex items-center px-6 py-3 bg-brand-light hover:bg-brand-dark text-white font-bold text-sm rounded-xl shadow-lg shadow-brand-light/30 transition-all">
+                <i class="fa-solid fa-plus mr-2"></i> Crear Nuevo Ejercicio
+            </a>
+            {% endif %}
+        </div>
+        {% endfor %}
+
+    </div>
 
 </div>
 {% endblock %}

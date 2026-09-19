@@ -1,0 +1,140 @@
+{% extends 'base.html' %}
+
+{% block title %}{{ ejercicio.nombre }} | Ficha Técnica{% endblock %}
+
+{% block content %}
+<div class="max-w-3xl mx-auto pb-20 space-y-6">
+
+    <!-- Cabecera -->
+    <div class="flex items-center justify-between">
+        <div class="flex items-center space-x-3">
+            <a href="{% url 'ejercicios:ejercicios' %}" class="w-10 h-10 rounded-xl bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 flex items-center justify-center text-gray-600 dark:text-gray-300 hover:text-brand-light shadow-sm transition-colors">
+                <i class="fa-solid fa-arrow-left"></i>
+            </a>
+            <div>
+                <h1 class="text-2xl font-black text-gray-900 dark:text-white">
+                    {{ ejercicio.nombre }}
+                </h1>
+                <div class="flex items-center space-x-2 text-xs text-gray-500 dark:text-gray-400 mt-0.5">
+                    <span>{{ ejercicio.get_grupo_muscular_display }}</span>
+                    <span>•</span>
+                    <span>{{ ejercicio.get_tipo_display }}</span>
+                </div>
+            </div>
+        </div>
+
+        {% if ejercicio.creado_por == user or user.is_superuser %}
+        <div class="flex items-center space-x-2">
+            <a href="{% url 'ejercicios:editar_ejercicio' ejercicio.id %}" class="px-3.5 py-2 rounded-xl bg-gray-100 dark:bg-gray-800 hover:bg-brand-light hover:text-white text-gray-700 dark:text-gray-300 text-xs font-bold transition-colors flex items-center space-x-1.5">
+                <i class="fa-solid fa-pen-to-square"></i>
+                <span>Editar</span>
+            </a>
+        </div>
+        {% endif %}
+    </div>
+
+    <!-- Tarjeta Principal con Imagen / Media -->
+    <div class="bg-white dark:bg-gray-800 rounded-3xl shadow-sm border border-gray-100 dark:border-gray-700/80 overflow-hidden">
+        
+        {% if ejercicio.foto %}
+        <div class="h-64 sm:h-80 w-full overflow-hidden bg-gray-100 dark:bg-gray-900">
+            <img src="{{ ejercicio.foto.url }}" alt="{{ ejercicio.nombre }}" class="w-full h-full object-cover">
+        </div>
+        {% endif %}
+
+        <div class="p-6 space-y-6">
+            
+            <!-- Badges de Atributos -->
+            <div class="flex flex-wrap gap-2">
+                <span class="px-3 py-1 rounded-xl text-xs font-bold bg-brand-light/10 text-brand-light">
+                    <i class="fa-solid fa-layer-group mr-1.5"></i> {{ ejercicio.get_grupo_muscular_display }}
+                </span>
+                <span class="px-3 py-1 rounded-xl text-xs font-bold 
+                    {% if ejercicio.modalidad == 'TIEMPO' %}bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-400
+                    {% else %}bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400{% endif %}">
+                    {% if ejercicio.modalidad == 'TIEMPO' %}⏱️ Por Tiempo{% else %}🏋️ Reps y Peso{% endif %}
+                </span>
+                <span class="px-3 py-1 rounded-xl text-xs font-bold bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300">
+                    <i class="fa-solid fa-gauge mr-1.5"></i> {{ ejercicio.get_dificultad_display }}
+                </span>
+                {% if ejercicio.equipo_necesario %}
+                <span class="px-3 py-1 rounded-xl text-xs font-bold bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-400">
+                    <i class="fa-solid fa-dumbbell mr-1.5"></i> {{ ejercicio.equipo_necesario }}
+                </span>
+                {% endif %}
+            </div>
+
+            <!-- Récord Personal del Usuario -->
+            {% if record_personal %}
+            <div class="p-4 rounded-2xl bg-gradient-to-r from-brand-light/10 to-emerald-500/10 border border-brand-light/20 flex items-center justify-between">
+                <div class="flex items-center space-x-3">
+                    <div class="w-10 h-10 rounded-xl bg-brand-light text-white flex items-center justify-center font-black">
+                        <i class="fa-solid fa-trophy"></i>
+                    </div>
+                    <div>
+                        <span class="text-xs font-bold text-gray-500 dark:text-gray-400 block uppercase">Tu Récord Personal</span>
+                        <span class="text-lg font-black text-gray-900 dark:text-white">{{ record_personal }}</span>
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+
+            <!-- Definición y Técnica -->
+            <div>
+                <h3 class="text-sm font-bold text-gray-900 dark:text-white uppercase tracking-wider mb-2">
+                    Técnica y Ejecución
+                </h3>
+                <p class="text-sm text-gray-600 dark:text-gray-300 leading-relaxed whitespace-pre-line">
+                    {{ ejercicio.definicion|default:"Sin descripción detallada disponible." }}
+                </p>
+            </div>
+
+            <!-- Vídeo de Demostración -->
+            {% if ejercicio.video %}
+            <div class="pt-4 border-t border-gray-100 dark:border-gray-700/60">
+                <h3 class="text-sm font-bold text-gray-900 dark:text-white uppercase tracking-wider mb-3 flex items-center">
+                    <i class="fa-brands fa-youtube text-red-500 text-lg mr-2"></i> Vídeo Demostrativo
+                </h3>
+                <a href="{{ ejercicio.video }}" target="_blank" rel="noopener noreferrer" 
+                   class="inline-flex items-center px-4 py-2.5 rounded-xl bg-red-500 hover:bg-red-600 text-white font-bold text-xs shadow-sm transition-all space-x-2">
+                    <i class="fa-solid fa-arrow-up-right-from-square"></i>
+                    <span>Ver Demostración en Vídeo</span>
+                </a>
+            </div>
+            {% endif %}
+
+        </div>
+
+    </div>
+
+    <!-- Historial de Entrenamientos Recientes con este Ejercicio -->
+    {% if historial_reciente %}
+    <div class="bg-white dark:bg-gray-800 rounded-3xl p-6 shadow-sm border border-gray-100 dark:border-gray-700/80 space-y-4">
+        <h3 class="text-base font-bold text-gray-900 dark:text-white flex items-center">
+            <i class="fa-solid fa-clock-rotate-left text-brand-light mr-2"></i> Tu Historial en este Ejercicio
+        </h3>
+
+        <div class="divide-y divide-gray-100 dark:divide-gray-700/50">
+            {% for reg in historial_reciente %}
+            <div class="py-3 flex items-center justify-between">
+                <div>
+                    <span class="font-bold text-sm text-gray-900 dark:text-white block">{{ reg.fecha|date:"d M Y" }}</span>
+                    <span class="text-xs text-gray-500">{{ reg.etiqueta|default:"Sesión libre" }}</span>
+                </div>
+                <div class="text-right">
+                    <div class="flex items-center space-x-1.5 justify-end">
+                        {% for serie in reg.series_detalle.all %}
+                        <span class="px-2 py-0.5 rounded-md bg-gray-100 dark:bg-gray-700 text-[11px] font-semibold text-gray-700 dark:text-gray-300">
+                            {% if serie.tiempo_segundos %}{{ serie.tiempo_segundos }}s{% else %}{{ serie.peso_kg|default:0 }}kg{% endif %}
+                        </span>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+    {% endif %}
+
+</div>
+{% endblock %}

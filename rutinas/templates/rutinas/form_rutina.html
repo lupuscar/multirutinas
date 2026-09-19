@@ -1,0 +1,471 @@
+{% extends 'base.html' %}
+
+{% block title %}{% if es_edicion %}Editar: {{ rutina.nombre }}{% else %}Nueva Rutina{% endif %} | FitApp{% endblock %}
+
+{% block content %}
+<div x-data="rutinaForm()" class="max-w-3xl mx-auto pb-24">
+
+    <!-- Cabecera con botón volver -->
+    <div class="flex items-center justify-between mb-6">
+        <div class="flex items-center space-x-3">
+            <a href="{% url 'rutinas:lista_rutinas' %}" class="w-10 h-10 rounded-xl bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 flex items-center justify-center text-gray-600 dark:text-gray-300 hover:text-brand-light shadow-sm transition-colors">
+                <i class="fa-solid fa-arrow-left"></i>
+            </a>
+            <div>
+                <h1 class="text-2xl font-bold text-gray-900 dark:text-white">
+                    {% if es_edicion %}Editar Rutina{% else %}Crear Nueva Rutina{% endif %}
+                </h1>
+                <p class="text-sm text-gray-500 dark:text-gray-400">Diseña tu plan de entrenamiento personalizado</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Formulario Principal -->
+    <form @submit.prevent="guardarRutina()" class="space-y-6">
+        {% csrf_token %}
+
+        <!-- Tarjeta: Datos Básicos -->
+        <div class="bg-white dark:bg-gray-800 rounded-2xl p-5 shadow-sm border border-gray-100 dark:border-gray-700 space-y-4">
+            <div>
+                <label class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1">Nombre de la Rutina *</label>
+                <input type="text" x-model="nombre" placeholder="Ej: Torso A, Día de Pierna, Cardio HIIT..." 
+                       class="w-full px-4 py-3 rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900/50 text-gray-900 dark:text-white focus:ring-2 focus:ring-brand-light focus:border-brand-light outline-none font-medium text-base"
+                       required>
+            </div>
+
+            <div>
+                <label class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1">Descripción u Objetivo (Opcional)</label>
+                <textarea x-model="descripcion" rows="2" placeholder="Ej: Foco en hipertrofia de pecho y tríceps con descansos de 90s..." 
+                          class="w-full px-4 py-2.5 rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900/50 text-gray-900 dark:text-white focus:ring-2 focus:ring-brand-light focus:border-brand-light outline-none text-sm"></textarea>
+            </div>
+        </div>
+
+        <!-- Sección: Ejercicios Seleccionados -->
+        <div class="space-y-3">
+            <div class="flex items-center justify-between px-1">
+                <div class="flex items-center space-x-2">
+                    <span class="text-lg font-bold text-gray-900 dark:text-white">Ejercicios seleccionados</span>
+                    <span class="px-2.5 py-0.5 rounded-full text-xs font-bold bg-brand-light/10 text-brand-light" x-text="ejerciciosSeleccionados.length"></span>
+                </div>
+                <button type="button" @click="abrirSelector()" class="inline-flex items-center text-sm font-bold text-brand-light hover:text-brand-dark transition-colors">
+                    <i class="fa-solid fa-plus mr-1.5"></i> Añadir Ejercicio
+                </button>
+            </div>
+
+            <!-- Lista de Ejercicios Añadidos -->
+            <div class="space-y-3">
+                <template x-for="(item, index) in ejerciciosSeleccionados" :key="item.ejercicio_id + '-' + index">
+                    <div class="bg-white dark:bg-gray-800 rounded-2xl p-4 shadow-sm border border-gray-100 dark:border-gray-700 transition-all hover:border-brand-light/40">
+                        
+                        <!-- Cabecera de la tarjeta del ejercicio -->
+                        <div class="flex items-center justify-between mb-3">
+                            <div class="flex items-center space-x-3">
+                                <span class="w-7 h-7 rounded-lg bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 font-bold text-xs flex items-center justify-center" x-text="index + 1"></span>
+                                <div>
+                                    <h3 class="font-bold text-gray-900 dark:text-white text-base" x-text="item.nombre"></h3>
+                                    <div class="flex items-center space-x-2 mt-0.5">
+                                        <span class="text-xs text-gray-500 dark:text-gray-400 font-medium" x-text="item.grupo_muscular"></span>
+                                        <span class="text-xs text-gray-400">•</span>
+                                        <span class="text-xs font-semibold px-2 py-0.5 rounded" 
+                                              :class="item.modalidad === 'TIEMPO' ? 'bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-400' : 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400'"
+                                              x-text="item.modalidad === 'TIEMPO' ? '⏱️ Tiempo' : '🏋️ Peso + Reps'">
+                                        </span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Botones de Acción (Subir, Bajar, Quitar) -->
+                            <div class="flex items-center space-x-1">
+                                <button type="button" @click="moverArriba(index)" :disabled="index === 0" class="w-8 h-8 rounded-lg text-gray-400 hover:text-gray-700 dark:hover:text-white disabled:opacity-30">
+                                    <i class="fa-solid fa-arrow-up text-xs"></i>
+                                </button>
+                                <button type="button" @click="moverAbajo(index)" :disabled="index === ejerciciosSeleccionados.length - 1" class="w-8 h-8 rounded-lg text-gray-400 hover:text-gray-700 dark:hover:text-white disabled:opacity-30">
+                                    <i class="fa-solid fa-arrow-down text-xs"></i>
+                                </button>
+                                <button type="button" @click="quitarEjercicio(index)" class="w-8 h-8 rounded-lg text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors">
+                                    <i class="fa-solid fa-trash-can text-sm"></i>
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- Metas del ejercicio (Series + Reps o Segundos) -->
+                        <div class="grid grid-cols-2 gap-3 pt-2 border-t border-gray-100 dark:border-gray-700/60">
+                            <!-- Series Objetivo -->
+                            <div class="bg-gray-50 dark:bg-gray-900/40 rounded-xl p-2.5">
+                                <label class="block text-xs font-semibold text-gray-500 dark:text-gray-400 mb-1">Series</label>
+                                <div class="flex items-center space-x-2">
+                                    <button type="button" @click="item.series_objetivo = Math.max(1, (parseInt(item.series_objetivo) || 3) - 1)" class="w-8 h-8 rounded-lg bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-200 font-bold hover:bg-gray-100 flex items-center justify-center">-</button>
+                                    <input type="number" x-model.number="item.series_objetivo" min="1" max="20" class="w-full text-center font-bold text-gray-900 dark:text-white bg-transparent outline-none">
+                                    <button type="button" @click="item.series_objetivo = (parseInt(item.series_objetivo) || 3) + 1" class="w-8 h-8 rounded-lg bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-200 font-bold hover:bg-gray-100 flex items-center justify-center">+</button>
+                                </div>
+                            </div>
+
+                            <!-- Repeticiones o Segundos Objetivo -->
+                            <div class="bg-gray-50 dark:bg-gray-900/40 rounded-xl p-2.5">
+                                <label class="block text-xs font-semibold text-gray-500 dark:text-gray-400 mb-1" x-text="item.modalidad === 'TIEMPO' ? 'Segundos por serie' : 'Repeticiones'"></label>
+                                <div class="flex items-center space-x-2">
+                                    <!-- Modo Repeticiones -->
+                                    <template x-if="item.modalidad !== 'TIEMPO'">
+                                        <div class="flex items-center space-x-2 w-full">
+                                            <button type="button" @click="item.repeticiones_objetivo = Math.max(1, (parseInt(item.repeticiones_objetivo) || 10) - 1)" class="w-8 h-8 rounded-lg bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-200 font-bold hover:bg-gray-100 flex items-center justify-center">-</button>
+                                            <input type="number" x-model.number="item.repeticiones_objetivo" min="1" class="w-full text-center font-bold text-gray-900 dark:text-white bg-transparent outline-none">
+                                            <button type="button" @click="item.repeticiones_objetivo = (parseInt(item.repeticiones_objetivo) || 10) + 1" class="w-8 h-8 rounded-lg bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-200 font-bold hover:bg-gray-100 flex items-center justify-center">+</button>
+                                        </div>
+                                    </template>
+                                    <!-- Modo Tiempo -->
+                                    <template x-if="item.modalidad === 'TIEMPO'">
+                                        <div class="flex items-center space-x-2 w-full">
+                                            <button type="button" @click="item.tiempo_objetivo_segundos = Math.max(5, (parseInt(item.tiempo_objetivo_segundos) || 30) - 5)" class="w-8 h-8 rounded-lg bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-200 font-bold hover:bg-gray-100 flex items-center justify-center">-5</button>
+                                            <input type="number" x-model.number="item.tiempo_objetivo_segundos" min="5" step="5" class="w-full text-center font-bold text-gray-900 dark:text-white bg-transparent outline-none">
+                                            <button type="button" @click="item.tiempo_objetivo_segundos = (parseInt(item.tiempo_objetivo_segundos) || 30) + 5" class="w-8 h-8 rounded-lg bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-200 font-bold hover:bg-gray-100 flex items-center justify-center">+5</button>
+                                        </div>
+                                    </template>
+                                </div>
+                            </div>
+                        </div>
+
+                    </div>
+                </template>
+
+                <!-- Estado vacío si no hay ejercicios -->
+                <div x-show="ejerciciosSeleccionados.length === 0" class="py-12 px-4 text-center bg-white dark:bg-gray-800 rounded-2xl border-2 border-dashed border-gray-200 dark:border-gray-700">
+                    <i class="fa-solid fa-dumbbell text-3xl text-gray-300 dark:text-gray-600 mb-2"></i>
+                    <p class="font-bold text-gray-700 dark:text-gray-300">Aún no has añadido ejercicios</p>
+                    <p class="text-xs text-gray-500 dark:text-gray-400 mt-1 max-w-xs mx-auto">Pulsa en "Añadir Ejercicio" para elegir del catálogo o crear uno nuevo.</p>
+                    <button type="button" @click="abrirSelector()" class="mt-4 px-5 py-2.5 rounded-xl bg-brand-light/10 hover:bg-brand-light/20 text-brand-light font-bold text-sm transition-colors">
+                        <i class="fa-solid fa-plus mr-1"></i> Explorar Catálogo
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Botón Flotante Inferior de Guardado -->
+        <div class="fixed bottom-0 left-0 right-0 p-4 bg-white/95 dark:bg-gray-900/95 backdrop-blur-md border-t border-gray-200 dark:border-gray-800 z-20 md:static md:bg-transparent md:border-0 md:p-0">
+            <div class="max-w-3xl mx-auto flex items-center space-x-3">
+                <a href="{% url 'rutinas:lista_rutinas' %}" class="w-1/3 py-3.5 px-4 text-center rounded-xl bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 font-bold text-sm hover:bg-gray-200 transition-colors">
+                    Cancelar
+                </a>
+                <button type="submit" :disabled="guardando || ejerciciosSeleccionados.length === 0" 
+                        class="w-2/3 py-3.5 px-6 rounded-xl bg-brand-light hover:bg-brand-dark text-white font-bold text-sm shadow-lg shadow-brand-light/30 transition-all flex items-center justify-center disabled:opacity-50">
+                    <i class="fa-solid fa-floppy-disk mr-2" x-show="!guardando"></i>
+                    <i class="fa-solid fa-circle-notch fa-spin mr-2" x-show="guardando"></i>
+                    <span x-text="guardando ? 'Guardando...' : '{% if es_edicion %}Guardar Cambios{% else %}Crear Rutina{% endif %}'"></span>
+                </button>
+            </div>
+        </div>
+
+    </form>
+
+    <!-- ================================================================= -->
+    <!-- MODAL / DRAWER: SELECTOR DE EJERCICIOS -->
+    <!-- ================================================================= -->
+    <div x-show="mostrarSelector" x-cloak class="fixed inset-0 z-50 overflow-hidden flex items-end md:items-center justify-center">
+        <!-- Backdrop -->
+        <div class="fixed inset-0 bg-black/60 backdrop-blur-sm transition-opacity" @click="mostrarSelector = false"></div>
+
+        <!-- Contenedor Modal -->
+        <div class="relative w-full max-w-xl max-h-[85vh] bg-white dark:bg-gray-800 rounded-t-3xl md:rounded-3xl shadow-2xl flex flex-col overflow-hidden z-10">
+            
+            <!-- Cabecera Selector -->
+            <div class="p-5 border-b border-gray-100 dark:border-gray-700 flex items-center justify-between">
+                <div>
+                    <h2 class="text-xl font-bold text-gray-900 dark:text-white">Seleccionar Ejercicio</h2>
+                    <p class="text-xs text-gray-500 dark:text-gray-400">Toca un ejercicio para añadirlo a tu rutina</p>
+                </div>
+                <button type="button" @click="mostrarSelector = false" class="w-9 h-9 rounded-full bg-gray-100 dark:bg-gray-700 text-gray-500 hover:text-gray-900 dark:hover:text-white flex items-center justify-center">
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
+            </div>
+
+            <!-- Buscador y Filtros -->
+            <div class="p-4 border-b border-gray-100 dark:border-gray-700/60 bg-gray-50 dark:bg-gray-900/40 space-y-3">
+                <div class="relative">
+                    <i class="fa-solid fa-magnifying-glass absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400 text-sm"></i>
+                    <input type="text" x-model="busqueda" placeholder="Buscar por nombre (ej: Banca, Sentadilla, Plancha)..." 
+                           class="w-full pl-10 pr-4 py-2.5 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-sm text-gray-900 dark:text-white outline-none focus:ring-2 focus:ring-brand-light">
+                </div>
+
+                <!-- Chips de Grupo Muscular -->
+                <div class="flex items-center space-x-2 overflow-x-auto pb-1 scrollbar-none text-xs">
+                    <button type="button" @click="filtroGrupo = ''" :class="filtroGrupo === '' ? 'bg-brand-light text-white font-bold' : 'bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-400 border border-gray-200 dark:border-gray-700'" class="px-3 py-1.5 rounded-lg whitespace-nowrap transition-colors">
+                        Todos
+                    </button>
+                    {% for codigo, nombre in grupos_musculares %}
+                    <button type="button" @click="filtroGrupo = '{{ nombre }}'" :class="filtroGrupo === '{{ nombre }}' ? 'bg-brand-light text-white font-bold' : 'bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-400 border border-gray-200 dark:border-gray-700'" class="px-3 py-1.5 rounded-lg whitespace-nowrap transition-colors">
+                        {{ nombre }}
+                    </button>
+                    {% endfor %}
+                </div>
+            </div>
+
+            <!-- Lista de Ejercicios Filtrados -->
+            <div class="flex-1 overflow-y-auto p-4 space-y-2 divide-y divide-gray-100 dark:divide-gray-700/40">
+                <template x-for="ej in ejerciciosFiltrados" :key="ej.id">
+                    <div @click="agregarEjercicio(ej)" class="pt-2.5 pb-2 px-2 flex items-center justify-between hover:bg-gray-50 dark:hover:bg-gray-700/30 rounded-xl cursor-pointer transition-colors">
+                        <div class="flex items-center space-x-3">
+                            <div class="w-10 h-10 rounded-xl bg-brand-light/10 text-brand-light flex items-center justify-center font-bold">
+                                <i :class="ej.modalidad === 'TIEMPO' ? 'fa-solid fa-stopwatch' : 'fa-solid fa-dumbbell'"></i>
+                            </div>
+                            <div>
+                                <h4 class="font-bold text-gray-900 dark:text-white text-sm" x-text="ej.nombre"></h4>
+                                <div class="flex items-center space-x-2 text-xs text-gray-500 dark:text-gray-400 mt-0.5">
+                                    <span x-text="ej.grupo_muscular"></span>
+                                    <span>•</span>
+                                    <span x-text="ej.tipo"></span>
+                                </div>
+                            </div>
+                        </div>
+                        <span class="w-8 h-8 rounded-full bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 flex items-center justify-center text-xs group-hover:bg-brand-light group-hover:text-white transition-colors">
+                            <i class="fa-solid fa-plus"></i>
+                        </span>
+                    </div>
+                </template>
+
+                <div x-show="ejerciciosFiltrados.length === 0" class="py-8 text-center">
+                    <p class="text-sm text-gray-500 dark:text-gray-400">No se encontraron ejercicios con ese criterio.</p>
+                </div>
+            </div>
+
+            <!-- Pie del Selector: Botón para crear ejercicio personalizado -->
+            <div class="p-4 border-t border-gray-100 dark:border-gray-700 bg-gray-50 dark:bg-gray-900/60">
+                <button type="button" @click="mostrarModalNuevoEjercicio = true; mostrarSelector = false" class="w-full py-2.5 px-4 rounded-xl border-2 border-dashed border-brand-light text-brand-light hover:bg-brand-light/10 font-bold text-sm transition-colors flex items-center justify-center space-x-2">
+                    <i class="fa-solid fa-sparkles"></i>
+                    <span>¿No encuentras tu ejercicio? Crear nuevo</span>
+                </button>
+            </div>
+
+        </div>
+    </div>
+
+
+    <!-- ================================================================= -->
+    <!-- MODAL: CREAR EJERCICIO PERSONALIZADO RÁPIDO -->
+    <!-- ================================================================= -->
+    <div x-show="mostrarModalNuevoEjercicio" x-cloak class="fixed inset-0 z-50 overflow-hidden flex items-center justify-center p-4">
+        <div class="fixed inset-0 bg-black/60 backdrop-blur-sm" @click="mostrarModalNuevoEjercicio = false"></div>
+
+        <div class="relative w-full max-w-md bg-white dark:bg-gray-800 rounded-3xl shadow-2xl p-6 z-10 space-y-4">
+            <div class="flex items-center justify-between">
+                <h3 class="text-lg font-bold text-gray-900 dark:text-white flex items-center">
+                    <i class="fa-solid fa-plus-circle text-brand-light mr-2"></i> Crear Ejercicio Personalizado
+                </h3>
+                <button type="button" @click="mostrarModalNuevoEjercicio = false" class="text-gray-400 hover:text-gray-600">
+                    <i class="fa-solid fa-xmark text-lg"></i>
+                </button>
+            </div>
+
+            <form @submit.prevent="crearNuevoEjercicio()" class="space-y-4">
+                <!-- Nombre -->
+                <div>
+                    <label class="block text-xs font-bold text-gray-700 dark:text-gray-300 mb-1">Nombre del Ejercicio *</label>
+                    <input type="text" x-model="nuevoEj.nombre" placeholder="Ej: Plancha Isométrica, Hip Thrust..." required
+                           class="w-full px-3.5 py-2.5 rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900/50 text-sm text-gray-900 dark:text-white outline-none focus:ring-2 focus:ring-brand-light">
+                </div>
+
+                <!-- Modalidad (Reps vs Tiempo) -->
+                <div>
+                    <label class="block text-xs font-bold text-gray-700 dark:text-gray-300 mb-1.5">¿Cómo se mide este ejercicio?</label>
+                    <div class="grid grid-cols-2 gap-2">
+                        <label :class="nuevoEj.modalidad === 'REPS_PESO' ? 'border-brand-light bg-brand-light/10 text-brand-light font-bold' : 'border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-400'" class="border rounded-xl p-3 text-center cursor-pointer transition-all text-xs flex flex-col items-center">
+                            <input type="radio" x-model="nuevoEj.modalidad" value="REPS_PESO" class="sr-only">
+                            <i class="fa-solid fa-dumbbell text-base mb-1"></i>
+                            <span>Repeticiones y Peso</span>
+                        </label>
+                        <label :class="nuevoEj.modalidad === 'TIEMPO' ? 'border-brand-light bg-brand-light/10 text-brand-light font-bold' : 'border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-400'" class="border rounded-xl p-3 text-center cursor-pointer transition-all text-xs flex flex-col items-center">
+                            <input type="radio" x-model="nuevoEj.modalidad" value="TIEMPO" class="sr-only">
+                            <i class="fa-solid fa-stopwatch text-base mb-1"></i>
+                            <span>Tiempo / Duración</span>
+                        </label>
+                    </div>
+                </div>
+
+                <!-- Grupo Muscular y Tipo -->
+                <div class="grid grid-cols-2 gap-3">
+                    <div>
+                        <label class="block text-xs font-bold text-gray-700 dark:text-gray-300 mb-1">Grupo Muscular</label>
+                        <select x-model="nuevoEj.grupo_muscular" class="w-full px-3 py-2 rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900/50 text-xs text-gray-900 dark:text-white outline-none">
+                            {% for codigo, nombre in grupos_musculares %}
+                            <option value="{{ codigo }}">{{ nombre }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-gray-700 dark:text-gray-300 mb-1">Tipo</label>
+                        <select x-model="nuevoEj.tipo" class="w-full px-3 py-2 rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900/50 text-xs text-gray-900 dark:text-white outline-none">
+                            {% for codigo, nombre in tipos_ejercicio %}
+                            <option value="{{ codigo }}">{{ nombre }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                </div>
+
+                <!-- Botones modal -->
+                <div class="pt-3 flex items-center space-x-2">
+                    <button type="button" @click="mostrarModalNuevoEjercicio = false" class="w-1/2 py-2.5 rounded-xl bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 font-bold text-xs">
+                        Cancelar
+                    </button>
+                    <button type="submit" :disabled="creandoEj" class="w-1/2 py-2.5 rounded-xl bg-brand-light hover:bg-brand-dark text-white font-bold text-xs shadow-md transition-colors flex items-center justify-center">
+                        <span x-text="creandoEj ? 'Creando...' : 'Crear y Añadir'"></span>
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+</div>
+
+<!-- Script Reactivo con Alpine.js -->
+<script>
+function rutinaForm() {
+    return {
+        nombre: '{{ rutina.nombre|default:""|escapejs }}',
+        descripcion: '{{ rutina.descripcion|default:""|escapejs }}',
+        catalogoEjercicios: JSON.parse('{{ ejercicios_json|escapejs }}'),
+        ejerciciosSeleccionados: JSON.parse('{{ rutina_ejercicios_json|default:"[]"|escapejs }}'),
+        
+        mostrarSelector: false,
+        mostrarModalNuevoEjercicio: false,
+        busqueda: '',
+        filtroGrupo: '',
+        guardando: false,
+        creandoEj: false,
+
+        nuevoEj: {
+            nombre: '',
+            modalidad: 'REPS_PESO',
+            grupo_muscular: 'PEC',
+            tipo: 'LIB'
+        },
+
+        get ejerciciosFiltrados() {
+            return this.catalogoEjercicios.filter(ej => {
+                const coincideNombre = ej.nombre.toLowerCase().includes(this.busqueda.toLowerCase());
+                const coincideGrupo = !this.filtroGrupo || ej.grupo_muscular === this.filtroGrupo;
+                return coincideNombre && coincideGrupo;
+            });
+        },
+
+        abrirSelector() {
+            this.busqueda = '';
+            this.filtroGrupo = '';
+            this.mostrarSelector = true;
+        },
+
+        agregarEjercicio(ej) {
+            // Comprobamos si ya está añadido
+            const yaExiste = this.ejerciciosSeleccionados.some(item => item.ejercicio_id === ej.id);
+            if (yaExiste) {
+                alert("Este ejercicio ya está en tu rutina.");
+                return;
+            }
+
+            this.ejerciciosSeleccionados.push({
+                ejercicio_id: ej.id,
+                nombre: ej.nombre,
+                modalidad: ej.modalidad,
+                grupo_muscular: ej.grupo_muscular,
+                series_objetivo: 3,
+                repeticiones_objetivo: ej.modalidad === 'TIEMPO' ? null : 10,
+                tiempo_objetivo_segundos: ej.modalidad === 'TIEMPO' ? 45 : null,
+            });
+
+            this.mostrarSelector = false;
+        },
+
+        quitarEjercicio(index) {
+            this.ejerciciosSeleccionados.splice(index, 1);
+        },
+
+        moverArriba(index) {
+            if (index > 0) {
+                const el = this.ejerciciosSeleccionados.splice(index, 1)[0];
+                this.ejerciciosSeleccionados.splice(index - 1, 0, el);
+            }
+        },
+
+        moverAbajo(index) {
+            if (index < this.ejerciciosSeleccionados.length - 1) {
+                const el = this.ejerciciosSeleccionados.splice(index, 1)[0];
+                this.ejerciciosSeleccionados.splice(index + 1, 0, el);
+            }
+        },
+
+        async crearNuevoEjercicio() {
+            if (!this.nuevoEj.nombre.trim()) return;
+            this.creandoEj = true;
+
+            try {
+                const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]').value;
+                const response = await fetch("{% url 'rutinas:crear_ejercicio_rapido_ajax' %}", {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': csrfToken
+                    },
+                    body: JSON.stringify(this.nuevoEj)
+                });
+                const res = await response.json();
+
+                if (res.status === 'success') {
+                    // Añadimos al catálogo local y a los seleccionados
+                    this.catalogoEjercicios.unshift(res.ejercicio);
+                    this.agregarEjercicio(res.ejercicio);
+                    
+                    // Reset modal
+                    this.nuevoEj.nombre = '';
+                    this.mostrarModalNuevoEjercicio = false;
+                } else {
+                    alert(res.message || "Error al crear el ejercicio.");
+                }
+            } catch (err) {
+                alert("Error de red al crear el ejercicio.");
+            } finally {
+                this.creandoEj = false;
+            }
+        },
+
+        async guardarRutina() {
+            if (!this.nombre.trim()) {
+                alert("Por favor escribe un nombre para tu rutina.");
+                return;
+            }
+            if (this.ejerciciosSeleccionados.length === 0) {
+                alert("Debes añadir al menos un ejercicio a la rutina.");
+                return;
+            }
+
+            this.guardando = true;
+            try {
+                const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]').value;
+                const payload = {
+                    nombre: this.nombre,
+                    descripcion: this.descripcion,
+                    ejercicios: this.ejerciciosSeleccionados
+                };
+
+                const url = "{% if es_edicion %}{% url 'rutinas:editar_rutina' rutina.id %}{% else %}{% url 'rutinas:crear_rutina' %}{% endif %}";
+                const response = await fetch(url, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': csrfToken
+                    },
+                    body: JSON.stringify(payload)
+                });
+                const res = await response.json();
+
+                if (res.status === 'success') {
+                    window.location.href = res.redirect_url || "{% url 'rutinas:lista_rutinas' %}";
+                } else {
+                    alert(res.message || "Error al guardar la rutina.");
+                }
+            } catch (err) {
+                alert("Error de red al guardar la rutina.");
+            } finally {
+                this.guardando = false;
+            }
+        }
+    }
+}
+</script>
+{% endblock %}

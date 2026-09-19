@@ -1,0 +1,381 @@
+{% extends 'base.html' %}
+
+{% block title %}Entrenando: {{ rutina.nombre }} | FitApp{% endblock %}
+
+{% block content %}
+<div x-data="modoGym()" x-init="iniciarTemporizadorSesion()" class="max-w-2xl mx-auto pb-32">
+
+    <!-- ================================================================= -->
+    <!-- BARRA SUPERIOR FIJA: PROGRESO Y CRONÓMETRO DE SESIÓN -->
+    <!-- ================================================================= -->
+    <div class="sticky top-0 z-20 bg-white/95 dark:bg-gray-900/95 backdrop-blur-md -mx-4 px-4 py-3 border-b border-gray-200 dark:border-gray-800 shadow-sm mb-6">
+        <div class="flex items-center justify-between">
+            <div class="flex items-center space-x-3">
+                <a href="{% url 'rutinas:lista_rutinas' %}" class="w-9 h-9 rounded-xl bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300 flex items-center justify-center hover:bg-gray-200 text-sm">
+                    <i class="fa-solid fa-chevron-left"></i>
+                </a>
+                <div>
+                    <h1 class="text-base font-extrabold text-gray-900 dark:text-white truncate max-w-[160px] sm:max-w-xs">
+                        {{ rutina.nombre }}
+                    </h1>
+                    <div class="flex items-center space-x-2 text-xs text-gray-500 dark:text-gray-400">
+                        <span class="inline-flex items-center text-brand-light font-bold">
+                            <i class="fa-regular fa-clock mr-1"></i> <span x-text="tiempoSesionFormateado"></span>
+                        </span>
+                        <span>•</span>
+                        <span x-text="seriesCompletadasTotales + '/' + totalSeriesTotales + ' series'"></span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Botón Finalizar Sesión -->
+            <button type="button" @click="finalizarEntrenamiento()" 
+                    class="px-3.5 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs shadow-md shadow-emerald-600/20 flex items-center space-x-1.5 transition-transform active:scale-95">
+                <i class="fa-solid fa-flag-checkered"></i>
+                <span>Terminar</span>
+            </button>
+        </div>
+
+        <!-- Barra de progreso general -->
+        <div class="w-full bg-gray-100 dark:bg-gray-800 h-1.5 rounded-full mt-2.5 overflow-hidden">
+            <div class="bg-gradient-to-r from-brand-light to-emerald-500 h-full transition-all duration-300"
+                 :style="'width: ' + porcentajeProgreso + '%'"></div>
+        </div>
+    </div>
+
+
+    <!-- ================================================================= -->
+    <!-- LISTA DE EJERCICIOS (TARJETAS MODO GYM TÁCTILES) -->
+    <!-- ================================================================= -->
+    <div class="space-y-6">
+        
+        <template x-for="(item, ejIndex) in ejercicios" :key="item.ejercicio_id">
+            <div class="bg-white dark:bg-gray-800 rounded-3xl shadow-sm border border-gray-100 dark:border-gray-700/80 overflow-hidden">
+                
+                <!-- Cabecera del Ejercicio -->
+                <div class="p-4 bg-gray-50/80 dark:bg-gray-700/40 border-b border-gray-100 dark:border-gray-700/60 flex items-center justify-between">
+                    <div class="flex items-center space-x-3">
+                        <span class="w-8 h-8 rounded-xl bg-brand-light/10 text-brand-light font-black text-sm flex items-center justify-center" x-text="ejIndex + 1"></span>
+                        <div>
+                            <h2 class="font-extrabold text-base text-gray-900 dark:text-white" x-text="item.ejercicio_nombre"></h2>
+                            <div class="flex items-center space-x-2 text-xs text-gray-500 dark:text-gray-400 mt-0.5">
+                                <span x-text="item.grupo_muscular"></span>
+                                <span>•</span>
+                                <span class="font-semibold" :class="item.modalidad === 'TIEMPO' ? 'text-amber-500' : 'text-blue-500'" 
+                                      x-text="item.modalidad === 'TIEMPO' ? '⏱️ Por tiempo' : '🏋️ Peso y Reps'"></span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Lista de Series del Ejercicio -->
+                <div class="p-3 sm:p-4 space-y-3">
+                    
+                    <template x-for="(serie, sIndex) in item.series_sugeridas" :key="serie.numero_serie">
+                        <div class="p-3 rounded-2xl border transition-all duration-200"
+                             :class="serie.completado ? 'bg-emerald-50/70 dark:bg-emerald-950/20 border-emerald-300 dark:border-emerald-800/60' : 'bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700'">
+                            
+                            <div class="flex items-center justify-between gap-2">
+                                
+                                <!-- Número de Serie -->
+                                <div class="w-8 text-center">
+                                    <span class="font-black text-sm" 
+                                          :class="serie.completado ? 'text-emerald-600 dark:text-emerald-400' : 'text-gray-400'"
+                                          x-text="'S' + serie.numero_serie"></span>
+                                </div>
+
+                                <!-- CONTROLES DE LA SERIE: MODO PESO + REPETICIONES -->
+                                <template x-if="item.modalidad !== 'TIEMPO'">
+                                    <div class="flex-1 grid grid-cols-2 gap-2">
+                                        
+                                        <!-- Peso (kg) con botones rápidos táctiles -->
+                                        <div class="flex items-center bg-gray-50 dark:bg-gray-900/60 rounded-xl p-1 border border-gray-200/80 dark:border-gray-700/60">
+                                            <button type="button" @click="ajustarValor(serie, 'peso_kg', -2.5)" 
+                                                    class="w-7 h-8 rounded-lg bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 font-bold text-xs shadow-xs hover:bg-gray-100 flex items-center justify-center active:scale-95">-</button>
+                                            <div class="flex-1 text-center px-1">
+                                                <input type="number" step="0.5" x-model="serie.peso_kg" placeholder="0" 
+                                                       @change="guardarSerie(item, serie)"
+                                                       class="w-full text-center font-black text-sm text-gray-900 dark:text-white bg-transparent outline-none">
+                                                <span class="block text-[9px] text-gray-400 uppercase font-bold -mt-1">kg</span>
+                                            </div>
+                                            <button type="button" @click="ajustarValor(serie, 'peso_kg', 2.5)" 
+                                                    class="w-7 h-8 rounded-lg bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 font-bold text-xs shadow-xs hover:bg-gray-100 flex items-center justify-center active:scale-95">+</button>
+                                        </div>
+
+                                        <!-- Repeticiones con botones rápidos táctiles -->
+                                        <div class="flex items-center bg-gray-50 dark:bg-gray-900/60 rounded-xl p-1 border border-gray-200/80 dark:border-gray-700/60">
+                                            <button type="button" @click="ajustarValor(serie, 'repeticiones', -1)" 
+                                                    class="w-7 h-8 rounded-lg bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 font-bold text-xs shadow-xs hover:bg-gray-100 flex items-center justify-center active:scale-95">-</button>
+                                            <div class="flex-1 text-center px-1">
+                                                <input type="number" x-model.number="serie.repeticiones" placeholder="10" 
+                                                       @change="guardarSerie(item, serie)"
+                                                       class="w-full text-center font-black text-sm text-gray-900 dark:text-white bg-transparent outline-none">
+                                                <span class="block text-[9px] text-gray-400 uppercase font-bold -mt-1">reps</span>
+                                            </div>
+                                            <button type="button" @click="ajustarValor(serie, 'repeticiones', 1)" 
+                                                    class="w-7 h-8 rounded-lg bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 font-bold text-xs shadow-xs hover:bg-gray-100 flex items-center justify-center active:scale-95">+</button>
+                                        </div>
+
+                                    </div>
+                                </template>
+
+                                <!-- CONTROLES DE LA SERIE: MODO TIEMPO / DURACIÓN -->
+                                <template x-if="item.modalidad === 'TIEMPO'">
+                                    <div class="flex-1 flex items-center space-x-2">
+                                        <div class="flex-1 flex items-center bg-gray-50 dark:bg-gray-900/60 rounded-xl p-1.5 border border-gray-200/80 dark:border-gray-700/60">
+                                            <button type="button" @click="ajustarValor(serie, 'tiempo_segundos', -5)" 
+                                                    class="w-8 h-8 rounded-lg bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 font-bold text-xs shadow-xs hover:bg-gray-100 flex items-center justify-center active:scale-95">-5s</button>
+                                            <div class="flex-1 text-center px-2">
+                                                <input type="number" x-model.number="serie.tiempo_segundos" placeholder="30" 
+                                                       @change="guardarSerie(item, serie)"
+                                                       class="w-full text-center font-black text-sm text-gray-900 dark:text-white bg-transparent outline-none">
+                                                <span class="block text-[9px] text-gray-400 uppercase font-bold -mt-1">segundos</span>
+                                            </div>
+                                            <button type="button" @click="ajustarValor(serie, 'tiempo_segundos', 5)" 
+                                                    class="w-8 h-8 rounded-lg bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 font-bold text-xs shadow-xs hover:bg-gray-100 flex items-center justify-center active:scale-95">+5s</button>
+                                        </div>
+                                    </div>
+                                </template>
+
+                                <!-- BOTÓN COMPLETAR SERIE (1-TAP TOUCH) -->
+                                <button type="button" @click="alternarSerieCompletada(item, serie)" 
+                                        :class="serie.completado ? 'bg-emerald-500 text-white shadow-md shadow-emerald-500/30' : 'bg-gray-100 dark:bg-gray-700 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200'"
+                                        class="w-12 h-11 rounded-xl flex items-center justify-center transition-all duration-200 active:scale-90 font-bold">
+                                    <i class="fa-solid fa-check text-base"></i>
+                                </button>
+
+                            </div>
+
+                        </div>
+                    </template>
+
+                    <!-- Botón para añadir una serie extra en caliente -->
+                    <button type="button" @click="agregarSerieExtra(item)" 
+                            class="w-full py-2.5 rounded-xl border border-dashed border-gray-300 dark:border-gray-700 text-gray-500 dark:text-gray-400 hover:text-brand-light hover:border-brand-light font-bold text-xs transition-colors flex items-center justify-center space-x-1">
+                        <i class="fa-solid fa-plus text-[10px]"></i>
+                        <span>Añadir Serie Extra</span>
+                    </button>
+
+                </div>
+
+            </div>
+        </template>
+
+    </div>
+
+
+    <!-- ================================================================= -->
+    <!-- TEMPORIZADOR FLOTANTE DE DESCANSO ("REST TIMER") -->
+    <!-- ================================================================= -->
+    <div x-show="descansoActivo" x-cloak 
+         class="fixed bottom-4 left-4 right-4 max-w-md mx-auto z-40 bg-gray-900/95 dark:bg-gray-950/95 backdrop-blur-md rounded-2xl p-4 text-white shadow-2xl border border-gray-700/60 transition-all transform duration-300">
+        <div class="flex items-center justify-between">
+            <div class="flex items-center space-x-3">
+                <!-- Indicador animado -->
+                <div class="w-11 h-11 rounded-xl bg-brand-light/30 border border-brand-light flex items-center justify-center text-brand-light font-black text-lg">
+                    <i class="fa-solid fa-stopwatch animate-pulse"></i>
+                </div>
+                <div>
+                    <span class="block text-[11px] font-bold text-gray-400 uppercase tracking-wider">Tiempo de Descanso</span>
+                    <span class="text-2xl font-black text-white tracking-tight" x-text="formatearSegundos(descansoRestante)"></span>
+                </div>
+            </div>
+
+            <!-- Botones Rápidos de Tiempo (+30s / Saltar) -->
+            <div class="flex items-center space-x-2">
+                <button type="button" @click="sumarDescanso(30)" 
+                        class="px-2.5 py-1.5 rounded-lg bg-gray-800 hover:bg-gray-700 text-xs font-bold text-gray-300 transition-colors">
+                    +30s
+                </button>
+                <button type="button" @click="detenerDescanso()" 
+                        class="w-8 h-8 rounded-lg bg-gray-800 hover:bg-gray-700 text-gray-400 hover:text-white flex items-center justify-center transition-colors">
+                    <i class="fa-solid fa-xmark text-sm"></i>
+                </button>
+            </div>
+        </div>
+
+        <!-- Barra de progreso de descanso -->
+        <div class="w-full bg-gray-800 h-1.5 rounded-full mt-3 overflow-hidden">
+            <div class="bg-brand-light h-full transition-all duration-1000 ease-linear"
+                 :style="'width: ' + ((descansoRestante / descansoTotal) * 100) + '%'"></div>
+        </div>
+    </div>
+
+</div>
+
+<!-- Audio para notificación de fin de descanso -->
+<audio id="audioFinDescanso" src="https://assets.mixkit.co/active_storage/sfx/2869/2869-preview.mp3" preload="auto"></audio>
+
+<script>
+function modoGym() {
+    return {
+        rutinaNombre: '{{ rutina.nombre|escapejs }}',
+        ejercicios: JSON.parse('{{ rutina_preparada_json|escapejs }}'),
+        csrfToken: '{{ csrf_token }}',
+
+        // Temporizador de sesión total
+        segundosSesion: 0,
+        intervaloSesion: null,
+
+        // Temporizador de descanso (Rest timer)
+        descansoActivo: false,
+        descansoRestante: 60,
+        descansoTotal: 60,
+        intervaloDescanso: null,
+
+        iniciarTemporizadorSesion() {
+            this.intervaloSesion = setInterval(() => {
+                this.segundosSesion++;
+            }, 1000);
+        },
+
+        get tiempoSesionFormateado() {
+            const mins = Math.floor(this.segundosSesion / 60);
+            const secs = this.segundosSesion % 60;
+            return `${mins}:${secs < 10 ? '0' : ''}${secs}`;
+        },
+
+        get totalSeriesTotales() {
+            return this.ejercicios.reduce((total, ej) => total + ej.series_sugeridas.length, 0);
+        },
+
+        get seriesCompletadasTotales() {
+            return this.ejercicios.reduce((total, ej) => {
+                return total + ej.series_sugeridas.filter(s => s.completado).length;
+            }, 0);
+        },
+
+        get porcentajeProgreso() {
+            if (this.totalSeriesTotales === 0) return 0;
+            return Math.round((this.seriesCompletadasTotales / this.totalSeriesTotales) * 100);
+        },
+
+        formatearSegundos(seg) {
+            const m = Math.floor(seg / 60);
+            const s = seg % 60;
+            return `${m}:${s < 10 ? '0' : ''}${s}`;
+        },
+
+        ajustarValor(serie, campo, delta) {
+            let val = parseFloat(serie[campo]) || 0;
+            val = Math.max(0, val + delta);
+            // Redondear a 2 decimales si es peso
+            if (campo === 'peso_kg') {
+                serie[campo] = Math.round(val * 10) / 10;
+            } else {
+                serie[campo] = Math.round(val);
+            }
+        },
+
+        agregarSerieExtra(item) {
+            const ultimoNum = item.series_sugeridas.length > 0 
+                ? item.series_sugeridas[item.series_sugeridas.length - 1].numero_serie 
+                : 0;
+            const anterior = item.series_sugeridas[item.series_sugeridas.length - 1] || {};
+
+            item.series_sugeridas.push({
+                numero_serie: ultimoNum + 1,
+                repeticiones: anterior.repeticiones || 10,
+                peso_kg: anterior.peso_kg || '',
+                tiempo_segundos: anterior.tiempo_segundos || 45,
+                completado: false
+            });
+        },
+
+        async alternarSerieCompletada(item, serie) {
+            serie.completado = !serie.completado;
+
+            // Guardar automáticamente en base de datos vía AJAX
+            await this.guardarSerie(item, serie);
+
+            // Si se marca como completada, arrancar el temporizador de descanso
+            if (serie.completado) {
+                this.iniciarDescanso(60); // 60 segundos de descanso por defecto
+            }
+        },
+
+        async guardarSerie(item, serie) {
+            try {
+                const payload = {
+                    ejercicio_id: item.ejercicio_id,
+                    numero_serie: serie.numero_serie,
+                    repeticiones: serie.repeticiones,
+                    peso: serie.peso_kg,
+                    tiempo_segundos: serie.tiempo_segundos,
+                    rutina_nombre: this.rutinaNombre
+                };
+
+                const response = await fetch("{% url 'rutinas:guardar_serie_ajax' %}", {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': this.csrfToken
+                    },
+                    body: JSON.stringify(payload)
+                });
+                const res = await response.json();
+                if (res.status !== 'success') {
+                    console.error("Error al guardar serie:", res.message);
+                }
+            } catch (err) {
+                console.error("Error de conexión al guardar serie:", err);
+            }
+        },
+
+        iniciarDescanso(segundos) {
+            clearInterval(this.intervaloDescanso);
+            this.descansoTotal = segundos;
+            this.descansoRestante = segundos;
+            this.descansoActivo = true;
+
+            this.intervaloDescanso = setInterval(() => {
+                if (this.descansoRestante > 0) {
+                    this.descansoRestante--;
+                } else {
+                    this.detenerDescanso();
+                    // Alarma sutil
+                    const audio = document.getElementById('audioFinDescanso');
+                    if (audio) audio.play().catch(() => {});
+                    if ('vibrate' in navigator) navigator.vibrate([200, 100, 200]);
+                }
+            }, 1000);
+        },
+
+        sumarDescanso(segundos) {
+            this.descansoRestante += segundos;
+            this.descansoTotal += segundos;
+        },
+
+        detenerDescanso() {
+            clearInterval(this.intervaloDescanso);
+            this.descansoActivo = false;
+        },
+
+        async finalizarEntrenamiento() {
+            const completadas = this.seriesCompletadasTotales;
+            const total = this.totalSeriesTotales;
+
+            if (!confirm(`¿Deseas finalizar tu entrenamiento? Has completado ${completadas} de ${total} series.`)) {
+                return;
+            }
+
+            try {
+                const response = await fetch("{% url 'rutinas:finalizar_entrenamiento_ajax' %}", {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': this.csrfToken
+                    }
+                });
+                const res = await response.json();
+                if (res.status === 'success') {
+                    window.location.href = res.redirect_url || "{% url 'dashboard:dashboard' %}";
+                }
+            } catch (err) {
+                window.location.href = "{% url 'dashboard:dashboard' %}";
+            }
+        }
+    }
+}
+</script>
+{% endblock %}
