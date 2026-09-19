@@ -42,6 +42,15 @@ Panel de administración:
 http://127.0.0.1:8000/admin/
 ```
 
+### 6. Cargar datos de prueba (Demo)
+
+Para ver el Dashboard y las rutinas con gráficas de fuerza, volumen y estadísticas reales:
+
+```bash
+python manage.py crear_datos_demo
+```
+*(Opcional: `--usuario carlos` para un usuario específico, o `--limpiar` para regenerarlos).*
+
 ---
 
 ## 📦 Dependencias

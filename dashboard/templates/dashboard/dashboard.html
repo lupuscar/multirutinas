@@ -8,29 +8,175 @@
 
 <div x-data="dashboardAnalytics()" x-init="iniciarGraficos()" class="max-w-6xl mx-auto pb-16 space-y-6">
 
-    <!-- Cabecera -->
+    <!-- ================================================================= -->
+    <!-- CABECERA PRINCIPAL -->
+    <!-- ================================================================= -->
     <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-            <h1 class="text-2xl sm:text-3xl font-black text-gray-900 dark:text-white flex items-center">
+            <div class="flex items-center space-x-2">
+                <span class="px-2.5 py-1 rounded-full bg-brand-light/10 text-brand-light text-xs font-black uppercase tracking-wider">
+                    Centro de Mando
+                </span>
+                {% if racha_semanas > 0 %}
+                <span class="px-2.5 py-1 rounded-full bg-amber-50 dark:bg-amber-900/30 text-amber-600 dark:text-amber-400 text-xs font-black flex items-center space-x-1">
+                    <i class="fa-solid fa-fire text-amber-500 animate-pulse"></i>
+                    <span>{{ racha_semanas }} {% if racha_semanas == 1 %}semana{% else %}semanas{% endif %} de racha</span>
+                </span>
+                {% endif %}
+            </div>
+            <h1 class="text-2xl sm:text-3xl font-black text-gray-900 dark:text-white mt-1 flex items-center">
                 <i class="fa-solid fa-chart-line text-brand-light mr-3"></i> Tu Progreso
             </h1>
-            <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">
-                Evolución de tus entrenamientos, récords y constancia.
+            <p class="text-xs sm:text-sm text-gray-500 dark:text-gray-400">
+                Hola, <strong>{{ user.first_name|default:user.username }}</strong>. Resumen de tu rendimiento, récords personales y constancia deportiva.
             </p>
         </div>
 
-        <a href="{% url 'rutinas:lista_rutinas' %}" class="inline-flex items-center justify-center px-5 py-2.5 rounded-xl bg-brand-light hover:bg-brand-dark text-white font-bold text-sm shadow-md shadow-brand-light/30 transition-all hover:scale-105 active:scale-95">
-            <i class="fa-solid fa-play mr-2 text-xs"></i> Entrenar Hoy
-        </a>
+        <div class="flex items-center space-x-3">
+            <!-- Botón Compartir Logros (Modal) -->
+            <button type="button" @click="modalCompartir = true"
+                    class="inline-flex items-center justify-center px-4 py-2.5 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-200 font-bold text-xs sm:text-sm shadow-xs transition-all hover:scale-105 active:scale-95">
+                <i class="fa-solid fa-share-nodes mr-2 text-brand-light"></i> Compartir Logros
+            </button>
+
+            <!-- Botón Ir a Rutinas -->
+            <a href="{% url 'rutinas:lista_rutinas' %}" 
+               class="inline-flex items-center justify-center px-5 py-2.5 rounded-xl bg-brand-light hover:bg-brand-dark text-white font-bold text-xs sm:text-sm shadow-md shadow-brand-light/30 transition-all hover:scale-105 active:scale-95">
+                <i class="fa-solid fa-play mr-2 text-xs"></i> Ver Rutinas
+            </a>
+        </div>
     </div>
 
     <!-- ================================================================= -->
-    <!-- TARJETAS DE MÉTRICAS CLAVE (KPIs) -->
+    <!-- PANEL DE HÁBITOS, RACHA Y PRÓXIMO ENTRENAMIENTO -->
+    <!-- ================================================================= -->
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        
+        <!-- Tarjeta de Hábitos & Tira Semanal (2 columnas) -->
+        <div class="lg:col-span-2 bg-white dark:bg-gray-800 rounded-3xl p-5 sm:p-6 border border-gray-100 dark:border-gray-700/80 shadow-sm flex flex-col justify-between space-y-5">
+            <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                <div>
+                    <h2 class="text-base font-black text-gray-900 dark:text-white flex items-center">
+                        <i class="fa-solid fa-calendar-week text-brand-light mr-2"></i> Tu Semana de Entrenamiento
+                    </h2>
+                    <p class="text-xs text-gray-500 dark:text-gray-400">
+                        Meta semanal: <strong>{{ dias_entrenados_semana }}</strong> de <strong>{{ meta_semanal }} días</strong> completados.
+                    </p>
+                </div>
+
+                <span class="inline-flex items-center px-3 py-1 rounded-xl text-xs font-bold {% if progreso_meta_pct >= 100 %}bg-emerald-100 text-emerald-800 dark:bg-emerald-900/40 dark:text-emerald-300{% else %}bg-brand-light/10 text-brand-light{% endif %}">
+                    {% if progreso_meta_pct >= 100 %}
+                    <i class="fa-solid fa-circle-check mr-1.5"></i> ¡Meta cumplida!
+                    {% else %}
+                    {{ progreso_meta_pct }}% conseguido
+                    {% endif %}
+                </span>
+            </div>
+
+            <!-- Barra de progreso semanal -->
+            <div class="w-full bg-gray-100 dark:bg-gray-700/60 rounded-full h-2.5 overflow-hidden">
+                <div class="bg-gradient-to-r from-brand-light to-emerald-500 h-2.5 rounded-full transition-all duration-700" 
+                     :style="'width: {{ progreso_meta_pct }}%'"></div>
+            </div>
+
+            <!-- Tira de los 7 días (L a D) -->
+            <div class="grid grid-cols-7 gap-2 pt-1">
+                {% for dia in calendario_semanal %}
+                <div class="flex flex-col items-center justify-center p-2 sm:p-3 rounded-2xl transition-all
+                            {% if dia.entrenado %}
+                                bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-200 dark:border-emerald-800/60 text-emerald-700 dark:text-emerald-300
+                            {% elif dia.es_hoy %}
+                                bg-brand-light/10 border-2 border-brand-light text-brand-light font-black
+                            {% elif dia.es_futuro %}
+                                bg-gray-50 dark:bg-gray-900/40 border border-transparent text-gray-400
+                            {% else %}
+                                bg-gray-50 dark:bg-gray-900/60 border border-gray-100 dark:border-gray-800 text-gray-400
+                            {% endif %}">
+                    <span class="text-[10px] sm:text-xs font-bold uppercase tracking-wider">{{ dia.nombre }}</span>
+                    <span class="text-sm sm:text-base font-black my-1">{{ dia.dia_mes }}</span>
+                    
+                    <div>
+                        {% if dia.entrenado %}
+                            <i class="fa-solid fa-circle-check text-emerald-500 text-xs sm:text-sm"></i>
+                        {% elif dia.es_hoy %}
+                            <span class="w-2 h-2 rounded-full bg-brand-light animate-ping block"></span>
+                        {% else %}
+                            <span class="w-1.5 h-1.5 rounded-full bg-gray-300 dark:bg-gray-600 block"></span>
+                        {% endif %}
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+
+        <!-- Tarjeta Siguiente Entrenamiento Recomendado (1 columna) -->
+        <div class="bg-gradient-to-br from-indigo-900 to-brand-dark rounded-3xl p-5 sm:p-6 text-white shadow-xl shadow-indigo-950/20 flex flex-col justify-between space-y-4 relative overflow-hidden">
+            <!-- Patrón decorativo de fondo -->
+            <div class="absolute -right-8 -bottom-8 w-36 h-36 bg-white/5 rounded-full blur-xl pointer-events-none"></div>
+
+            <div>
+                <div class="flex items-center justify-between mb-2">
+                    <span class="px-2.5 py-0.5 rounded-lg bg-white/10 backdrop-blur-md text-[11px] font-bold uppercase tracking-wider text-amber-300 flex items-center">
+                        <i class="fa-solid fa-bolt mr-1 text-xs"></i> Recomendado Hoy
+                    </span>
+                    <i class="fa-solid fa-dumbbell text-white/20 text-2xl"></i>
+                </div>
+
+                {% if rutina_sugerida %}
+                <h3 class="text-lg font-black text-white leading-tight">
+                    {{ rutina_sugerida.rutina.nombre }}
+                </h3>
+                <p class="text-xs text-indigo-200 mt-1 line-clamp-2">
+                    {{ rutina_sugerida.rutina.descripcion|default:"Rutina equilibrada para maximizar tu ganancia de fuerza e hipertrofia." }}
+                </p>
+
+                <div class="mt-3 flex items-center space-x-3 text-xs text-indigo-200">
+                    <span><i class="fa-solid fa-layer-group mr-1 text-brand-light"></i> {{ rutina_sugerida.ejercicios_count }} ejercicios</span>
+                    <span>•</span>
+                    <span>
+                        {% if rutina_sugerida.ultima_fecha %}
+                            Último: {{ rutina_sugerida.ultima_fecha|date:"d M" }}
+                        {% else %}
+                            Aún sin realizar
+                        {% endif %}
+                    </span>
+                </div>
+                {% else %}
+                <h3 class="text-lg font-black text-white leading-tight">
+                    Crea tu primera rutina
+                </h3>
+                <p class="text-xs text-indigo-200 mt-1">
+                    Diseña tu rutina a medida para recibir sugerencias inteligentes cada día.
+                </p>
+                {% endif %}
+            </div>
+
+            <div class="pt-2">
+                {% if rutina_sugerida %}
+                <a href="{% url 'rutinas:iniciar_rutina' rutina_sugerida.rutina.id %}" 
+                   class="w-full py-3 px-4 rounded-xl bg-white text-brand-dark hover:bg-indigo-50 font-black text-xs sm:text-sm text-center shadow-lg shadow-black/20 flex items-center justify-center space-x-2 transition-all hover:scale-[1.02] active:scale-95">
+                    <i class="fa-solid fa-play text-xs"></i>
+                    <span>Iniciar Entrenamiento</span>
+                </a>
+                {% else %}
+                <a href="{% url 'rutinas:crear_rutina' %}" 
+                   class="w-full py-3 px-4 rounded-xl bg-white text-brand-dark hover:bg-indigo-50 font-black text-xs sm:text-sm text-center shadow-lg shadow-black/20 flex items-center justify-center space-x-2 transition-all hover:scale-[1.02] active:scale-95">
+                    <i class="fa-solid fa-plus text-xs"></i>
+                    <span>Crear Rutina Ahora</span>
+                </a>
+                {% endif %}
+            </div>
+        </div>
+
+    </div>
+
+    <!-- ================================================================= -->
+    <!-- TARJETAS DE MÉTRICAS CLAVE (KPIS) CON TENDENCIA SEMANAL -->
     <!-- ================================================================= -->
     <div class="grid grid-cols-2 lg:grid-cols-4 gap-4">
         
         <!-- Sesiones este mes -->
-        <div class="bg-white dark:bg-gray-800 rounded-2xl p-4 sm:p-5 border border-gray-100 dark:border-gray-700/80 shadow-sm flex flex-col justify-between">
+        <div class="bg-white dark:bg-gray-800 rounded-3xl p-4 sm:p-5 border border-gray-100 dark:border-gray-700/80 shadow-sm flex flex-col justify-between">
             <div class="flex items-center justify-between text-gray-400 mb-2">
                 <span class="text-xs font-bold uppercase tracking-wider">Este Mes</span>
                 <span class="w-8 h-8 rounded-xl bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 flex items-center justify-center text-sm">
@@ -41,24 +187,45 @@
                 <span class="text-2xl sm:text-3xl font-black text-gray-900 dark:text-white">{{ dias_entrenados_mes }}</span>
                 <span class="text-xs text-gray-500 dark:text-gray-400 block mt-0.5">días entrenados</span>
             </div>
+            <div class="mt-3 pt-2.5 border-t border-gray-100 dark:border-gray-700/60 flex items-center text-[11px] text-gray-400">
+                <i class="fa-solid fa-clock text-blue-500 mr-1.5"></i>
+                <span>{{ dias_entrenados_semana }} días esta semana</span>
+            </div>
         </div>
 
-        <!-- Volumen Total -->
-        <div class="bg-white dark:bg-gray-800 rounded-2xl p-4 sm:p-5 border border-gray-100 dark:border-gray-700/80 shadow-sm flex flex-col justify-between">
+        <!-- Carga / Volumen Total -->
+        <div class="bg-white dark:bg-gray-800 rounded-3xl p-4 sm:p-5 border border-gray-100 dark:border-gray-700/80 shadow-sm flex flex-col justify-between">
             <div class="flex items-center justify-between text-gray-400 mb-2">
-                <span class="text-xs font-bold uppercase tracking-wider">Carga Total</span>
+                <span class="text-xs font-bold uppercase tracking-wider">Volumen Total</span>
                 <span class="w-8 h-8 rounded-xl bg-purple-50 dark:bg-purple-900/30 text-purple-600 dark:text-purple-400 flex items-center justify-center text-sm">
                     <i class="fa-solid fa-weight-hanging"></i>
                 </span>
             </div>
             <div>
                 <span class="text-2xl sm:text-3xl font-black text-gray-900 dark:text-white">{{ volumen_total|floatformat:0 }}</span>
-                <span class="text-xs text-gray-500 dark:text-gray-400 block mt-0.5">kg acumulados</span>
+                <span class="text-xs text-gray-500 dark:text-gray-400 block mt-0.5">kg levantados</span>
+            </div>
+            <div class="mt-3 pt-2.5 border-t border-gray-100 dark:border-gray-700/60 flex items-center text-[11px]">
+                {% if vol_cambio_pct is not None %}
+                    {% if vol_cambio_pct >= 0 %}
+                    <span class="text-emerald-600 dark:text-emerald-400 font-bold flex items-center">
+                        <i class="fa-solid fa-arrow-trend-up mr-1"></i> +{{ vol_cambio_pct }}%
+                    </span>
+                    <span class="text-gray-400 ml-1">vs sem. anterior</span>
+                    {% else %}
+                    <span class="text-rose-600 dark:text-rose-400 font-bold flex items-center">
+                        <i class="fa-solid fa-arrow-trend-down mr-1"></i> {{ vol_cambio_pct }}%
+                    </span>
+                    <span class="text-gray-400 ml-1">vs sem. anterior</span>
+                    {% endif %}
+                {% else %}
+                    <span class="text-gray-400">{{ vol_sem_actual|floatformat:0 }} kg esta semana</span>
+                {% endif %}
             </div>
         </div>
 
         <!-- Series Completadas -->
-        <div class="bg-white dark:bg-gray-800 rounded-2xl p-4 sm:p-5 border border-gray-100 dark:border-gray-700/80 shadow-sm flex flex-col justify-between">
+        <div class="bg-white dark:bg-gray-800 rounded-3xl p-4 sm:p-5 border border-gray-100 dark:border-gray-700/80 shadow-sm flex flex-col justify-between">
             <div class="flex items-center justify-between text-gray-400 mb-2">
                 <span class="text-xs font-bold uppercase tracking-wider">Series</span>
                 <span class="w-8 h-8 rounded-xl bg-emerald-50 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400 flex items-center justify-center text-sm">
@@ -69,10 +236,27 @@
                 <span class="text-2xl sm:text-3xl font-black text-gray-900 dark:text-white">{{ total_series }}</span>
                 <span class="text-xs text-gray-500 dark:text-gray-400 block mt-0.5">series registradas</span>
             </div>
+            <div class="mt-3 pt-2.5 border-t border-gray-100 dark:border-gray-700/60 flex items-center text-[11px]">
+                {% if series_cambio_pct is not None %}
+                    {% if series_cambio_pct >= 0 %}
+                    <span class="text-emerald-600 dark:text-emerald-400 font-bold flex items-center">
+                        <i class="fa-solid fa-arrow-up mr-1"></i> +{{ series_cambio_pct }}%
+                    </span>
+                    <span class="text-gray-400 ml-1">vs sem. anterior</span>
+                    {% else %}
+                    <span class="text-rose-600 dark:text-rose-400 font-bold flex items-center">
+                        <i class="fa-solid fa-arrow-down mr-1"></i> {{ series_cambio_pct }}%
+                    </span>
+                    <span class="text-gray-400 ml-1">vs sem. anterior</span>
+                    {% endif %}
+                {% else %}
+                    <span class="text-gray-400">{{ series_sem_actual }} series esta semana</span>
+                {% endif %}
+            </div>
         </div>
 
         <!-- Rutinas Creadas -->
-        <div class="bg-white dark:bg-gray-800 rounded-2xl p-4 sm:p-5 border border-gray-100 dark:border-gray-700/80 shadow-sm flex flex-col justify-between">
+        <div class="bg-white dark:bg-gray-800 rounded-3xl p-4 sm:p-5 border border-gray-100 dark:border-gray-700/80 shadow-sm flex flex-col justify-between">
             <div class="flex items-center justify-between text-gray-400 mb-2">
                 <span class="text-xs font-bold uppercase tracking-wider">Planes</span>
                 <span class="w-8 h-8 rounded-xl bg-amber-50 dark:bg-amber-900/30 text-amber-600 dark:text-amber-400 flex items-center justify-center text-sm">
@@ -83,8 +267,73 @@
                 <span class="text-2xl sm:text-3xl font-black text-gray-900 dark:text-white">{{ total_rutinas }}</span>
                 <span class="text-xs text-gray-500 dark:text-gray-400 block mt-0.5">rutinas activas</span>
             </div>
+            <div class="mt-3 pt-2.5 border-t border-gray-100 dark:border-gray-700/60 flex items-center text-[11px] text-gray-400">
+                <i class="fa-solid fa-star text-amber-400 mr-1.5"></i>
+                <span>Listas para ejecutar</span>
+            </div>
         </div>
 
+    </div>
+
+    <!-- ================================================================= -->
+    <!-- SALÓN DE RÉCORDS PERSONALES (PRS) Y 1RM ESTIMADO -->
+    <!-- ================================================================= -->
+    <div class="bg-white dark:bg-gray-800 rounded-3xl p-5 sm:p-6 border border-gray-100 dark:border-gray-700/80 shadow-sm space-y-4">
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+            <div>
+                <h2 class="text-lg font-black text-gray-900 dark:text-white flex items-center">
+                    <i class="fa-solid fa-trophy text-amber-400 mr-2"></i> Salón de Récords Personales (PRs)
+                </h2>
+                <p class="text-xs text-gray-500 dark:text-gray-400">
+                    Tus mejores levantamientos históricos y fuerza máxima estimada a 1 repetición (1RM).
+                </p>
+            </div>
+            <span class="text-[11px] font-bold text-gray-400 self-start sm:self-auto bg-gray-50 dark:bg-gray-900 px-3 py-1.5 rounded-xl">
+                Fórmula de Epley (1RM)
+            </span>
+        </div>
+
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 pt-2">
+            {% for rec in records_personales %}
+            <div class="p-4 rounded-2xl bg-gray-50 dark:bg-gray-900/50 border border-gray-100 dark:border-gray-700/70 hover:border-amber-400/50 transition-all flex flex-col justify-between space-y-3 group">
+                <div class="flex items-start justify-between">
+                    <div>
+                        <span class="text-[10px] font-bold uppercase tracking-wider text-brand-light block">
+                            {{ rec.ejercicio.get_grupo_muscular_display }}
+                        </span>
+                        <h4 class="text-sm font-black text-gray-900 dark:text-white group-hover:text-brand-light transition-colors">
+                            {{ rec.ejercicio.nombre }}
+                        </h4>
+                    </div>
+                    <span class="w-7 h-7 rounded-lg bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300 flex items-center justify-center text-xs shrink-0">
+                        <i class="fa-solid fa-medal"></i>
+                    </span>
+                </div>
+
+                <div class="grid grid-cols-2 gap-2 pt-1 border-t border-gray-200/50 dark:border-gray-700/50">
+                    <div>
+                        <span class="text-[10px] text-gray-400 uppercase font-bold block">Peso Máx</span>
+                        <span class="text-base font-black text-gray-900 dark:text-white">
+                            {{ rec.max_peso }} <span class="text-xs font-semibold text-gray-400">kg</span>
+                        </span>
+                        <span class="text-[10px] text-gray-400 block">x {{ rec.max_peso_reps }} reps</span>
+                    </div>
+
+                    <div>
+                        <span class="text-[10px] text-amber-500 uppercase font-bold block">1RM Estimado</span>
+                        <span class="text-base font-black text-amber-500">
+                            {{ rec.max_1rm }} <span class="text-xs font-semibold text-amber-400/80">kg</span>
+                        </span>
+                        <span class="text-[10px] text-gray-400 block">{{ rec.max_1rm_fecha|date:"d M Y" }}</span>
+                    </div>
+                </div>
+            </div>
+            {% empty %}
+            <div class="col-span-full py-8 text-center text-gray-400 text-xs">
+                Aún no has registrado series con peso para calcular tus récords personales.
+            </div>
+            {% endfor %}
+        </div>
     </div>
 
     <!-- ================================================================= -->
@@ -94,10 +343,10 @@
         
         <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
             <div>
-                <h2 class="text-lg font-bold text-gray-900 dark:text-white flex items-center">
+                <h2 class="text-lg font-black text-gray-900 dark:text-white flex items-center">
                     <i class="fa-solid fa-arrow-trend-up text-brand-light mr-2"></i> Evolución de Carga y Rendimiento
                 </h2>
-                <p class="text-xs text-gray-500 dark:text-gray-400">Observa cómo aumentan tus cargas con el tiempo.</p>
+                <p class="text-xs text-gray-500 dark:text-gray-400">Observa cómo aumentan tus cargas a lo largo de las semanas.</p>
             </div>
 
             <!-- Selector de Ejercicio -->
@@ -144,7 +393,7 @@
         
         <!-- Historial de Últimas Sesiones (2 columnas) -->
         <div class="lg:col-span-2 bg-white dark:bg-gray-800 rounded-3xl p-5 sm:p-6 border border-gray-100 dark:border-gray-700/80 shadow-sm space-y-4">
-            <h2 class="text-base font-bold text-gray-900 dark:text-white flex items-center">
+            <h2 class="text-base font-black text-gray-900 dark:text-white flex items-center">
                 <i class="fa-solid fa-clock-rotate-left text-brand-light mr-2"></i> Sesiones Recientes
             </h2>
 
@@ -176,7 +425,7 @@
 
         <!-- Distribución por Grupo Muscular (1 columna) -->
         <div class="bg-white dark:bg-gray-800 rounded-3xl p-5 sm:p-6 border border-gray-100 dark:border-gray-700/80 shadow-sm space-y-4">
-            <h2 class="text-base font-bold text-gray-900 dark:text-white flex items-center">
+            <h2 class="text-base font-black text-gray-900 dark:text-white flex items-center">
                 <i class="fa-solid fa-pie-chart text-brand-light mr-2"></i> Enfoque Muscular
             </h2>
 
@@ -188,6 +437,93 @@
             </div>
         </div>
 
+    </div>
+
+    <!-- ================================================================= -->
+    <!-- MODAL PARA COMPARTIR LOGROS / TARJETA SOCIAL -->
+    <!-- ================================================================= -->
+    <div x-show="modalCompartir" 
+         x-transition:enter="transition ease-out duration-200"
+         x-transition:enter-start="opacity-0"
+         x-transition:enter-end="opacity-100"
+         x-transition:leave="transition ease-in duration-150"
+         x-transition:leave-start="opacity-100"
+         x-transition:leave-end="opacity-0"
+         class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm"
+         style="display: none;">
+        
+        <div @click.away="modalCompartir = false"
+             class="bg-white dark:bg-gray-800 rounded-3xl max-w-md w-full p-6 shadow-2xl border border-gray-100 dark:border-gray-700 space-y-5">
+            
+            <div class="flex items-center justify-between">
+                <h3 class="text-lg font-black text-gray-900 dark:text-white flex items-center">
+                    <i class="fa-solid fa-award text-brand-light mr-2"></i> Tu Tarjeta de Logros FitApp
+                </h3>
+                <button type="button" @click="modalCompartir = false" class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200">
+                    <i class="fa-solid fa-xmark text-lg"></i>
+                </button>
+            </div>
+
+            <!-- Tarjeta visual descargable / compartible -->
+            <div id="tarjetaLogros" class="p-6 rounded-3xl bg-gradient-to-br from-indigo-950 via-slate-900 to-indigo-900 text-white shadow-xl space-y-4 border border-indigo-500/20">
+                <div class="flex items-center justify-between">
+                    <div class="flex items-center space-x-2">
+                        <span class="w-8 h-8 rounded-xl bg-brand-light flex items-center justify-center text-white font-black text-sm">
+                            <i class="fa-solid fa-dumbbell"></i>
+                        </span>
+                        <span class="font-black text-base tracking-wider">FIT<span class="text-brand-light">APP</span></span>
+                    </div>
+                    <span class="text-[11px] px-2.5 py-0.5 rounded-full bg-white/10 text-amber-300 font-bold">
+                        🔥 {{ racha_semanas }} sem. racha
+                    </span>
+                </div>
+
+                <div>
+                    <h4 class="text-xl font-black">{{ user.get_full_name|default:user.username }}</h4>
+                    <p class="text-xs text-indigo-200">Atleta en FitApp • {{ dias_entrenados_mes }} días entrenados este mes</p>
+                </div>
+
+                <div class="grid grid-cols-2 gap-3 pt-2 border-t border-white/10 text-center">
+                    <div class="bg-white/5 p-3 rounded-2xl">
+                        <span class="text-[10px] uppercase font-bold text-indigo-300 block">Carga Total</span>
+                        <span class="text-lg font-black text-white">{{ volumen_total|floatformat:0 }} kg</span>
+                    </div>
+                    <div class="bg-white/5 p-3 rounded-2xl">
+                        <span class="text-[10px] uppercase font-bold text-indigo-300 block">Series Totales</span>
+                        <span class="text-lg font-black text-white">{{ total_series }}</span>
+                    </div>
+                </div>
+
+                {% if records_personales %}
+                <div class="pt-2 border-t border-white/10">
+                    <span class="text-[10px] uppercase font-bold text-amber-300 block mb-1.5">Top Récords 1RM:</span>
+                    <div class="space-y-1">
+                        {% for r in records_personales|slice:":2" %}
+                        <div class="flex items-center justify-between text-xs bg-white/5 px-3 py-1.5 rounded-xl">
+                            <span class="font-medium text-gray-200">{{ r.ejercicio.nombre }}</span>
+                            <span class="font-black text-amber-400">{{ r.max_1rm }} kg 1RM</span>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+                {% endif %}
+            </div>
+
+            <!-- Botones de Acción -->
+            <div class="space-y-2 pt-2">
+                <button type="button" @click="copiarTextoLogro()" 
+                        class="w-full py-3 px-4 rounded-xl bg-brand-light hover:bg-brand-dark text-white font-bold text-xs sm:text-sm flex items-center justify-center space-x-2 shadow-lg shadow-brand-light/20 transition-all hover:scale-[1.02] active:scale-95">
+                    <i class="fa-solid fa-copy"></i>
+                    <span x-text="textoCopiado ? '¡Copiado al portapapeles!' : 'Copiar Resumen para Compartir'"></span>
+                </button>
+                <button type="button" @click="window.print()" 
+                        class="w-full py-2.5 px-4 rounded-xl border border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 font-bold text-xs flex items-center justify-center space-x-2 transition-colors">
+                    <i class="fa-solid fa-print"></i>
+                    <span>Imprimir o Guardar en PDF</span>
+                </button>
+            </div>
+
+        </div>
     </div>
 
 </div>
@@ -202,9 +538,10 @@ function dashboardAnalytics() {
         hayDatosGrafico: false,
         chartProgresion: null,
         chartMuscular: null,
+        modalCompartir: false,
+        textoCopiado: false,
 
         iniciarGraficos() {
-            // Seleccionamos el primer ejercicio si existe
             const ids = Object.keys(this.datosProgresion);
             if (ids.length > 0) {
                 this.ejercicioSeleccionado = ids[0];
@@ -328,6 +665,21 @@ function dashboardAnalytics() {
 
         actualizarGrafico() {
             this.renderizarGraficoProgresion();
+        },
+
+        copiarTextoLogro() {
+            const texto = `🔥 ¡Mi progreso en FitApp!\n` +
+                          `• Racha actual: {{ racha_semanas }} semanas consecutivas\n` +
+                          `• Volumen acumulado: {{ volumen_total|floatformat:0 }} kg levantados\n` +
+                          `• Series completadas: {{ total_series }}\n` +
+                          `\n¡Entrena y supera tus límites en FitApp!`;
+            
+            navigator.clipboard.writeText(texto).then(() => {
+                this.textoCopiado = true;
+                setTimeout(() => {
+                    this.textoCopiado = false;
+                }, 3000);
+            });
         }
     }
 }
