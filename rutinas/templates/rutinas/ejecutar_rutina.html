@@ -121,18 +121,32 @@
 
                                 <!-- CONTROLES DE LA SERIE: MODO TIEMPO / DURACIÓN -->
                                 <template x-if="item.modalidad === 'TIEMPO'">
-                                    <div class="flex-1 flex items-center space-x-2">
-                                        <div class="flex-1 flex items-center bg-gray-50 dark:bg-gray-900/60 rounded-xl p-1.5 border border-gray-200/80 dark:border-gray-700/60">
-                                            <button type="button" @click="ajustarValor(serie, 'tiempo_segundos', -5)" 
-                                                    class="w-8 h-8 rounded-lg bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 font-bold text-xs shadow-xs hover:bg-gray-100 flex items-center justify-center active:scale-95">-5s</button>
+                                    <div class="flex-1 flex flex-col space-y-1.5">
+                                        <div class="flex items-center bg-gray-50 dark:bg-gray-900/60 rounded-xl p-1.5 border border-gray-200/80 dark:border-gray-700/60">
+                                            <button type="button" @click="ajustarTiempoInteligente(serie, -1)" 
+                                                    class="px-2.5 h-8 rounded-lg bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 font-bold text-xs shadow-xs hover:bg-gray-100 flex items-center justify-center active:scale-95"
+                                                    x-text="serie.tiempo_segundos >= 300 ? '-5m' : (serie.tiempo_segundos >= 60 ? '-1m' : '-5s')"></button>
                                             <div class="flex-1 text-center px-2">
-                                                <input type="number" x-model.number="serie.tiempo_segundos" placeholder="30" 
-                                                       @change="guardarSerie(item, serie)"
-                                                       class="w-full text-center font-black text-sm text-gray-900 dark:text-white bg-transparent outline-none">
-                                                <span class="block text-[9px] text-gray-400 uppercase font-bold -mt-1">segundos</span>
+                                                <div class="flex items-center justify-center space-x-1">
+                                                    <input type="number" x-model.number="serie.tiempo_segundos" placeholder="30" 
+                                                           @change="guardarSerie(item, serie)"
+                                                           class="w-20 text-center font-black text-sm text-gray-900 dark:text-white bg-transparent outline-none">
+                                                    <span class="text-[10px] text-gray-400 font-semibold">seg</span>
+                                                </div>
+                                                <span class="block text-[10px] text-brand-light font-bold -mt-0.5" 
+                                                      x-text="formatearSegundosHumano(serie.tiempo_segundos)"></span>
                                             </div>
-                                            <button type="button" @click="ajustarValor(serie, 'tiempo_segundos', 5)" 
-                                                    class="w-8 h-8 rounded-lg bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 font-bold text-xs shadow-xs hover:bg-gray-100 flex items-center justify-center active:scale-95">+5s</button>
+                                            <button type="button" @click="ajustarTiempoInteligente(serie, 1)" 
+                                                    class="px-2.5 h-8 rounded-lg bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 font-bold text-xs shadow-xs hover:bg-gray-100 flex items-center justify-center active:scale-95"
+                                                    x-text="serie.tiempo_segundos >= 300 ? '+5m' : (serie.tiempo_segundos >= 60 ? '+1m' : '+5s')"></button>
+                                        </div>
+                                        <!-- Presets rápidos para deportes, danza y carrera continua -->
+                                        <div class="flex items-center justify-center gap-1">
+                                            <button type="button" @click="fijarTiempoMinutos(item, serie, 15)" class="px-2 py-0.5 rounded-lg text-[10px] font-bold bg-gray-100 dark:bg-gray-700 hover:bg-brand-light hover:text-white text-gray-600 dark:text-gray-300 transition-colors">15m</button>
+                                            <button type="button" @click="fijarTiempoMinutos(item, serie, 30)" class="px-2 py-0.5 rounded-lg text-[10px] font-bold bg-gray-100 dark:bg-gray-700 hover:bg-brand-light hover:text-white text-gray-600 dark:text-gray-300 transition-colors">30m</button>
+                                            <button type="button" @click="fijarTiempoMinutos(item, serie, 45)" class="px-2 py-0.5 rounded-lg text-[10px] font-bold bg-gray-100 dark:bg-gray-700 hover:bg-brand-light hover:text-white text-gray-600 dark:text-gray-300 transition-colors">45m</button>
+                                            <button type="button" @click="fijarTiempoMinutos(item, serie, 60)" class="px-2 py-0.5 rounded-lg text-[10px] font-bold bg-gray-100 dark:bg-gray-700 hover:bg-brand-light hover:text-white text-gray-600 dark:text-gray-300 transition-colors">60m</button>
+                                            <button type="button" @click="fijarTiempoMinutos(item, serie, 90)" class="px-2 py-0.5 rounded-lg text-[10px] font-bold bg-gray-100 dark:bg-gray-700 hover:bg-brand-light hover:text-white text-gray-600 dark:text-gray-300 transition-colors">90m</button>
                                         </div>
                                     </div>
                                 </template>
@@ -254,6 +268,43 @@ function modoGym() {
             const m = Math.floor(seg / 60);
             const s = seg % 60;
             return `${m}:${s < 10 ? '0' : ''}${s}`;
+        },
+
+        formatearSegundosHumano(seg) {
+            if (!seg) return '0s';
+            seg = parseInt(seg) || 0;
+            if (seg >= 3600) {
+                const h = Math.floor(seg / 3600);
+                const m = Math.floor((seg % 3600) / 60);
+                return m > 0 ? `${h}h ${m}m` : `${h}h`;
+            }
+            if (seg >= 60) {
+                const m = Math.floor(seg / 60);
+                const s = seg % 60;
+                return s > 0 ? `${m}m ${s}s` : `${m} min`;
+            }
+            return `${seg}s`;
+        },
+
+        ajustarTiempoInteligente(serie, factor) {
+            let actual = parseInt(serie.tiempo_segundos) || 0;
+            let paso = 5;
+            if (actual >= 300) {
+                paso = 300; // 5 minutos si es >= 5 min
+            } else if (actual >= 60) {
+                paso = 60;  // 1 minuto si es >= 1 min
+            }
+            let nuevo = Math.max(5, actual + (paso * factor));
+            serie.tiempo_segundos = nuevo;
+            const item = this.ejercicios.find(e => e.series_sugeridas.some(s => s === serie));
+            if (item) {
+                this.guardarSerie(item, serie);
+            }
+        },
+
+        fijarTiempoMinutos(item, serie, minutos) {
+            serie.tiempo_segundos = minutos * 60;
+            this.guardarSerie(item, serie);
         },
 
         ajustarValor(serie, campo, delta) {

@@ -102,7 +102,12 @@
 
                             <!-- Repeticiones o Segundos Objetivo -->
                             <div class="bg-gray-50 dark:bg-gray-900/40 rounded-xl p-2.5">
-                                <label class="block text-xs font-semibold text-gray-500 dark:text-gray-400 mb-1" x-text="item.modalidad === 'TIEMPO' ? 'Segundos por serie' : 'Repeticiones'"></label>
+                                <label class="block text-xs font-semibold text-gray-500 dark:text-gray-400 mb-1">
+                                    <span x-text="item.modalidad === 'TIEMPO' ? 'Duración objetivo' : 'Repeticiones'"></span>
+                                    <span x-show="item.modalidad === 'TIEMPO' && item.tiempo_objetivo_segundos >= 60" 
+                                          class="text-brand-light font-bold ml-1" 
+                                          x-text="'(' + formatearTiempo(item.tiempo_objetivo_segundos) + ')'"></span>
+                                </label>
                                 <div class="flex items-center space-x-2">
                                     <!-- Modo Repeticiones -->
                                     <template x-if="item.modalidad !== 'TIEMPO'">
@@ -114,10 +119,17 @@
                                     </template>
                                     <!-- Modo Tiempo -->
                                     <template x-if="item.modalidad === 'TIEMPO'">
-                                        <div class="flex items-center space-x-2 w-full">
-                                            <button type="button" @click="item.tiempo_objetivo_segundos = Math.max(5, (parseInt(item.tiempo_objetivo_segundos) || 30) - 5)" class="w-8 h-8 rounded-lg bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-200 font-bold hover:bg-gray-100 flex items-center justify-center">-5</button>
-                                            <input type="number" x-model.number="item.tiempo_objetivo_segundos" min="5" step="5" class="w-full text-center font-bold text-gray-900 dark:text-white bg-transparent outline-none">
-                                            <button type="button" @click="item.tiempo_objetivo_segundos = (parseInt(item.tiempo_objetivo_segundos) || 30) + 5" class="w-8 h-8 rounded-lg bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-200 font-bold hover:bg-gray-100 flex items-center justify-center">+5</button>
+                                        <div class="flex items-center space-x-1.5 w-full">
+                                            <button type="button" @click="item.tiempo_objetivo_segundos = Math.max(5, (parseInt(item.tiempo_objetivo_segundos) || 30) - (item.tiempo_objetivo_segundos >= 300 ? 300 : (item.tiempo_objetivo_segundos >= 60 ? 60 : 5)))" 
+                                                    class="px-2 py-1.5 rounded-lg bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-200 font-bold text-xs hover:bg-gray-100 flex items-center justify-center" 
+                                                    x-text="item.tiempo_objetivo_segundos >= 300 ? '-5m' : (item.tiempo_objetivo_segundos >= 60 ? '-1m' : '-5s')"></button>
+                                            <div class="flex-1 flex items-center justify-center">
+                                                <input type="number" x-model.number="item.tiempo_objetivo_segundos" min="5" step="5" class="w-full text-center font-bold text-gray-900 dark:text-white bg-transparent outline-none">
+                                                <span class="text-[10px] text-gray-400 font-semibold mr-1">s</span>
+                                            </div>
+                                            <button type="button" @click="item.tiempo_objetivo_segundos = (parseInt(item.tiempo_objetivo_segundos) || 30) + (item.tiempo_objetivo_segundos >= 300 ? 300 : (item.tiempo_objetivo_segundos >= 60 ? 60 : 5))" 
+                                                    class="px-2 py-1.5 rounded-lg bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-200 font-bold text-xs hover:bg-gray-100 flex items-center justify-center" 
+                                                    x-text="item.tiempo_objetivo_segundos >= 300 ? '+5m' : (item.tiempo_objetivo_segundos >= 60 ? '+1m' : '+5s')"></button>
                                         </div>
                                     </template>
                                 </div>
@@ -345,6 +357,22 @@ function rutinaForm() {
             });
         },
 
+        formatearTiempo(seg) {
+            if (!seg) return '';
+            seg = parseInt(seg) || 0;
+            if (seg >= 3600) {
+                const h = Math.floor(seg / 3600);
+                const m = Math.floor((seg % 3600) / 60);
+                return m > 0 ? `${h}h ${m}m` : `${h}h`;
+            }
+            if (seg >= 60) {
+                const m = Math.floor(seg / 60);
+                const s = seg % 60;
+                return s > 0 ? `${m}m ${s}s` : `${m} min`;
+            }
+            return `${seg}s`;
+        },
+
         abrirSelector() {
             this.busqueda = '';
             this.filtroGrupo = '';
@@ -359,14 +387,17 @@ function rutinaForm() {
                 return;
             }
 
+            const esActividadContinua = ['DEP', 'DAN', 'OUT', 'CAR'].includes(ej.tipo) || 
+                                       ['Deporte', 'Danza', 'Aire Libre', 'Cardio'].some(t => (ej.tipo || '').includes(t));
+
             this.ejerciciosSeleccionados.push({
                 ejercicio_id: ej.id,
                 nombre: ej.nombre,
                 modalidad: ej.modalidad,
                 grupo_muscular: ej.grupo_muscular,
-                series_objetivo: 3,
+                series_objetivo: (ej.modalidad === 'TIEMPO' && esActividadContinua) ? 1 : 3,
                 repeticiones_objetivo: ej.modalidad === 'TIEMPO' ? null : 10,
-                tiempo_objetivo_segundos: ej.modalidad === 'TIEMPO' ? 45 : null,
+                tiempo_objetivo_segundos: ej.modalidad === 'TIEMPO' ? (esActividadContinua ? 1800 : 45) : null,
             });
 
             this.mostrarSelector = false;

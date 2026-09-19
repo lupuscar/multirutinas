@@ -118,3 +118,90 @@ class EjerciciosAppTests(TestCase):
         self.assertContains(response, 'Fondos en Paralelas de Carlos')
         self.assertContains(response, '25 kg')
 
+    def test_crear_ejercicios_deporte_danza_aire_libre(self):
+        """Verifica que se pueden crear actividades como pádel, danza y running al aire libre"""
+        self.client.login(username='carlos', password='password123')
+
+        # 1. Crear un partido de pádel (Deporte)
+        data_padel = {
+            'nombre': 'Partido de Pádel Mixto',
+            'modalidad': 'TIEMPO',
+            'grupo_muscular': 'FUL',
+            'tipo': 'DEP',
+            'dificultad': 'PRI',
+            'equipo_necesario': 'Pala de pádel y pelotas',
+            'definicion': 'Partido de fin de semana con amigos.',
+            'video': ''
+        }
+        res_padel = self.client.post(reverse('ejercicios:crear_ejercicio'), data_padel)
+        self.assertRedirects(res_padel, reverse('ejercicios:ejercicios'))
+
+        ej_padel = Ejercicio.objects.filter(nombre='Partido de Pádel Mixto').first()
+        self.assertIsNotNone(ej_padel)
+        self.assertEqual(ej_padel.tipo, 'DEP')
+        self.assertEqual(ej_padel.modalidad, 'TIEMPO')
+        self.assertEqual(ej_padel.grupo_muscular, 'FUL')
+        self.assertEqual(ej_padel.icono, 'fa-solid fa-table-tennis-paddle-ball')
+
+        # 2. Crear Danza Contemporánea
+        data_danza = {
+            'nombre': 'Clase de Danza Contemporánea',
+            'modalidad': 'TIEMPO',
+            'grupo_muscular': 'AGI',
+            'tipo': 'DAN',
+            'dificultad': 'INT',
+            'equipo_necesario': 'Ropa elástica',
+            'definicion': 'Trabajo de suelo, saltos y secuencias coreográficas.',
+            'video': ''
+        }
+        res_danza = self.client.post(reverse('ejercicios:crear_ejercicio'), data_danza)
+        self.assertRedirects(res_danza, reverse('ejercicios:ejercicios'))
+
+        ej_danza = Ejercicio.objects.filter(nombre='Clase de Danza Contemporánea').first()
+        self.assertIsNotNone(ej_danza)
+        self.assertEqual(ej_danza.tipo, 'DAN')
+        self.assertEqual(ej_danza.icono, 'fa-solid fa-person-dancing')
+
+    def test_filtro_por_tipo_de_actividad(self):
+        """Verifica que el catálogo permite filtrar por tipo de actividad (deportes, aire libre, etc.)"""
+        self.client.login(username='carlos', password='password123')
+
+        # Creamos una actividad deportiva
+        Ejercicio.objects.create(
+            nombre='Partido de Baloncesto 3x3',
+            modalidad='TIEMPO',
+            grupo_muscular='FUL',
+            tipo='DEP',
+            creado_por=self.user1
+        )
+
+        # Filtramos por tipo DEP
+        response = self.client.get(reverse('ejercicios:ejercicios') + '?tipo=DEP')
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'Partido de Baloncesto 3x3')
+        # No debe aparecer el ejercicio militar (LIB)
+        self.assertNotContains(response, 'Press Militar Oficial')
+
+    def test_formato_duracion_en_serie_y_detalle(self):
+        """Verifica que sesiones de 90 minutos se formateen como 1h 30m en lugar de segundos crudos"""
+        self.client.login(username='carlos', password='password123')
+
+        ej_running = Ejercicio.objects.create(
+            nombre='Running 10K',
+            modalidad='TIEMPO',
+            grupo_muscular='CAR',
+            tipo='OUT',
+            creado_por=self.user1
+        )
+
+        reg = RegistroEjercicio.objects.create(usuario=self.user1, ejercicio=ej_running)
+        serie = Serie.objects.create(registro=reg, numero_serie=1, tiempo_segundos=5400) # 90 minutos
+
+        # Comprobar representación __str__ de la serie
+        self.assertIn('1h 30m', str(serie))
+
+        # Comprobar vista de detalle con récord formateado
+        response = self.client.get(reverse('ejercicios:detalle_ejercicio', args=[ej_running.id]))
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, '1h 30m')
+

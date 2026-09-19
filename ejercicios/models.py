@@ -8,6 +8,10 @@ class Ejercicio(models.Model):
         ('LIB', 'Peso Libre'),
         ('CAL', 'Calistenia'),
         ('CAR', 'Cardio'),
+        ('DEP', 'Deporte (Pádel, Tenis, etc.)'),
+        ('DAN', 'Danza / Baile'),
+        ('OUT', 'Aire Libre / Outdoor'),
+        ('FLL', 'Flexibilidad / Yoga / Movilidad'),
     ]
     
     DIFICULTAD_CHOICES = [
@@ -24,6 +28,9 @@ class Ejercicio(models.Model):
         ('BRA', 'Brazos (Bíceps/Tríceps)'),
         ('COR', 'Core / Abdominales'),
         ('GLU', 'Glúteos'),
+        ('FUL', 'Cuerpo Completo / Full Body'),
+        ('CAR', 'Cardiovascular / Resistencia'),
+        ('AGI', 'Agilidad y Coordinación'),
     ]
 
     MODALIDAD_CHOICES = [
@@ -40,7 +47,7 @@ class Ejercicio(models.Model):
     video = models.URLField(max_length=200, null=True, blank=True, verbose_name="Enlace al Vídeo")
     dificultad = models.CharField(max_length=3, choices=DIFICULTAD_CHOICES, default='PRI', verbose_name="Dificultad")
     grupo_muscular = models.CharField(max_length=3, choices=GRUPO_MUSCULAR_CHOICES, verbose_name="Grupo Muscular Principal")
-    equipo_necesario = models.CharField(max_length=100, blank=True, null=True, help_text="Ej: Mancuernas, Polea...")
+    equipo_necesario = models.CharField(max_length=100, blank=True, null=True, help_text="Ej: Mancuernas, Polea, Zapatillas de running, Pala de pádel...")
 
     class Meta:
         verbose_name = "Ejercicio"
@@ -49,6 +56,21 @@ class Ejercicio(models.Model):
 
     def __str__(self):
         return f"{self.nombre} ({self.get_grupo_muscular_display()})"
+
+    @property
+    def icono(self):
+        """Devuelve el icono FontAwesome más representativo para este tipo de ejercicio"""
+        iconos = {
+            'DEP': 'fa-solid fa-table-tennis-paddle-ball',
+            'DAN': 'fa-solid fa-person-dancing',
+            'OUT': 'fa-solid fa-person-running',
+            'CAR': 'fa-solid fa-heart-pulse',
+            'FLL': 'fa-solid fa-spa',
+            'CAL': 'fa-solid fa-person-walking',
+            'MAQ': 'fa-solid fa-dumbbell',
+            'LIB': 'fa-solid fa-dumbbell',
+        }
+        return iconos.get(self.tipo, 'fa-solid fa-stopwatch' if self.modalidad == 'TIEMPO' else 'fa-solid fa-dumbbell')
 
 
 
@@ -111,7 +133,13 @@ class Serie(models.Model):
     def __str__(self):
         if self.tiempo_segundos:
             mins, secs = divmod(self.tiempo_segundos, 60)
-            tiempo_str = f"{mins}m {secs}s" if mins else f"{secs}s"
+            if mins >= 60:
+                horas, mins = divmod(mins, 60)
+                tiempo_str = f"{horas}h {mins}m" if mins else f"{horas}h"
+            elif mins:
+                tiempo_str = f"{mins}m {secs}s" if secs else f"{mins}m"
+            else:
+                tiempo_str = f"{secs}s"
             peso_str = f" x {self.peso_kg} kg" if self.peso_kg else ""
             return f"Serie {self.numero_serie}: {tiempo_str}{peso_str}"
         peso_str = f"{self.peso_kg} kg" if self.peso_kg else "Peso corporal"

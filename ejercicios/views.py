@@ -16,6 +16,7 @@ def lista_ejercicios(request):
     """
     user = request.user
     q = request.GET.get('q', '').strip()
+    tipo = request.GET.get('tipo', '').strip()
     grupo = request.GET.get('grupo', '').strip()
     modalidad = request.GET.get('modalidad', '').strip()
     origen = request.GET.get('origen', 'todos').strip()
@@ -32,6 +33,10 @@ def lista_ejercicios(request):
         qs = qs.filter(creado_por=user)
     elif origen == 'oficiales':
         qs = qs.filter(creado_por=None)
+
+    # Filtrar por tipo de actividad (Máquina, Peso libre, Deporte, Danza, Aire Libre...)
+    if tipo:
+        qs = qs.filter(tipo=tipo)
 
     # Filtrar por grupo muscular
     if grupo:
@@ -52,9 +57,11 @@ def lista_ejercicios(request):
 
     context = {
         'ejercicios': qs.order_by('nombre'),
+        'tipos_ejercicio': Ejercicio.TIPO_CHOICES,
         'grupos_musculares': Ejercicio.GRUPO_MUSCULAR_CHOICES,
         'modalidades': Ejercicio.MODALIDAD_CHOICES,
         'q': q,
+        'tipo_actual': tipo,
         'grupo_actual': grupo,
         'modalidad_actual': modalidad,
         'origen_actual': origen,
@@ -160,7 +167,14 @@ def detalle_ejercicio(request, ejercicio_id):
         if ejercicio.modalidad == 'TIEMPO':
             max_tiempo = series_usuario.aggregate(Max('tiempo_segundos'))['tiempo_segundos__max']
             if max_tiempo:
-                record_personal = f"{max_tiempo} segundos"
+                mins, secs = divmod(max_tiempo, 60)
+                if mins >= 60:
+                    horas, mins = divmod(mins, 60)
+                    record_personal = f"{horas}h {mins}m" if mins else f"{horas}h"
+                elif mins:
+                    record_personal = f"{mins} min {secs}s" if secs else f"{mins} min"
+                else:
+                    record_personal = f"{secs} segundos"
         else:
             max_peso = series_usuario.aggregate(Max('peso_kg'))['peso_kg__max']
             if max_peso:

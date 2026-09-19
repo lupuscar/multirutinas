@@ -40,12 +40,22 @@
         <div class="h-64 sm:h-80 w-full overflow-hidden bg-gray-100 dark:bg-gray-900">
             <img src="{{ ejercicio.foto.url }}" alt="{{ ejercicio.nombre }}" class="w-full h-full object-cover">
         </div>
+        {% else %}
+        <div class="h-44 sm:h-52 w-full bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-800 dark:to-gray-900 flex flex-col items-center justify-center border-b border-gray-100 dark:border-gray-700/60">
+            <div class="w-16 h-16 rounded-2xl bg-brand-light/10 text-brand-light flex items-center justify-center mb-2 text-3xl">
+                <i class="{{ ejercicio.icono }}"></i>
+            </div>
+            <span class="text-xs font-bold text-gray-500 dark:text-gray-400">{{ ejercicio.get_tipo_display }}</span>
+        </div>
         {% endif %}
 
         <div class="p-6 space-y-6">
             
             <!-- Badges de Atributos -->
             <div class="flex flex-wrap gap-2">
+                <span class="px-3 py-1 rounded-xl text-xs font-bold bg-indigo-100 text-indigo-800 dark:bg-indigo-900/30 dark:text-indigo-400">
+                    <i class="{{ ejercicio.icono }} mr-1.5"></i> {{ ejercicio.get_tipo_display }}
+                </span>
                 <span class="px-3 py-1 rounded-xl text-xs font-bold bg-brand-light/10 text-brand-light">
                     <i class="fa-solid fa-layer-group mr-1.5"></i> {{ ejercicio.get_grupo_muscular_display }}
                 </span>
@@ -59,7 +69,7 @@
                 </span>
                 {% if ejercicio.equipo_necesario %}
                 <span class="px-3 py-1 rounded-xl text-xs font-bold bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-400">
-                    <i class="fa-solid fa-dumbbell mr-1.5"></i> {{ ejercicio.equipo_necesario }}
+                    <i class="fa-solid fa-box mr-1.5"></i> {{ ejercicio.equipo_necesario }}
                 </span>
                 {% endif %}
             </div>

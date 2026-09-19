@@ -30,14 +30,14 @@
         
         <!-- Pestañas de Origen (Todos / Mis Ejercicios / Oficiales) -->
         <div class="flex items-center space-x-2 border-b border-gray-100 dark:border-gray-700/60 pb-3 text-xs sm:text-sm overflow-x-auto">
-            <a href="?origen=todos{% if grupo_actual %}&grupo={{ grupo_actual }}{% endif %}{% if modalidad_actual %}&modalidad={{ modalidad_actual }}{% endif %}{% if q %}&q={{ q }}{% endif %}" 
+            <a href="?origen=todos{% if tipo_actual %}&tipo={{ tipo_actual }}{% endif %}{% if grupo_actual %}&grupo={{ grupo_actual }}{% endif %}{% if modalidad_actual %}&modalidad={{ modalidad_actual }}{% endif %}{% if q %}&q={{ q }}{% endif %}" 
                class="px-4 py-2 rounded-xl font-bold whitespace-nowrap transition-colors flex items-center space-x-1.5 {% if origen_actual == 'todos' %}bg-brand-light text-white shadow-sm{% else %}text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700{% endif %}">
                 <span>Todos los ejercicios</span>
                 <span class="px-2 py-0.5 rounded-full text-xs font-semibold {% if origen_actual == 'todos' %}bg-white/20 text-white{% else %}bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300{% endif %}">{{ total_todos }}</span>
             </a>
 
             {% if user.is_authenticated %}
-            <a href="?origen=mis_ejercicios{% if grupo_actual %}&grupo={{ grupo_actual }}{% endif %}{% if modalidad_actual %}&modalidad={{ modalidad_actual }}{% endif %}{% if q %}&q={{ q }}{% endif %}" 
+            <a href="?origen=mis_ejercicios{% if tipo_actual %}&tipo={{ tipo_actual }}{% endif %}{% if grupo_actual %}&grupo={{ grupo_actual }}{% endif %}{% if modalidad_actual %}&modalidad={{ modalidad_actual }}{% endif %}{% if q %}&q={{ q }}{% endif %}" 
                class="px-4 py-2 rounded-xl font-bold whitespace-nowrap transition-colors flex items-center space-x-1.5 {% if origen_actual == 'mis_ejercicios' %}bg-brand-light text-white shadow-sm{% else %}text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700{% endif %}">
                 <i class="fa-solid fa-user-pen mr-1"></i>
                 <span>Mis Ejercicios</span>
@@ -45,7 +45,7 @@
             </a>
             {% endif %}
 
-            <a href="?origen=oficiales{% if grupo_actual %}&grupo={{ grupo_actual }}{% endif %}{% if modalidad_actual %}&modalidad={{ modalidad_actual }}{% endif %}{% if q %}&q={{ q }}{% endif %}" 
+            <a href="?origen=oficiales{% if tipo_actual %}&tipo={{ tipo_actual }}{% endif %}{% if grupo_actual %}&grupo={{ grupo_actual }}{% endif %}{% if modalidad_actual %}&modalidad={{ modalidad_actual }}{% endif %}{% if q %}&q={{ q }}{% endif %}" 
                class="px-4 py-2 rounded-xl font-bold whitespace-nowrap transition-colors flex items-center space-x-1.5 {% if origen_actual == 'oficiales' %}bg-brand-light text-white shadow-sm{% else %}text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700{% endif %}">
                 <i class="fa-solid fa-certificate mr-1"></i>
                 <span>Catálogo Oficial</span>
@@ -57,29 +57,40 @@
         <form method="GET" class="grid grid-cols-1 sm:grid-cols-12 gap-3">
             <input type="hidden" name="origen" value="{{ origen_actual }}">
 
-            <!-- Input Búsqueda (6 cols) -->
-            <div class="sm:col-span-6 relative">
+            <!-- Input Búsqueda (4 cols) -->
+            <div class="sm:col-span-4 relative">
                 <i class="fa-solid fa-magnifying-glass absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400 text-sm"></i>
-                <input type="text" name="q" value="{{ q }}" placeholder="Buscar ejercicio por nombre..." 
+                <input type="text" name="q" value="{{ q }}" placeholder="Buscar por nombre..." 
                        class="w-full pl-10 pr-4 py-2.5 rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900 text-sm text-gray-900 dark:text-white outline-none focus:ring-2 focus:ring-brand-light">
             </div>
 
-            <!-- Selector Grupo Muscular (3 cols) -->
+            <!-- Selector Tipo de Actividad (3 cols) -->
+            <div class="sm:col-span-3">
+                <select name="tipo" onchange="this.form.submit()" 
+                        class="w-full px-3 py-2.5 rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900 text-xs sm:text-sm text-gray-900 dark:text-white outline-none focus:ring-2 focus:ring-brand-light">
+                    <option value="">Todos los tipos de actividad</option>
+                    {% for codigo, nombre in tipos_ejercicio %}
+                    <option value="{{ codigo }}" {% if tipo_actual == codigo %}selected{% endif %}>{{ nombre }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <!-- Selector Grupo Muscular / Enfoque (3 cols) -->
             <div class="sm:col-span-3">
                 <select name="grupo" onchange="this.form.submit()" 
                         class="w-full px-3 py-2.5 rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900 text-xs sm:text-sm text-gray-900 dark:text-white outline-none focus:ring-2 focus:ring-brand-light">
-                    <option value="">Todos los músculos</option>
+                    <option value="">Todos los músculos / enfoque</option>
                     {% for codigo, nombre in grupos_musculares %}
                     <option value="{{ codigo }}" {% if grupo_actual == codigo %}selected{% endif %}>{{ nombre }}</option>
                     {% endfor %}
                 </select>
             </div>
 
-            <!-- Selector Modalidad (3 cols) -->
-            <div class="sm:col-span-3">
+            <!-- Selector Modalidad (2 cols) -->
+            <div class="sm:col-span-2">
                 <select name="modalidad" onchange="this.form.submit()" 
                         class="w-full px-3 py-2.5 rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900 text-xs sm:text-sm text-gray-900 dark:text-white outline-none focus:ring-2 focus:ring-brand-light">
-                    <option value="">Todas las modalidades</option>
+                    <option value="">Modalidad</option>
                     {% for codigo, nombre in modalidades %}
                     <option value="{{ codigo }}" {% if modalidad_actual == codigo %}selected{% endif %}>{{ nombre }}</option>
                     {% endfor %}
@@ -96,13 +107,13 @@
         <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-sm hover:shadow-md border border-gray-100 dark:border-gray-700/80 overflow-hidden flex flex-col transition-all">
             
             <!-- Imagen / Banner -->
-            <div class="h-44 w-full bg-gray-100 dark:bg-gray-700/60 relative flex items-center justify-center overflow-hidden">
+            <div class="h-44 w-full bg-gray-50 dark:bg-gray-900/60 relative flex items-center justify-center overflow-hidden border-b border-gray-100 dark:border-gray-700/50">
                 {% if ejercicio.foto %}
                     <img src="{{ ejercicio.foto.url }}" alt="{{ ejercicio.nombre }}" class="w-full h-full object-cover">
                 {% else %}
-                    <div class="text-gray-300 dark:text-gray-600 flex flex-col items-center">
-                        <i class="{% if ejercicio.modalidad == 'TIEMPO' %}fa-solid fa-stopwatch{% else %}fa-solid fa-dumbbell{% endif %} text-4xl mb-1.5"></i>
-                        <span class="text-xs font-semibold">FitApp</span>
+                    <div class="text-gray-400 dark:text-gray-500 flex flex-col items-center p-4 text-center">
+                        <i class="{{ ejercicio.icono }} text-4xl mb-2 text-brand-light"></i>
+                        <span class="text-xs font-bold text-gray-700 dark:text-gray-300">{{ ejercicio.get_tipo_display }}</span>
                     </div>
                 {% endif %}
 
