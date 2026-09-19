@@ -1,11 +1,14 @@
-from django.shortcuts import render, redirect
-from django.contrib.auth import login, update_session_auth_hash
+from django.shortcuts import render, redirect, get_object_or_404
+from django.contrib.auth import login, update_session_auth_hash, get_user_model
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
 from django.db.models import Count
+from django.utils.http import urlsafe_base64_decode
+from django.utils.encoding import force_str
 
 from .models import Profile
-from .utils import registrar_log, enviar_correo_bienvenida
+from .tokens import email_verification_token
+from .utils import registrar_log, enviar_correo_bienvenida, enviar_correo_activacion
 from .forms import (
     RegistroUsuarioForm,
     UserUpdateForm,
@@ -15,11 +18,14 @@ from .forms import (
 from rutinas.models import Rutina
 from ejercicios.models import RegistroEjercicio, Serie
 
+User = get_user_model()
+
 
 def registro_view(request):
     """
-    Permite el registro público de nuevos usuarios de forma autónoma.
-    Al crearse la cuenta, inicia sesión automáticamente y redirige al perfil.
+    Permite el registro público de nuevos usuarios.
+    Crea la cuenta en estado inactivo (is_active=False) y envía un correo
+    con un enlace seguro para activar la cuenta antes del primer acceso.
     """
     if request.user.is_authenticated:
         return redirect('users:perfil')
@@ -27,27 +33,33 @@ def registro_view(request):
     if request.method == 'POST':
         form = RegistroUsuarioForm(request.POST)
         if form.is_valid():
-            user = form.save()
-            # Aseguramos que el perfil existe
-            Profile.objects.get_or_create(user=user)
+            user = form.save(commit=False)
+            user.is_active = False  # Obligatorio verificar correo antes de acceder
+            user.save()
+
+            # Aseguramos que el perfil existe con email_verificado=False
+            Profile.objects.get_or_create(user=user, defaults={'email_verificado': False})
+
             # Registro en auditoría
             registrar_log(
                 request=request,
                 usuario=user,
                 nivel='INFO',
                 tipo='REGISTRO',
-                mensaje=f"Nuevo usuario registrado en la app: {user.username} ({user.email})"
+                mensaje=f"Nuevo usuario registrado (pendiente de activación por email): {user.username} ({user.email})"
             )
-            # Envío de correo de bienvenida (tolerante a fallos)
-            enviar_correo_bienvenida(user, request)
 
-            # Iniciamos sesión automáticamente
-            login(request, user, backend='users.backends.EmailOrUsernameModelBackend')
-            messages.success(
+            # Envío de correo con enlace de activación
+            enviar_correo_activacion(user, request)
+
+            # Guardamos email en sesión para mostrarlo en la pantalla informativa
+            request.session['registro_email'] = user.email
+
+            messages.info(
                 request,
-                f"¡Bienvenido a FitApp, {user.first_name or user.username}! Tu cuenta ha sido creada exitosamente."
+                f"¡Cuenta creada! Hemos enviado un enlace de activación a {user.email}. Revisa tu bandeja de entrada."
             )
-            return redirect('users:perfil')
+            return redirect('users:registro_pendiente')
         else:
             messages.error(request, "Por favor corrige los errores indicados en el formulario.")
     else:
@@ -57,6 +69,111 @@ def registro_view(request):
         'form': form
     }
     return render(request, 'users/registro.html', context)
+
+
+def registro_pendiente_view(request):
+    """
+    Pantalla informativa mostrada inmediatamente tras el registro,
+    recordando al usuario que debe confirmar su correo antes de acceder.
+    """
+    if request.user.is_authenticated:
+        return redirect('users:perfil')
+
+    email = request.session.get('registro_email', '')
+    return render(request, 'users/registro_pendiente.html', {'email': email})
+
+
+def activar_cuenta_view(request, uidb64, token):
+    """
+    Valida el token de activación recibido por correo. Si es válido, activa la cuenta
+    (is_active=True, email_verificado=True), envía el correo de bienvenida y
+    conecta la sesión del usuario.
+    """
+    try:
+        uid = force_str(urlsafe_base64_decode(uidb64))
+        user = User.objects.filter(pk=uid).first()
+    except (TypeError, ValueError, OverflowError):
+        user = None
+
+    if user and email_verification_token.check_token(user, token):
+        # Activar usuario
+        user.is_active = True
+        user.save(update_fields=['is_active'])
+
+        # Asegurar perfil marcado como verificado
+        if not hasattr(user, 'profile'):
+            Profile.objects.create(user=user)
+        user.profile.email_verificado = True
+        user.profile.save(update_fields=['email_verificado'])
+
+        # Registro en auditoría
+        registrar_log(
+            request=request,
+            usuario=user,
+            nivel='INFO',
+            tipo='REGISTRO',
+            mensaje=f"Cuenta activada y correo confirmado exitosamente: {user.email}"
+        )
+
+        # Enviar correo de bienvenida completo tras activación
+        enviar_correo_bienvenida(user, request)
+
+        # Iniciar sesión automáticamente
+        login(request, user, backend='users.backends.EmailOrUsernameModelBackend')
+
+        # Limpiar email temporal de sesión
+        request.session.pop('registro_email', None)
+
+        messages.success(
+            request,
+            f"¡Tu cuenta ha sido activada con éxito, {user.first_name or user.username}! Bienvenido a FitApp."
+        )
+        return redirect('users:perfil')
+
+    # Si ya estaba activo y verificado
+    if user and user.is_active and getattr(user, 'profile', None) and user.profile.email_verificado:
+        messages.info(request, "Tu cuenta ya se encuentra activa y verificada. Puedes iniciar sesión.")
+        return redirect('login')
+
+    # Token inválido o expirado
+    return render(request, 'users/activacion_invalida.html')
+
+
+def reenviar_activacion_view(request):
+    """
+    Permite solicitar un nuevo enlace de activación si el anterior caducó o no llegó.
+    """
+    if request.user.is_authenticated:
+        return redirect('users:perfil')
+
+    if request.method == 'POST':
+        email = request.POST.get('email', '').strip().lower()
+        if not email:
+            messages.error(request, "Por favor introduce un correo electrónico válido.")
+            return render(request, 'users/reenviar_activacion.html')
+
+        user = User.objects.filter(email__iexact=email).first()
+
+        if user:
+            profile = getattr(user, 'profile', None)
+            if user.is_active and profile and profile.email_verificado:
+                messages.info(request, "Esta cuenta ya está activa y verificada. Puedes iniciar sesión directamente.")
+                return redirect('login')
+            elif not user.is_active and profile and profile.email_verificado:
+                messages.error(request, "Esta cuenta ha sido deshabilitada por un administrador. Contacta con soporte.")
+                return redirect('login')
+            else:
+                # Enviar nuevo enlace de activación
+                enviar_correo_activacion(user, request)
+                request.session['registro_email'] = user.email
+                messages.success(request, f"Hemos enviado un nuevo enlace de activación a {user.email}. Revisa tu bandeja de entrada.")
+                return redirect('users:registro_pendiente')
+        else:
+            # Por privacidad, mostramos mensaje neutro
+            messages.info(request, f"Si existe una cuenta registrada con {email}, hemos enviado un nuevo enlace de activación.")
+            return redirect('users:registro_pendiente')
+
+    return render(request, 'users/reenviar_activacion.html')
 
 
 @login_required

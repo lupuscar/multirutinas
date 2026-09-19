@@ -26,6 +26,11 @@ class Profile(models.Model):
         blank=True,
         verbose_name="Vencimiento de Suscripción"
     )
+    email_verificado = models.BooleanField(
+        default=False,
+        verbose_name="Email Verificado",
+        help_text="Indica si el usuario ha confirmado su dirección de correo electrónico mediante el enlace de activación"
+    )
 
     # 2. FOTO Y BIOGRAFÍA
     foto_perfil = models.ImageField(

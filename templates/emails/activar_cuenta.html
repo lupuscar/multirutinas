@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Activa tu cuenta - FitApp</title>
+</head>
+<body style="margin: 0; padding: 0; background-color: #0f172a; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; color: #1e293b;">
+    <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="background-color: #0f172a; padding: 40px 15px;">
+        <tr>
+            <td align="center">
+                <table role="presentation" width="100%" style="max-width: 540px; background-color: #ffffff; border-radius: 24px; box-shadow: 0 10px 30px rgba(0,0,0,0.25); overflow: hidden; border: 1px solid #e2e8f0;">
+                    
+                    <!-- Header con Degradado Deportivo -->
+                    <tr>
+                        <td align="center" style="background: linear-gradient(135deg, #4f46e5 0%, #6366f1 50%, #0f172a 100%); padding: 35px 25px; text-align: center;">
+                            <div style="display: inline-block; background-color: rgba(255, 255, 255, 0.15); backdrop-filter: blur(8px); padding: 8px 20px; border-radius: 999px; margin-bottom: 15px;">
+                                <span style="color: #ffffff; font-size: 13px; font-weight: 700; letter-spacing: 0.5px;">🔐 CONFIRMACIÓN DE SEGURIDAD</span>
+                            </div>
+                            <h1 style="margin: 0; color: #ffffff; font-size: 24px; font-weight: 900; letter-spacing: 0.5px;">
+                                Activa tu cuenta en Fit<span style="color: #a5b4fc;">App</span>
+                            </h1>
+                        </td>
+                    </tr>
+
+                    <!-- Cuerpo Principal -->
+                    <tr>
+                        <td style="padding: 35px 30px 25px 30px;">
+                            <p style="margin: 0 0 15px 0; font-size: 15px; line-height: 24px; color: #334155;">
+                                Hola <strong>{{ nombre }}</strong>,
+                            </p>
+                            <p style="margin: 0 0 25px 0; font-size: 15px; line-height: 24px; color: #475569;">
+                                ¡Gracias por unirte a FitApp! Antes de comenzar a planificar tus rutinas y registrar tus entrenamientos, necesitamos confirmar que esta es tu dirección de correo electrónico.
+                            </p>
+
+                            <!-- Botón de Activación (CTA) -->
+                            <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="margin: 25px 0;">
+                                <tr>
+                                    <td align="center">
+                                        <a href="{{ activacion_url }}" 
+                                           style="display: inline-block; background-color: #10b981; color: #ffffff; font-weight: 800; font-size: 15px; text-decoration: none; padding: 15px 36px; border-radius: 14px; box-shadow: 0 6px 16px rgba(16, 185, 129, 0.35); letter-spacing: 0.3px;">
+                                            ✅ Activar y Confirmar mi Cuenta
+                                        </a>
+                                    </td>
+                                </tr>
+                            </table>
+
+                            <div style="background-color: #f8fafc; border: 1px solid #e2e8f0; border-radius: 14px; padding: 16px 20px; margin: 25px 0; font-size: 13px; color: #64748b; line-height: 20px;">
+                                ⏱️ <strong>Nota de validez:</strong> Por seguridad, este enlace de activación expirará en <strong>{{ timeout_horas }} horas</strong>.
+                            </div>
+
+                            <!-- Enlace alternativo si el botón no funciona -->
+                            <div style="border-top: 1px solid #f1f5f9; padding-top: 20px; font-size: 12px; line-height: 18px; color: #94a3b8;">
+                                <p style="margin: 0 0 8px 0;">Si el botón no funciona, copia y pega el siguiente enlace en tu navegador:</p>
+                                <p style="margin: 0; word-break: break-all;">
+                                    <a href="{{ activacion_url }}" style="color: #4f46e5; text-decoration: underline;">
+                                        {{ activacion_url }}
+                                    </a>
+                                </p>
+                            </div>
+
+                        </td>
+                    </tr>
+
+                    <!-- Pie de Página -->
+                    <tr>
+                        <td style="background-color: #f8fafc; border-top: 1px solid #e2e8f0; padding: 20px 30px; text-align: center;">
+                            <p style="margin: 0; font-size: 11px; color: #94a3b8; line-height: 16px;">
+                                Si tú no creaste una cuenta en FitApp, no te preocupes: puedes ignorar este correo y la cuenta no será activada.
+                            </p>
+                        </td>
+                    </tr>
+
+                </table>
+            </td>
+        </tr>
+    </table>
+</body>
+</html>

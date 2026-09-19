@@ -1,0 +1,17 @@
+¡HOLA, {{ nombre|upper }}! ACTIVA TU CUENTA EN FITAPP
+============================================================
+
+Gracias por unirte a FitApp. 
+
+Para verificar que esta dirección de correo te pertenece y activar tu cuenta, haz clic en el siguiente enlace:
+
+{{ activacion_url }}
+
+(Este enlace tiene una validez de {{ timeout_horas }} horas).
+
+Una vez que actives tu cuenta, podrás iniciar sesión y empezar a planificar tus rutinas y registrar tus entrenamientos.
+
+Si no te has registrado en FitApp, por favor ignora este correo.
+
+El equipo de FitApp
+============================================================

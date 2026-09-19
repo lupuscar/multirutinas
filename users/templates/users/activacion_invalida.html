@@ -1,0 +1,41 @@
+{% extends 'base.html' %}
+
+{% block title %}Enlace no válido | FitApp{% endblock %}
+
+{% block content %}
+<div class="max-w-md mx-auto my-10 sm:my-16 px-4">
+
+    <div class="bg-white dark:bg-gray-800 p-8 sm:p-10 rounded-3xl shadow-sm border border-gray-100 dark:border-gray-700/80 text-center">
+        
+        <!-- Icono Advertencia -->
+        <div class="w-20 h-20 rounded-2xl bg-amber-50 dark:bg-amber-900/30 text-amber-500 flex items-center justify-center mx-auto mb-6 text-3xl shadow-inner">
+            <i class="fa-solid fa-link-slash"></i>
+        </div>
+
+        <h1 class="text-2xl font-black text-gray-900 dark:text-white">
+            Enlace no válido o expirado
+        </h1>
+        
+        <p class="text-sm text-gray-600 dark:text-gray-300 mt-2 leading-relaxed">
+            El enlace de activación que has utilizado no es válido, ha caducado o tu cuenta ya se encuentra activa.
+        </p>
+
+        <div class="mt-8 space-y-3">
+            <a href="{% url 'users:reenviar_activacion' %}" 
+               class="w-full inline-flex items-center justify-center py-3.5 px-4 rounded-xl bg-brand-light hover:bg-brand-dark text-white font-bold text-sm transition-all shadow-md shadow-brand-light/20">
+                <i class="fa-solid fa-paper-plane mr-2"></i>
+                Solicitar un nuevo enlace de activación
+            </a>
+
+            <div>
+                <a href="{% url 'login' %}" 
+                   class="w-full inline-flex items-center justify-center py-3 px-4 rounded-xl border border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-300 font-bold text-xs hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-all">
+                    Ir al Inicio de Sesión
+                </a>
+            </div>
+        </div>
+
+    </div>
+
+</div>
+{% endblock %}

@@ -16,11 +16,15 @@ def crear_perfil_usuario(sender, instance, created, **kwargs):
 
 
 @receiver(post_save, sender=User)
-def guardar_perfil_usuario(sender, instance, **kwargs):
+def guardar_perfil_usuario(sender, instance, created=False, **kwargs):
     """
     Guarda el perfil asociado al usuario cuando se actualiza el usuario.
+    Ignora actualizaciones parciales como last_login o is_active para evitar colisiones en caché.
     """
-    if hasattr(instance, 'profile'):
+    if not created and hasattr(instance, 'profile'):
+        update_fields = kwargs.get('update_fields')
+        if update_fields and ('last_login' in update_fields or 'is_active' in update_fields):
+            return
         instance.profile.save()
 
 

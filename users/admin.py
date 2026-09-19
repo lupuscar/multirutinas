@@ -1,13 +1,126 @@
 from django.contrib import admin
 from django.utils.html import format_html
 from django.urls import reverse
+from django.contrib.auth import get_user_model
+from django.contrib.auth.admin import UserAdmin as BaseUserAdmin
 from .models import Profile, LogActividad
+from .utils import registrar_log, enviar_correo_activacion
+
+User = get_user_model()
+
+# Desregistramos el User por defecto de Django para usar nuestra versión personalizada
+admin.site.unregister(User)
+
+
+class ProfileInline(admin.StackedInline):
+    model = Profile
+    can_delete = False
+    verbose_name_plural = 'Ficha de Atleta y Verificación'
+    fk_name = 'user'
+    fields = (
+        ('tipo_suscripcion', 'email_verificado'),
+        ('peso', 'altura'),
+        ('nivel', 'objetivo'),
+        'biografia',
+        'fecha_fin_suscripcion'
+    )
+
+
+@admin.register(User)
+class CustomUserAdmin(BaseUserAdmin):
+    inlines = (ProfileInline,)
+    list_display = (
+        'username',
+        'email',
+        'first_name',
+        'estado_cuenta_badge',
+        'is_staff',
+        'date_joined',
+    )
+    list_filter = (
+        'is_active',
+        'profile__email_verificado',
+        'profile__tipo_suscripcion',
+        'is_staff',
+        'is_superuser',
+        'date_joined',
+    )
+    actions = ['bloquear_usuarios', 'desbloquear_usuarios', 'reenviar_activacion_accion']
+
+    @admin.display(description="Estado de Cuenta")
+    def estado_cuenta_badge(self, obj):
+        profile = getattr(obj, 'profile', None)
+        email_verificado = profile.email_verificado if profile else False
+
+        if obj.is_active and email_verificado:
+            return format_html(
+                '<span style="display:inline-block; padding:3px 10px; font-weight:700; font-size:11px; border-radius:12px; color:#065f46; background-color:#d1fae5; border:1px solid #a7f3d0;">'
+                '🟢 Activo (Verificado)</span>'
+            )
+        elif not obj.is_active and not email_verificado:
+            return format_html(
+                '<span style="display:inline-block; padding:3px 10px; font-weight:700; font-size:11px; border-radius:12px; color:#92400e; background-color:#fef3c7; border:1px solid #fde68a;">'
+                '🟡 Pendiente Verificación</span>'
+            )
+        elif not obj.is_active and email_verificado:
+            return format_html(
+                '<span style="display:inline-block; padding:3px 10px; font-weight:700; font-size:11px; border-radius:12px; color:#991b1b; background-color:#fee2e2; border:1px solid #fecaca;">'
+                '🔴 Bloqueado / Deshabilitado</span>'
+            )
+        else:
+            return format_html(
+                '<span style="display:inline-block; padding:3px 10px; font-weight:700; font-size:11px; border-radius:12px; color:#1e40af; background-color:#dbeafe; border:1px solid #bfdbfe;">'
+                '🔵 Activo (Sin validar)</span>'
+            )
+
+    @admin.action(description="🚫 Bloquear / Deshabilitar usuarios seleccionados")
+    def bloquear_usuarios(self, request, queryset):
+        # Impedir que el superusuario que ejecuta la acción se bloquee a sí mismo
+        queryset_filtrado = queryset.exclude(pk=request.user.pk)
+        afectados = queryset_filtrado.update(is_active=False)
+
+        for u in queryset_filtrado:
+            registrar_log(
+                request=request,
+                usuario=u,
+                nivel='WARNING',
+                tipo='OTRO',
+                mensaje=f"Usuario {u.username} ({u.email}) bloqueado/deshabilitado por el administrador {request.user.username}"
+            )
+
+        self.message_user(request, f"Se han bloqueado {afectados} usuario(s) correctamente.")
+
+    @admin.action(description="✅ Activar / Desbloquear usuarios seleccionados")
+    def desbloquear_usuarios(self, request, queryset):
+        afectados = queryset.update(is_active=True)
+        Profile.objects.filter(user__in=queryset).update(email_verificado=True)
+
+        for u in queryset:
+            registrar_log(
+                request=request,
+                usuario=u,
+                nivel='INFO',
+                tipo='OTRO',
+                mensaje=f"Usuario {u.username} ({u.email}) activado/desbloqueado por el administrador {request.user.username}"
+            )
+
+        self.message_user(request, f"Se han activado y verificado {afectados} usuario(s) correctamente.")
+
+    @admin.action(description="📧 Reenviar correo de activación a pendientes")
+    def reenviar_activacion_accion(self, request, queryset):
+        enviados = 0
+        for u in queryset:
+            profile = getattr(u, 'profile', None)
+            if not u.is_active or (profile and not profile.email_verificado):
+                if enviar_correo_activacion(u, request):
+                    enviados += 1
+        self.message_user(request, f"Se ha enviado el enlace de activación a {enviados} usuario(s).")
 
 
 @admin.register(Profile)
 class ProfileAdmin(admin.ModelAdmin):
-    list_display = ('user', 'tipo_suscripcion', 'peso', 'altura', 'nivel', 'objetivo')
-    list_filter = ('tipo_suscripcion', 'nivel', 'objetivo')
+    list_display = ('user', 'email_verificado', 'tipo_suscripcion', 'peso', 'altura', 'nivel', 'objetivo')
+    list_filter = ('email_verificado', 'tipo_suscripcion', 'nivel', 'objetivo')
     search_fields = ('user__username', 'user__email', 'biografia')
 
 

@@ -2,7 +2,10 @@ from django.test import TestCase, Client
 from django.contrib.auth import get_user_model
 from django.urls import reverse
 from django.core import mail
+from django.utils.http import urlsafe_base64_encode
+from django.utils.encoding import force_bytes
 from users.models import Profile
+from users.tokens import email_verification_token
 
 User = get_user_model()
 
@@ -16,6 +19,8 @@ class UsersAuthTests(TestCase):
             password='Password123!',
             first_name='Atleta'
         )
+        self.user.profile.email_verificado = True
+        self.user.profile.save()
 
     def test_perfil_creado_automaticamente_por_senal(self):
         """Verifica que al crearse un usuario, su Profile se genera de forma automática"""
@@ -23,8 +28,9 @@ class UsersAuthTests(TestCase):
         self.assertIsNotNone(self.user.profile)
         self.assertEqual(self.user.profile.tipo_suscripcion, 'FREE')
 
-    def test_registro_publico_usuario(self):
-        """Verifica el formulario y flujo de registro público de nuevos usuarios"""
+    def test_registro_publico_crea_usuario_inactivo_y_envia_activacion(self):
+        """Verifica que al registrarse el usuario queda inactivo y se envía el correo con token de activación"""
+        mail.outbox = []
         data = {
             'username': 'nuevousuario',
             'first_name': 'Nuevo',
@@ -33,12 +39,98 @@ class UsersAuthTests(TestCase):
             'password2': 'MiClaveSecreta99!',
         }
         response = self.client.post(reverse('users:registro'), data)
+        self.assertRedirects(response, reverse('users:registro_pendiente'))
+
+        nuevo_user = User.objects.filter(email='nuevo@fitapp.com').first()
+        self.assertIsNotNone(nuevo_user)
+        self.assertFalse(nuevo_user.is_active)
+        self.assertFalse(nuevo_user.profile.email_verificado)
+
+        # Comprobar que se envió 1 correo de activación
+        self.assertEqual(len(mail.outbox), 1)
+        email_activacion = mail.outbox[0]
+        self.assertEqual(email_activacion.to, ['nuevo@fitapp.com'])
+        self.assertIn('Activa tu cuenta', email_activacion.subject)
+        self.assertIn('activar/', email_activacion.body)
+
+    def test_activacion_exitosa_con_token_valido(self):
+        """Al hacer clic en el enlace de activación válido, la cuenta se activa y se envía bienvenida"""
+        inactivo = User.objects.create_user(
+            username='inactivo@fitapp.com',
+            email='inactivo@fitapp.com',
+            password='Password123!',
+            first_name='Pendiente',
+            is_active=False
+        )
+        inactivo.profile.email_verificado = False
+        inactivo.profile.save()
+
+        mail.outbox = []
+        uid = urlsafe_base64_encode(force_bytes(inactivo.pk))
+        token = email_verification_token.make_token(inactivo)
+
+        url = reverse('users:activar_cuenta', kwargs={'uidb64': uid, 'token': token})
+        response = self.client.get(url)
         self.assertRedirects(response, reverse('users:perfil'))
 
-        nuevo_user = User.objects.filter(username='nuevousuario').first()
-        self.assertIsNotNone(nuevo_user)
-        self.assertTrue(hasattr(nuevo_user, 'profile'))
-        self.assertEqual(nuevo_user.email, 'nuevo@fitapp.com')
+        inactivo.refresh_from_db()
+        inactivo.profile.refresh_from_db()
+        self.assertTrue(inactivo.is_active)
+        self.assertTrue(inactivo.profile.email_verificado)
+
+        # Se envía el correo de bienvenida al activarse
+        self.assertEqual(len(mail.outbox), 1)
+        self.assertIn('Bienvenido a FitApp', mail.outbox[0].subject)
+
+    def test_activacion_falla_con_token_manipulado(self):
+        """Un token no válido o manipulado no activa la cuenta"""
+        inactivo = User.objects.create_user(
+            username='hacker@fitapp.com',
+            email='hacker@fitapp.com',
+            password='Password123!',
+            first_name='Hacker',
+            is_active=False
+        )
+        inactivo.profile.email_verificado = False
+        inactivo.profile.save()
+
+        uid = urlsafe_base64_encode(force_bytes(inactivo.pk))
+        url = reverse('users:activar_cuenta', kwargs={'uidb64': uid, 'token': 'token-invalido-123'})
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, 200)
+        self.assertTemplateUsed(response, 'users/activacion_invalida.html')
+
+        inactivo.refresh_from_db()
+        self.assertFalse(inactivo.is_active)
+        self.assertFalse(inactivo.profile.email_verificado)
+
+    def test_usuario_inactivo_no_puede_iniciar_sesion(self):
+        """Un usuario con is_active=False es rechazado por el sistema de autenticación"""
+        User.objects.create_user(
+            username='bloqueado@fitapp.com',
+            email='bloqueado@fitapp.com',
+            password='Password123!',
+            is_active=False
+        )
+        login_exitoso = self.client.login(username='bloqueado@fitapp.com', password='Password123!')
+        self.assertFalse(login_exitoso)
+
+    def test_reenviar_activacion(self):
+        """Permite reenviar un nuevo enlace de activación a usuarios pendientes"""
+        inactivo = User.objects.create_user(
+            username='olvidadizo@fitapp.com',
+            email='olvidadizo@fitapp.com',
+            password='Password123!',
+            is_active=False
+        )
+        inactivo.profile.email_verificado = False
+        inactivo.profile.save()
+
+        mail.outbox = []
+        response = self.client.post(reverse('users:reenviar_activacion'), {'email': 'olvidadizo@fitapp.com'})
+        self.assertRedirects(response, reverse('users:registro_pendiente'))
+        self.assertEqual(len(mail.outbox), 1)
+        self.assertEqual(mail.outbox[0].to, ['olvidadizo@fitapp.com'])
 
     def test_registro_email_duplicado(self):
         """No permite registrarse con un email ya existente"""
@@ -52,44 +144,6 @@ class UsersAuthTests(TestCase):
         response = self.client.post(reverse('users:registro'), data)
         self.assertEqual(response.status_code, 200)
         self.assertFormError(response.context['form'], 'email', 'Ya existe una cuenta con este correo electrónico.')
-
-    def test_registro_solo_con_email_sin_username(self):
-        """Verifica que el usuario se puede registrar solo con nombre, email y contraseña"""
-        data = {
-            'first_name': 'Carlos',
-            'email': 'carlos@fitapp.com',
-            'password1': 'MiClaveSecreta99!',
-            'password2': 'MiClaveSecreta99!',
-        }
-        response = self.client.post(reverse('users:registro'), data)
-        self.assertRedirects(response, reverse('users:perfil'))
-
-        carlos = User.objects.filter(email='carlos@fitapp.com').first()
-        self.assertIsNotNone(carlos)
-        self.assertEqual(carlos.username, 'carlos@fitapp.com')
-        self.assertEqual(carlos.first_name, 'Carlos')
-        self.assertTrue(hasattr(carlos, 'profile'))
-
-    def test_envio_correo_bienvenida_al_registrarse(self):
-        """Verifica que se envía el correo HTML de bienvenida al registrarse"""
-        mail.outbox = []
-        data = {
-            'first_name': 'Laura',
-            'email': 'laura@fitapp.com',
-            'password1': 'MiClaveSecreta99!',
-            'password2': 'MiClaveSecreta99!',
-        }
-        response = self.client.post(reverse('users:registro'), data)
-        self.assertRedirects(response, reverse('users:perfil'))
-
-        # Comprobar que se envió 1 correo
-        self.assertEqual(len(mail.outbox), 1)
-        email_enviado = mail.outbox[0]
-        self.assertEqual(email_enviado.to, ['laura@fitapp.com'])
-        self.assertIn('Laura', email_enviado.subject)
-        self.assertIn('Bienvenido a FitApp', email_enviado.subject)
-        # Comprobar que contiene alternativa HTML
-        self.assertTrue(any(content_type == 'text/html' for _, content_type in email_enviado.alternatives))
 
     def test_login_con_email(self):
         """Verifica que el usuario puede iniciar sesión usando su correo electrónico"""

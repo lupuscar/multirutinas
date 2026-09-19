@@ -19,11 +19,29 @@
         </div>
 
         {% if form.errors %}
-        <div
-            class="bg-red-50 dark:bg-red-900/30 border border-red-200 dark:border-red-800 text-red-700 dark:text-red-300 p-3.5 rounded-xl mb-4 text-xs font-medium flex items-start space-x-2">
-            <i class="fa-solid fa-circle-exclamation mt-0.5 shrink-0"></i>
-            <span>Tu correo electrónico o contraseña no son correctos. Por favor inténtalo de nuevo.</span>
-        </div>
+            {% if form.get_user and not form.get_user.is_active %}
+                {% if form.get_user.profile and form.get_user.profile.email_verificado %}
+                    <div class="bg-red-50 dark:bg-red-900/30 border border-red-200 dark:border-red-800 text-red-700 dark:text-red-300 p-3.5 rounded-xl mb-4 text-xs font-medium flex items-start space-x-2">
+                        <i class="fa-solid fa-ban mt-0.5 shrink-0 text-red-500"></i>
+                        <span>Esta cuenta ha sido <strong>deshabilitada o bloqueada</strong> por un administrador. Si consideras que se trata de un error, por favor contacta con soporte.</span>
+                    </div>
+                {% else %}
+                    <div class="bg-amber-50 dark:bg-amber-900/30 border border-amber-200 dark:border-amber-800 text-amber-800 dark:text-amber-200 p-3.5 rounded-xl mb-4 text-xs font-medium flex items-start space-x-2">
+                        <i class="fa-solid fa-envelope-circle-check mt-0.5 shrink-0 text-amber-500"></i>
+                        <div>
+                            <span>Tu cuenta está <strong>pendiente de activación</strong> por correo electrónico. Revisa tu bandeja de entrada o</span>
+                            <a href="{% url 'users:reenviar_activacion' %}" class="font-bold underline ml-1 text-amber-900 dark:text-amber-100 hover:text-brand-light">
+                                solicita un nuevo enlace de activación aquí
+                            </a>.
+                        </div>
+                    </div>
+                {% endif %}
+            {% else %}
+                <div class="bg-red-50 dark:bg-red-900/30 border border-red-200 dark:border-red-800 text-red-700 dark:text-red-300 p-3.5 rounded-xl mb-4 text-xs font-medium flex items-start space-x-2">
+                    <i class="fa-solid fa-circle-exclamation mt-0.5 shrink-0"></i>
+                    <span>Tu correo electrónico o contraseña no son correctos. Por favor inténtalo de nuevo.</span>
+                </div>
+            {% endif %}
         {% endif %}
 
         <form method="post" class="space-y-4">

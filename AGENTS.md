@@ -18,14 +18,15 @@ Este documento sirve como **memoria persistente y guía contextual** de **Multir
 ## 🏗️ 2. Arquitectura de Aplicaciones y Modelos
 
 ### `users` (Usuarios, Salud y Auditoría)
-- **`Profile`:** Extensión del modelo `User` con ficha antropométrica (`peso_kg`, `altura_cm`, `fecha_nacimiento`, `foto`), meta semanal (`dias_objetivo_semana`), objetivo deportivo (`HIP`, `FUE`, `DEF`, `RES`, `SAL`), nivel y membresía comercial (`tipo_suscripcion`: `FREE`, `PRO`, `COACH`).
+- **`Profile`:** Extensión del modelo `User` con ficha antropométrica (`peso_kg`, `altura_cm`, `fecha_nacimiento`, `foto`), meta semanal (`dias_objetivo_semana`), objetivo deportivo (`HIP`, `FUE`, `DEF`, `RES`, `SAL`), nivel, membresía comercial (`tipo_suscripcion`: `FREE`, `PRO`, `COACH`) y estado de verificación de correo (`email_verificado`).
   - `@property categoria_imc`: Clasificación dinámica del IMC (*Bajo peso*, *Peso normal*, *Sobrepeso*, *Obesidad*).
 - **`LogActividad`:** Sistema de auditoría y captura de incidencias.
   - Campos: `usuario`, `nivel` (INFO, WARNING, ERROR, CRITICAL), `tipo` (LOGIN, LOGOUT, LOGIN_FAIL, REGISTRO, PERFIL_EDIT, PASSWORD_CHANGE, ERROR_500), `ruta`, `metodo`, `ip`, `user_agent`, `mensaje`, `traceback`, `creado_en`.
 - **`middleware.py` (`AuditAndErrorLoggingMiddleware`):** Captura en `process_exception` cualquier error 500 no controlado y registra la traza completa.
 - **`signals.py`:** Crea automáticamente el `Profile` al registrarse un usuario y registra eventos de autenticación.
 - **`backends.py` (`EmailOrUsernameModelBackend`):** Permite autenticación insensible a mayúsculas tanto por correo electrónico como por nombre de usuario tradicional.
-- **`utils.py`:** Funciones `get_client_ip(request)`, `registrar_log(...)` (tolerante a fallos) y `enviar_correo_bienvenida(user, request)` (envío multipart HTML/TXT tolerante a incidencias SMTP).
+- **`tokens.py` (`EmailVerificationTokenGenerator`):** Genera tokens seguros de un solo uso vinculados al estado `is_active` y al email.
+- **`utils.py`:** Funciones `get_client_ip(request)`, `registrar_log(...)` (tolerante a fallos), `enviar_correo_activacion(user, request)` y `enviar_correo_bienvenida(user, request)`.
 
 ### `ejercicios` (Catálogo y Tipos de Actividad)
 - **`Ejercicio`:**

@@ -116,3 +116,76 @@ def enviar_correo_bienvenida(user, request=None):
         )
         return False
 
+
+def enviar_correo_activacion(user, request=None):
+    """
+    Genera un token seguro y envía un correo electrónico al usuario para
+    que active su cuenta antes de poder iniciar sesión.
+    """
+    if not user or not user.email:
+        return False
+
+    try:
+        from django.urls import reverse
+        from django.core.mail import EmailMultiAlternatives
+        from django.template.loader import render_to_string
+        from django.conf import settings
+        from django.utils.http import urlsafe_base64_encode
+        from django.utils.encoding import force_bytes
+        from .tokens import email_verification_token
+
+        protocol = 'https' if (request and request.is_secure()) else 'http'
+        if request:
+            domain = request.get_host()
+        else:
+            domain = '127.0.0.1:8000'
+
+        nombre = user.first_name or user.username or 'Atleta'
+        uid = urlsafe_base64_encode(force_bytes(user.pk))
+        token = email_verification_token.make_token(user)
+        activacion_url = f"{protocol}://{domain}{reverse('users:activar_cuenta', kwargs={'uidb64': uid, 'token': token})}"
+
+        timeout_segundos = int(getattr(settings, 'PASSWORD_RESET_TIMEOUT', 86400))
+        timeout_horas = max(1, timeout_segundos // 3600)
+
+        context = {
+            'user': user,
+            'nombre': nombre,
+            'domain': domain,
+            'protocol': protocol,
+            'activacion_url': activacion_url,
+            'timeout_horas': timeout_horas,
+        }
+
+        asunto = f"Activa tu cuenta en FitApp 🚀 — Confirma tu correo"
+        mensaje_texto = render_to_string('emails/activar_cuenta.txt', context)
+        mensaje_html = render_to_string('emails/activar_cuenta.html', context)
+
+        email = EmailMultiAlternatives(
+            subject=asunto,
+            body=mensaje_texto,
+            from_email=settings.DEFAULT_FROM_EMAIL,
+            to=[user.email],
+        )
+        email.attach_alternative(mensaje_html, "text/html")
+        email.send(fail_silently=False)
+
+        registrar_log(
+            request=request,
+            usuario=user,
+            nivel='INFO',
+            tipo='REGISTRO',
+            mensaje=f"Correo de activación de cuenta enviado exitosamente a {user.email}"
+        )
+        return True
+    except Exception as e:
+        registrar_log(
+            request=request,
+            usuario=user,
+            nivel='WARNING',
+            tipo='OTRO',
+            mensaje=f"Fallo al enviar correo de activación a {user.email}: {str(e)}"
+        )
+        return False
+
+
