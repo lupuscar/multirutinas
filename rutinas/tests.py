@@ -3,6 +3,7 @@ from django.test import TestCase, RequestFactory, Client
 from django.contrib.auth.models import User
 from django.contrib.admin.sites import AdminSite
 from django.urls import reverse
+from django.utils import timezone
 
 from rutinas.models import Rutina, RutinaEjercicio
 from ejercicios.models import Ejercicio, RegistroEjercicio, Serie
@@ -176,3 +177,88 @@ class RutinaAppTests(TestCase):
         self.assertContains(response, 'Tu Progreso')
         self.assertIn('volumen_total', response.context)
         self.assertEqual(response.context['volumen_total'], 800.0)
+
+    def test_rutina_dias_semana_model_methods(self):
+        """Verifica los métodos y propiedades de días de la semana en el modelo Rutina"""
+        hoy_weekday = timezone.now().date().weekday()
+        otro_dia = (hoy_weekday + 1) % 7
+
+        # Rutina con días programados
+        rutina_programada = Rutina.objects.create(
+            nombre='Rutina Programada',
+            usuario=self.user,
+            dias_semana=f"{hoy_weekday},{otro_dia}"
+        )
+        self.assertEqual(rutina_programada.lista_dias_numeros, sorted([hoy_weekday, otro_dia]))
+        self.assertEqual(len(rutina_programada.badges_dias), 2)
+        self.assertTrue(rutina_programada.toca_hoy)
+
+        # Rutina sin días asignados
+        rutina_sin_dias = Rutina.objects.create(
+            nombre='Rutina Sin Días',
+            usuario=self.user,
+            dias_semana=""
+        )
+        self.assertEqual(rutina_sin_dias.lista_dias_numeros, [])
+        self.assertEqual(rutina_sin_dias.badges_dias, [])
+        self.assertFalse(rutina_sin_dias.toca_hoy)
+
+    def test_crear_rutina_con_dias_semana_view(self):
+        """Verifica que al crear una rutina vía JSON se persistan los días seleccionados"""
+        payload = {
+            'nombre': 'Rutina Con Días',
+            'descripcion': 'Martes y Jueves',
+            'dias_semana': [1, 3],
+            'ejercicios': [
+                {
+                    'ejercicio_id': self.ejercicio_peso.id,
+                    'series_objetivo': 3,
+                    'repeticiones_objetivo': 10
+                }
+            ]
+        }
+        response = self.client.post(
+            reverse('rutinas:crear_rutina'),
+            data=json.dumps(payload),
+            content_type='application/json'
+        )
+        self.assertEqual(response.status_code, 200)
+        creada = Rutina.objects.filter(nombre='Rutina Con Días', usuario=self.user).first()
+        self.assertIsNotNone(creada)
+        self.assertEqual(creada.dias_semana, '1,3')
+        self.assertEqual([b['corto'] for b in creada.badges_dias], ['Mar', 'Jue'])
+
+    def test_editar_rutina_con_dias_semana_view(self):
+        """Verifica que al editar una rutina se actualicen los días asignados"""
+        payload = {
+            'nombre': 'Torso y Core Actualizado',
+            'descripcion': 'Nueva descripción',
+            'dias_semana': [0, 4],  # Lunes y Viernes
+            'ejercicios': [
+                {
+                    'ejercicio_id': self.ejercicio_peso.id,
+                    'series_objetivo': 4,
+                    'repeticiones_objetivo': 8
+                }
+            ]
+        }
+        response = self.client.post(
+            reverse('rutinas:editar_rutina', args=[self.rutina.id]),
+            data=json.dumps(payload),
+            content_type='application/json'
+        )
+        self.assertEqual(response.status_code, 200)
+        self.rutina.refresh_from_db()
+        self.assertEqual(self.rutina.dias_semana, '0,4')
+        self.assertEqual([b['corto'] for b in self.rutina.badges_dias], ['Lun', 'Vie'])
+
+    def test_lista_rutinas_muestra_dias_y_toca_hoy(self):
+        """Verifica que en la lista de rutinas se rendericen los badges de días y Toca Hoy"""
+        hoy_weekday = timezone.now().date().weekday()
+        self.rutina.dias_semana = str(hoy_weekday)
+        self.rutina.save()
+
+        response = self.client.get(reverse('rutinas:lista_rutinas'))
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, '¡Toca hoy!')
+

@@ -52,11 +52,18 @@ def crear_rutina_view(request):
             if not nombre:
                 return JsonResponse({'status': 'error', 'message': 'El nombre de la rutina es obligatorio.'}, status=400)
 
+            dias_semana_raw = data.get('dias_semana', [])
+            if isinstance(dias_semana_raw, list):
+                dias_semana_str = ",".join(str(d) for d in sorted(dias_semana_raw) if str(d).isdigit())
+            else:
+                dias_semana_str = str(dias_semana_raw or '').strip()
+
             with transaction.atomic():
                 rutina = Rutina.objects.create(
                     usuario=request.user,
                     nombre=nombre,
-                    descripcion=data.get('descripcion', '').strip()
+                    descripcion=data.get('descripcion', '').strip(),
+                    dias_semana=dias_semana_str
                 )
 
                 ejercicios_data = data.get('ejercicios', [])
@@ -101,9 +108,21 @@ def crear_rutina_view(request):
         for ej in ejercicios
     ]
 
+    dias_semana_opciones = [
+        (0, 'Lun', 'Lunes'),
+        (1, 'Mar', 'Martes'),
+        (2, 'Mié', 'Miércoles'),
+        (3, 'Jue', 'Jueves'),
+        (4, 'Vie', 'Viernes'),
+        (5, 'Sáb', 'Sábado'),
+        (6, 'Dom', 'Domingo'),
+    ]
+
     context = {
         'ejercicios': ejercicios,
         'ejercicios_json': json.dumps(ejercicios_json),
+        'dias_semana_json': json.dumps([]),
+        'dias_semana_opciones': dias_semana_opciones,
         'grupos_musculares': Ejercicio.GRUPO_MUSCULAR_CHOICES,
         'tipos_ejercicio': Ejercicio.TIPO_CHOICES,
         'modalidades': Ejercicio.MODALIDAD_CHOICES,
@@ -127,6 +146,7 @@ def editar_rutina_view(request, rutina_id):
                 data = {
                     'nombre': request.POST.get('nombre'),
                     'descripcion': request.POST.get('descripcion', ''),
+                    'dias_semana': json.loads(request.POST.get('dias_semana_json', '[]')),
                     'ejercicios': json.loads(request.POST.get('ejercicios_json', '[]'))
                 }
 
@@ -134,9 +154,16 @@ def editar_rutina_view(request, rutina_id):
             if not nombre:
                 return JsonResponse({'status': 'error', 'message': 'El nombre es obligatorio.'}, status=400)
 
+            dias_semana_raw = data.get('dias_semana', [])
+            if isinstance(dias_semana_raw, list):
+                dias_semana_str = ",".join(str(d) for d in sorted(dias_semana_raw) if str(d).isdigit())
+            else:
+                dias_semana_str = str(dias_semana_raw or '').strip()
+
             with transaction.atomic():
                 rutina.nombre = nombre
                 rutina.descripcion = data.get('descripcion', '').strip()
+                rutina.dias_semana = dias_semana_str
                 rutina.save()
 
                 # Reemplazamos los ejercicios con la nueva configuración
@@ -191,11 +218,23 @@ def editar_rutina_view(request, rutina_id):
         for re in rutina.rutinaejercicio_set.select_related('ejercicio').order_by('orden')
     ]
 
+    dias_semana_opciones = [
+        (0, 'Lun', 'Lunes'),
+        (1, 'Mar', 'Martes'),
+        (2, 'Mié', 'Miércoles'),
+        (3, 'Jue', 'Jueves'),
+        (4, 'Vie', 'Viernes'),
+        (5, 'Sáb', 'Sábado'),
+        (6, 'Dom', 'Domingo'),
+    ]
+
     context = {
         'rutina': rutina,
         'ejercicios': ejercicios,
         'ejercicios_json': json.dumps(ejercicios_json),
         'rutina_ejercicios_json': json.dumps(rutina_ejercicios_actuales),
+        'dias_semana_json': json.dumps(rutina.lista_dias_numeros),
+        'dias_semana_opciones': dias_semana_opciones,
         'grupos_musculares': Ejercicio.GRUPO_MUSCULAR_CHOICES,
         'tipos_ejercicio': Ejercicio.TIPO_CHOICES,
         'modalidades': Ejercicio.MODALIDAD_CHOICES,

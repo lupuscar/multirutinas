@@ -78,11 +78,12 @@ class Command(BaseCommand):
                 Rutina.objects.filter(usuario=user, nombre__startswith="[Demo]").delete()
                 RegistroEjercicio.objects.filter(usuario=user, etiqueta="Demo").delete()
 
-            # 2. Crear Rutinas estructuradas
+            # 2. Crear Rutinas estructuradas con días programados
             rutinas_data = [
                 {
                     'nombre': '[Demo] Torso Potencia (Empuje & Brazos)',
                     'desc': 'Foco en hipertrofia y fuerza para pecho, hombro y tríceps.',
+                    'dias_semana': '0,3',  # Lunes y Jueves
                     'ejercicios': [
                         ('Chest Press', 4, 10),
                         ('Pec Fly', 3, 12),
@@ -92,6 +93,7 @@ class Command(BaseCommand):
                 {
                     'nombre': '[Demo] Pierna Completa & Estabilidad',
                     'desc': 'Entrenamiento intenso de cuádriceps, glúteos y cadena posterior.',
+                    'dias_semana': '1,4',  # Martes y Viernes
                     'ejercicios': [
                         ('Leg Press', 4, 10),
                         ('Leg Extensions', 4, 12),
@@ -101,6 +103,7 @@ class Command(BaseCommand):
                 {
                     'nombre': '[Demo] Tracción & Brazos',
                     'desc': 'Espalda densa y bíceps con estímulo de alta tensión mecánica.',
+                    'dias_semana': '2,5',  # Miércoles y Sábado
                     'ejercicios': [
                         ('Jalón al Pecho', 4, 10),
                         ('Remo con Mancuerna', 3, 10),
@@ -113,8 +116,14 @@ class Command(BaseCommand):
                 rutina, creada = Rutina.objects.get_or_create(
                     usuario=user,
                     nombre=rd['nombre'],
-                    defaults={'descripcion': rd['desc']}
+                    defaults={
+                        'descripcion': rd['desc'],
+                        'dias_semana': rd.get('dias_semana', '')
+                    }
                 )
+                if not creada and rd.get('dias_semana') and not rutina.dias_semana:
+                    rutina.dias_semana = rd['dias_semana']
+                    rutina.save()
                 for orden, ej_info in enumerate(rd['ejercicios'], start=1):
                     nombre_ej = ej_info[0]
                     series_obj = ej_info[1]

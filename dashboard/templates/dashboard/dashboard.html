@@ -116,9 +116,15 @@
 
             <div>
                 <div class="flex items-center justify-between mb-2">
+                    {% if rutina_sugerida and rutina_sugerida.es_programada_hoy %}
+                    <span class="px-2.5 py-0.5 rounded-lg bg-emerald-400/20 text-emerald-300 text-[11px] font-bold uppercase tracking-wider flex items-center border border-emerald-400/30">
+                        <i class="fa-solid fa-calendar-check mr-1.5 text-xs text-emerald-400 animate-pulse"></i> Toca Hoy ({{ dia_hoy_nombre }})
+                    </span>
+                    {% else %}
                     <span class="px-2.5 py-0.5 rounded-lg bg-white/10 backdrop-blur-md text-[11px] font-bold uppercase tracking-wider text-amber-300 flex items-center">
                         <i class="fa-solid fa-bolt mr-1 text-xs"></i> Recomendado Hoy
                     </span>
+                    {% endif %}
                     <i class="fa-solid fa-dumbbell text-white/20 text-2xl"></i>
                 </div>
 

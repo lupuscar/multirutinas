@@ -87,3 +87,29 @@ class DashboardViewTests(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertIsNotNone(response.context['rutina_sugerida'])
         self.assertEqual(response.context['rutina_sugerida']['rutina'].nombre, 'Rutina Torso Test')
+
+    def test_dashboard_prioriza_rutina_programada_para_hoy(self):
+        """Verifica que el dashboard priorice la rutina asignada al día de la semana actual"""
+        self.client.login(username='atletadash', password='Password123!')
+
+        hoy_weekday = timezone.now().date().weekday()
+        otro_weekday = (hoy_weekday + 1) % 7
+
+        rutina_otro_dia = Rutina.objects.create(
+            usuario=self.user,
+            nombre='Rutina Otro Día',
+            dias_semana=str(otro_weekday)
+        )
+        rutina_hoy = Rutina.objects.create(
+            usuario=self.user,
+            nombre='Rutina Para Hoy',
+            dias_semana=str(hoy_weekday)
+        )
+
+        response = self.client.get(reverse('dashboard:dashboard'))
+        self.assertEqual(response.status_code, 200)
+        self.assertIsNotNone(response.context['rutina_sugerida'])
+        self.assertEqual(response.context['rutina_sugerida']['rutina'].id, rutina_hoy.id)
+        self.assertTrue(response.context['rutina_sugerida']['es_programada_hoy'])
+        self.assertContains(response, 'Toca Hoy')
+

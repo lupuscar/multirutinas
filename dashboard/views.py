@@ -187,10 +187,13 @@ def dashboard(request):
     )[:6]
 
     # =====================================================================
-    # 4. SIGUIENTE ENTRENAMIENTO RECOMENDADO
+    # 4. SIGUIENTE ENTRENAMIENTO RECOMENDADO (PRIORIDAD POR DÍA ASIGNADO)
     # =====================================================================
     rutinas_usuario = Rutina.objects.filter(usuario=usuario).prefetch_related('ejercicios')
     rutina_sugerida = None
+
+    nombres_dias_completos = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo']
+    dia_hoy_nombre = nombres_dias_completos[hoy.weekday()]
 
     if rutinas_usuario.exists():
         rutinas_con_fecha = []
@@ -202,17 +205,27 @@ def dashboard(request):
             ).order_by('-fecha').first()
 
             ultima_fecha = ultimo_reg.fecha if ultimo_reg else None
+            es_programada_hoy = rut.toca_hoy
+            ya_entrenada_hoy = (ultima_fecha == hoy)
+
             rutinas_con_fecha.append({
                 'rutina': rut,
                 'ultima_fecha': ultima_fecha,
                 'ejercicios_count': len(ej_ids),
+                'es_programada_hoy': es_programada_hoy,
+                'ya_entrenada_hoy': ya_entrenada_hoy,
             })
 
-        # Se sugiere la que hace más tiempo que no se entrena (o nunca entrenada)
-        rutinas_con_fecha.sort(
-            key=lambda x: (x['ultima_fecha'] is not None, x['ultima_fecha'] or datetime.date.min)
-        )
-        rutina_sugerida = rutinas_con_fecha[0]
+        # 1. Si hay alguna rutina programada específicamente para hoy que aún no se haya realizado hoy
+        rutinas_hoy_pendientes = [r for r in rutinas_con_fecha if r['es_programada_hoy'] and not r['ya_entrenada_hoy']]
+        if rutinas_hoy_pendientes:
+            rutina_sugerida = rutinas_hoy_pendientes[0]
+        else:
+            # 2. Si no hay rutina de hoy o ya se entrenó: ordenamos por la que hace más tiempo que no se entrena
+            rutinas_con_fecha.sort(
+                key=lambda x: (x['ultima_fecha'] is not None, x['ultima_fecha'] or datetime.date.min)
+            )
+            rutina_sugerida = rutinas_con_fecha[0]
 
     # =====================================================================
     # 5. HISTORIAL DE SESIONES RECIENTES
@@ -301,6 +314,7 @@ def dashboard(request):
         'meta_semanal': meta_semanal,
         'progreso_meta_pct': progreso_meta_pct,
         'rutina_sugerida': rutina_sugerida,
+        'dia_hoy_nombre': dia_hoy_nombre,
 
         # KPIs y Tendencias
         'dias_entrenados_mes': dias_entrenados_mes,
