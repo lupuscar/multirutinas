@@ -113,3 +113,56 @@ class Profile(models.Model):
             return {'nombre': 'Sobrepeso', 'badge_class': 'bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300'}
         else:
             return {'nombre': 'Obesidad', 'badge_class': 'bg-rose-100 text-rose-700 dark:bg-rose-900/40 dark:text-rose-300'}
+
+
+# =====================================================================
+# 5. AUDITORÍA, INCIDENCIAS Y REGISTRO DE EVENTOS (LOGS)
+# =====================================================================
+class LogActividad(models.Model):
+    NIVELES = [
+        ('INFO', 'Información'),
+        ('WARNING', 'Advertencia'),
+        ('ERROR', 'Error / Excepción'),
+        ('CRITICAL', 'Crítico'),
+    ]
+
+    TIPOS = [
+        ('LOGIN', 'Inicio de sesión'),
+        ('LOGOUT', 'Cierre de sesión'),
+        ('LOGIN_FAIL', 'Intento de login fallido'),
+        ('REGISTRO', 'Registro de nuevo usuario'),
+        ('PERFIL_EDIT', 'Edición de perfil'),
+        ('PASSWORD_RESET', 'Solicitud reseteo de clave'),
+        ('PASSWORD_CHANGE', 'Cambio de clave'),
+        ('RUTINA_CREATE', 'Creación de rutina'),
+        ('SERIE_LOG', 'Registro de serie en Modo Gym'),
+        ('ERROR_500', 'Excepción 500 en servidor'),
+        ('OTRO', 'Otro evento'),
+    ]
+
+    usuario = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='logs_actividad',
+        verbose_name="Usuario"
+    )
+    nivel = models.CharField(max_length=10, choices=NIVELES, default='INFO', verbose_name="Nivel")
+    tipo = models.CharField(max_length=20, choices=TIPOS, default='INFO', verbose_name="Tipo de Evento")
+    ruta = models.CharField(max_length=255, blank=True, default='', verbose_name="Ruta / URL")
+    metodo = models.CharField(max_length=10, blank=True, default='GET', verbose_name="Método HTTP")
+    ip = models.GenericIPAddressField(null=True, blank=True, verbose_name="Dirección IP")
+    user_agent = models.CharField(max_length=255, blank=True, default='', verbose_name="Dispositivo / Navegador")
+    mensaje = models.TextField(verbose_name="Mensaje o Descripción")
+    traceback = models.TextField(null=True, blank=True, verbose_name="Traza de Error (Traceback)")
+    creado_en = models.DateTimeField(auto_now_add=True, verbose_name="Fecha y Hora")
+
+    class Meta:
+        verbose_name = "Registro de Actividad"
+        verbose_name_plural = "Auditoría de Actividad e Incidencias"
+        ordering = ['-creado_en']
+
+    def __str__(self):
+        usr = self.usuario.username if self.usuario else "Anónimo"
+        return f"[{self.nivel}] {self.get_tipo_display()} - {usr} ({self.creado_en.strftime('%d/%m/%Y %H:%M')})"

@@ -5,6 +5,7 @@ from django.contrib import messages
 from django.db.models import Count
 
 from .models import Profile
+from .utils import registrar_log
 from .forms import (
     RegistroUsuarioForm,
     UserUpdateForm,
@@ -29,6 +30,14 @@ def registro_view(request):
             user = form.save()
             # Aseguramos que el perfil existe
             Profile.objects.get_or_create(user=user)
+            # Registro en auditoría
+            registrar_log(
+                request=request,
+                usuario=user,
+                nivel='INFO',
+                tipo='REGISTRO',
+                mensaje=f"Nuevo usuario registrado en la app: {user.username} ({user.email})"
+            )
             # Iniciamos sesión automáticamente
             login(request, user)
             messages.success(
@@ -76,6 +85,13 @@ def perfil_view(request):
             if user_form.is_valid() and profile_form.is_valid():
                 user_form.save()
                 profile_form.save()
+                registrar_log(
+                    request=request,
+                    usuario=usuario,
+                    nivel='INFO',
+                    tipo='PERFIL_EDIT',
+                    mensaje="Perfil y datos personales actualizados exitosamente."
+                )
                 messages.success(request, '¡Tu perfil y datos deportivos se han actualizado con éxito!')
                 return redirect('users:perfil')
             else:
@@ -89,6 +105,13 @@ def perfil_view(request):
                 user = password_form.save()
                 # Mantiene la sesión iniciada tras cambiar la contraseña
                 update_session_auth_hash(request, user)
+                registrar_log(
+                    request=request,
+                    usuario=usuario,
+                    nivel='INFO',
+                    tipo='PASSWORD_CHANGE',
+                    mensaje="Contraseña de usuario cambiada desde el panel de perfil."
+                )
                 messages.success(request, '¡Tu contraseña ha sido cambiada correctamente!')
                 return redirect('users:perfil')
             else:

@@ -130,3 +130,54 @@ class UsersAuthTests(TestCase):
         self.user.save()
         self.assertFalse(default_token_generator.check_token(self.user, token))
 
+    def test_log_creado_en_login_y_logout(self):
+        """Verifica que el login y logout exitosos generen registros de auditoría"""
+        from users.models import LogActividad
+
+        # Login
+        self.client.login(username='atleta1', password='Password123!')
+        log_login = LogActividad.objects.filter(usuario=self.user, tipo='LOGIN').first()
+        self.assertIsNotNone(log_login)
+        self.assertEqual(log_login.nivel, 'INFO')
+
+        # Logout
+        self.client.logout()
+        log_logout = LogActividad.objects.filter(usuario=self.user, tipo='LOGOUT').first()
+        self.assertIsNotNone(log_logout)
+        self.assertEqual(log_logout.nivel, 'INFO')
+
+    def test_log_creado_en_login_fallido(self):
+        """Verifica que un intento con contraseña errónea genere una advertencia WARNING"""
+        from users.models import LogActividad
+
+        self.client.post('/accounts/login/', {'username': 'atleta1', 'password': 'ClaveIncorrecta!'})
+        log_fail = LogActividad.objects.filter(tipo='LOGIN_FAIL').first()
+        self.assertIsNotNone(log_fail)
+        self.assertEqual(log_fail.nivel, 'WARNING')
+        self.assertIn('atleta1', log_fail.mensaje)
+
+    def test_middleware_captura_error_500(self):
+        """Verifica que el middleware capture excepciones no controladas y cree un registro ERROR_500"""
+        from users.models import LogActividad
+        from django.test import RequestFactory
+        from users.middleware import AuditAndErrorLoggingMiddleware
+
+        factory = RequestFactory()
+        request = factory.get('/ruta-con-error/')
+        request.user = self.user
+
+        middleware = AuditAndErrorLoggingMiddleware(lambda r: None)
+        try:
+            raise ValueError("Fallo forzado de prueba técnica")
+        except ValueError as e:
+            middleware.process_exception(request, e)
+
+        log_err = LogActividad.objects.filter(tipo='ERROR_500').first()
+        self.assertIsNotNone(log_err)
+        self.assertEqual(log_err.nivel, 'ERROR')
+        self.assertEqual(log_err.usuario, self.user)
+        self.assertIn("Fallo forzado de prueba técnica", log_err.mensaje)
+        self.assertIsNotNone(log_err.traceback)
+        self.assertIn("ValueError", log_err.traceback)
+
+
