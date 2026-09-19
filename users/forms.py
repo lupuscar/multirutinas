@@ -10,15 +10,6 @@ User = get_user_model()
 # 1. FORMULARIO DE REGISTRO PÚBLICO (SIGNUP)
 # =====================================================================
 class RegistroUsuarioForm(UserCreationForm):
-    email = forms.EmailField(
-        required=True,
-        label="Correo electrónico",
-        help_text="Necesario para recuperar tu contraseña y enviarte resúmenes de progreso.",
-        widget=forms.EmailInput(attrs={
-            'placeholder': 'tu@email.com',
-            'class': 'w-full px-4 py-2.5 rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-white outline-none focus:ring-2 focus:ring-brand-light text-sm'
-        })
-    )
     first_name = forms.CharField(
         max_length=30,
         required=True,
@@ -28,19 +19,19 @@ class RegistroUsuarioForm(UserCreationForm):
             'class': 'w-full px-4 py-2.5 rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-white outline-none focus:ring-2 focus:ring-brand-light text-sm'
         })
     )
+    email = forms.EmailField(
+        required=True,
+        label="Correo electrónico",
+        help_text="Será tu usuario para iniciar sesión y recuperar tu contraseña.",
+        widget=forms.EmailInput(attrs={
+            'placeholder': 'tu@email.com',
+            'class': 'w-full px-4 py-2.5 rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-white outline-none focus:ring-2 focus:ring-brand-light text-sm'
+        })
+    )
 
     class Meta(UserCreationForm.Meta):
         model = User
-        fields = ('username', 'first_name', 'email')
-        labels = {
-            'username': 'Nombre de usuario',
-        }
-        widgets = {
-            'username': forms.TextInput(attrs={
-                'placeholder': 'Elige un usuario único',
-                'class': 'w-full px-4 py-2.5 rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-white outline-none focus:ring-2 focus:ring-brand-light text-sm'
-            }),
-        }
+        fields = ('first_name', 'email')
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -59,6 +50,21 @@ class RegistroUsuarioForm(UserCreationForm):
         if User.objects.filter(email__iexact=email).exists():
             raise forms.ValidationError("Ya existe una cuenta con este correo electrónico.")
         return email
+
+    def save(self, commit=True):
+        user = super().save(commit=False)
+        email = self.cleaned_data.get('email', '').strip().lower()
+        user.email = email
+        # Si vino un username explícito (ej. tests automatizados), respetarlo; si no, usar el correo
+        username_extra = self.data.get('username', '').strip()
+        if username_extra:
+            user.username = username_extra
+        else:
+            user.username = email[:150]
+
+        if commit:
+            user.save()
+        return user
 
 
 # =====================================================================

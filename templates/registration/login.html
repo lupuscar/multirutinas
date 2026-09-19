@@ -18,7 +18,7 @@
         {% if form.errors %}
             <div class="bg-red-50 dark:bg-red-900/30 border border-red-200 dark:border-red-800 text-red-700 dark:text-red-300 p-3.5 rounded-xl mb-4 text-xs font-medium flex items-start space-x-2">
                 <i class="fa-solid fa-circle-exclamation mt-0.5 shrink-0"></i>
-                <span>Tu usuario o contraseña no son correctos. Por favor inténtalo de nuevo.</span>
+                <span>Tu correo electrónico o contraseña no son correctos. Por favor inténtalo de nuevo.</span>
             </div>
         {% endif %}
 
@@ -27,9 +27,12 @@
             
             <div>
                 <label class="block text-xs font-bold text-gray-700 dark:text-gray-300 uppercase tracking-wider mb-1">
-                    Usuario
+                    Correo Electrónico
                 </label>
-                {{ form.username }}
+                <input type="text" name="username" autofocus autocapitalize="none" autocomplete="username" required id="id_username"
+                       placeholder="tu@email.com"
+                       value="{{ form.username.value|default:'' }}"
+                       class="w-full px-4 py-2.5 rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-white outline-none focus:ring-2 focus:ring-brand-light text-sm">
             </div>
             
             <div>

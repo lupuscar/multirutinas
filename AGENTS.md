@@ -24,6 +24,7 @@ Este documento sirve como **memoria persistente y guía contextual** de **Multir
   - Campos: `usuario`, `nivel` (INFO, WARNING, ERROR, CRITICAL), `tipo` (LOGIN, LOGOUT, LOGIN_FAIL, REGISTRO, PERFIL_EDIT, PASSWORD_CHANGE, ERROR_500), `ruta`, `metodo`, `ip`, `user_agent`, `mensaje`, `traceback`, `creado_en`.
 - **`middleware.py` (`AuditAndErrorLoggingMiddleware`):** Captura en `process_exception` cualquier error 500 no controlado y registra la traza completa.
 - **`signals.py`:** Crea automáticamente el `Profile` al registrarse un usuario y registra eventos de autenticación.
+- **`backends.py` (`EmailOrUsernameModelBackend`):** Permite autenticación insensible a mayúsculas tanto por correo electrónico como por nombre de usuario tradicional.
 - **`utils.py`:** Funciones `get_client_ip(request)` y `registrar_log(...)` (tolerante a fallos).
 
 ### `ejercicios` (Catálogo y Tipos de Actividad)

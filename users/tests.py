@@ -52,6 +52,38 @@ class UsersAuthTests(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertFormError(response.context['form'], 'email', 'Ya existe una cuenta con este correo electrónico.')
 
+    def test_registro_solo_con_email_sin_username(self):
+        """Verifica que el usuario se puede registrar solo con nombre, email y contraseña"""
+        data = {
+            'first_name': 'Carlos',
+            'email': 'carlos@fitapp.com',
+            'password1': 'MiClaveSecreta99!',
+            'password2': 'MiClaveSecreta99!',
+        }
+        response = self.client.post(reverse('users:registro'), data)
+        self.assertRedirects(response, reverse('users:perfil'))
+
+        carlos = User.objects.filter(email='carlos@fitapp.com').first()
+        self.assertIsNotNone(carlos)
+        self.assertEqual(carlos.username, 'carlos@fitapp.com')
+        self.assertEqual(carlos.first_name, 'Carlos')
+        self.assertTrue(hasattr(carlos, 'profile'))
+
+    def test_login_con_email(self):
+        """Verifica que el usuario puede iniciar sesión usando su correo electrónico"""
+        login_exitoso = self.client.login(username='atleta1@fitapp.com', password='Password123!')
+        self.assertTrue(login_exitoso)
+
+    def test_login_con_email_case_insensitive(self):
+        """Verifica que el login por email es insensible a mayúsculas/minúsculas"""
+        login_exitoso = self.client.login(username='ATLETA1@FITAPP.COM', password='Password123!')
+        self.assertTrue(login_exitoso)
+
+    def test_login_con_username_tradicional(self):
+        """Verifica que el usuario también puede iniciar sesión con su username tradicional"""
+        login_exitoso = self.client.login(username='atleta1', password='Password123!')
+        self.assertTrue(login_exitoso)
+
     def test_actualizar_perfil(self):
         """Verifica la actualización de datos personales y físicos en el perfil"""
         self.client.login(username='atleta1', password='Password123!')

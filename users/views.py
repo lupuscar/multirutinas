@@ -39,7 +39,7 @@ def registro_view(request):
                 mensaje=f"Nuevo usuario registrado en la app: {user.username} ({user.email})"
             )
             # Iniciamos sesión automáticamente
-            login(request, user)
+            login(request, user, backend='users.backends.EmailOrUsernameModelBackend')
             messages.success(
                 request,
                 f"¡Bienvenido a FitApp, {user.first_name or user.username}! Tu cuenta ha sido creada exitosamente."
