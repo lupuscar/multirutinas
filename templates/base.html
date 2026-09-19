@@ -105,11 +105,13 @@
                         <span class="sidebar-text ml-4 font-medium">Dashboard</span>
                     </a>
 
+                    {% if user.is_staff or user.is_superuser %}
                     <!-- Admin -->
                     <a href="/admin/" class="flex items-center px-4 py-3 text-gray-600 dark:text-gray-300 hover:bg-brand-light hover:text-white rounded-lg transition-colors group">
                         <i class="fa-solid fa-shield-halved text-lg"></i>
                         <span class="sidebar-text ml-4 font-medium">Admin</span>
                     </a>
+                    {% endif %}
 
                     <!-- Separador dinámico -->
                     <div class="px-3 my-3">

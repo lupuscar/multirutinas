@@ -111,7 +111,16 @@ Ejemplo de `.env`
 SECRET_KEY=
 DEBUG=True
 ALLOWED_HOSTS=127.0.0.1,localhost
+
+# Configuración de Email (SMTP para producción / consola en desarrollo)
+EMAIL_HOST=smtp-relay.brevo.com
+EMAIL_PORT=587
+EMAIL_USE_TLS=True
+EMAIL_HOST_USER=
+EMAIL_HOST_PASSWORD=
+DEFAULT_FROM_EMAIL=FitApp <no-reply@fitapp.com>
 ```
+
 
 ---
 

@@ -1,151 +1,416 @@
 {% extends 'base.html' %}
 
-{% block title %}Mi Perfil - FitApp{% endblock %}
+{% block title %}Mi Perfil | FitApp{% endblock %}
 
 {% block content %}
-<!-- Contenedor principal con estado de pestañas -->
-<div x-data="{ tab: 'ver' }" class="max-w-4xl mx-auto">
-    
-    <!-- Cabecera del Perfil -->
-    <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-sm p-6 mb-6 flex items-center gap-6 transition-colors duration-300">
-        <div class="relative">
+<div x-data="{ tab: '{{ pestaña_activa|default:'ver' }}', modalPlanes: false }" class="max-w-4xl mx-auto pb-20 space-y-6">
+
+    <!-- ================================================================= -->
+    <!-- CABECERA DEL PERFIL CON BADGE DE SUSCRIPCIÓN COMERCIAL -->
+    <!-- ================================================================= -->
+    <div class="bg-white dark:bg-gray-800 rounded-3xl shadow-sm border border-gray-100 dark:border-gray-700/80 p-6 sm:p-8 flex flex-col sm:flex-row items-center sm:items-start gap-6 transition-colors">
+        
+        <!-- Avatar / Foto -->
+        <div class="relative shrink-0">
             {% if perfil.foto_perfil %}
-                <img src="{{ perfil.foto_perfil.url }}" alt="Foto de {{ request.user.username }}" class="w-24 h-24 rounded-full object-cover border-4 border-brand-light/20">
+                <img src="{{ perfil.foto_perfil.url }}" alt="Foto de {{ request.user.username }}" 
+                     class="w-24 h-24 sm:w-28 sm:h-28 rounded-3xl object-cover border-4 border-brand-light/20 shadow-md">
             {% else %}
-                <div class="w-24 h-24 rounded-full bg-gray-200 dark:bg-gray-700 flex items-center justify-center border-4 border-brand-light/20">
-                    <i class="fa-solid fa-user text-4xl text-gray-400"></i>
+                <div class="w-24 h-24 sm:w-28 sm:h-28 rounded-3xl bg-gradient-to-br from-gray-100 to-gray-200 dark:from-gray-700 dark:to-gray-800 flex items-center justify-center border-4 border-brand-light/20 text-gray-400">
+                    <i class="fa-solid fa-user text-4xl"></i>
                 </div>
             {% endif %}
-        </div>
-        <div>
-            <h1 class="text-3xl font-bold text-gray-900 dark:text-white">{{ request.user.first_name|default:request.user.username }} {{ request.user.last_name }}</h1>
-            <p class="text-gray-500 dark:text-gray-400 mt-1">{{ request.user.email|default:"Sin correo registrado" }}</p>
-            <span class="inline-block mt-2 px-3 py-1 bg-brand-light/10 text-brand-light text-xs font-bold rounded-full uppercase tracking-wide">
-                {{ perfil.get_nivel_display }}
+
+            <!-- Medalla del Plan -->
+            <span class="absolute -bottom-2 -right-2 px-2.5 py-1 rounded-xl text-[10px] font-black tracking-wider uppercase shadow-md
+                {% if perfil.tipo_suscripcion == 'PRO' %}bg-gradient-to-r from-amber-400 to-yellow-500 text-gray-900
+                {% elif perfil.tipo_suscripcion == 'COACH' %}bg-gradient-to-r from-purple-500 to-indigo-600 text-white
+                {% else %}bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300{% endif %}">
+                {% if perfil.tipo_suscripcion == 'PRO' %}⭐ PRO{% elif perfil.tipo_suscripcion == 'COACH' %}COACH{% else %}GRATIS{% endif %}
             </span>
         </div>
+
+        <!-- Información y Lema -->
+        <div class="flex-1 text-center sm:text-left space-y-2">
+            <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                <div>
+                    <h1 class="text-2xl sm:text-3xl font-black text-gray-900 dark:text-white">
+                        {{ request.user.first_name|default:request.user.username }} {{ request.user.last_name }}
+                    </h1>
+                    <p class="text-xs sm:text-sm text-gray-500 dark:text-gray-400">
+                        @{{ request.user.username }} • {{ request.user.email }}
+                    </p>
+                </div>
+
+                <!-- Botón Monetización / Upgrade -->
+                {% if not perfil.es_pro %}
+                <button type="button" @click="modalPlanes = true" 
+                        class="inline-flex items-center justify-center px-4 py-2 rounded-xl bg-gradient-to-r from-amber-400 to-amber-500 hover:from-amber-500 hover:to-amber-600 text-gray-950 font-black text-xs shadow-md shadow-amber-400/20 transition-all hover:scale-105 active:scale-95">
+                    <i class="fa-solid fa-crown mr-1.5 text-xs"></i>
+                    <span>Pasar a FitApp PRO</span>
+                </button>
+                {% else %}
+                <span class="inline-flex items-center px-3.5 py-1.5 rounded-xl bg-amber-100 dark:bg-amber-900/30 text-amber-800 dark:text-amber-300 font-bold text-xs">
+                    <i class="fa-solid fa-gem mr-1.5"></i> Miembro PRO Activo
+                </span>
+                {% endif %}
+            </div>
+
+            {% if perfil.biografia %}
+            <p class="text-xs sm:text-sm text-gray-600 dark:text-gray-300 italic pt-1">
+                "{{ perfil.biografia }}"
+            </p>
+            {% endif %}
+
+            <div class="flex flex-wrap items-center justify-center sm:justify-start gap-2 pt-1">
+                <span class="px-2.5 py-1 rounded-lg bg-brand-light/10 text-brand-light font-bold text-xs">
+                    <i class="fa-solid fa-bolt mr-1 text-[10px]"></i> Nivel: {{ perfil.get_nivel_display }}
+                </span>
+                <span class="px-2.5 py-1 rounded-lg bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-400 font-bold text-xs">
+                    <i class="fa-solid fa-bullseye mr-1 text-[10px]"></i> {{ perfil.get_objetivo_display }}
+                </span>
+            </div>
+        </div>
+
     </div>
 
-    <!-- Navegación de Pestañas -->
-    <div class="flex space-x-4 mb-6 border-b border-gray-200 dark:border-gray-700">
+    <!-- ================================================================= -->
+    <!-- NAVEGACIÓN POR PESTAÑAS TÁCTILES -->
+    <!-- ================================================================= -->
+    <div class="flex space-x-2 border-b border-gray-200 dark:border-gray-700/80 pb-2 text-xs sm:text-sm overflow-x-auto">
         <button @click="tab = 'ver'" 
-                :class="{ 'border-brand-light text-brand-light dark:text-brand-light': tab === 'ver', 'border-transparent text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300': tab !== 'ver' }"
-                class="pb-3 border-b-2 font-medium transition-colors">
-            <i class="fa-solid fa-address-card mr-2"></i>Ver Detalles
+                :class="tab === 'ver' ? 'bg-brand-light text-white font-bold shadow-sm' : 'text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800'"
+                class="px-4 py-2.5 rounded-xl transition-all flex items-center space-x-2 whitespace-nowrap">
+            <i class="fa-solid fa-id-card"></i>
+            <span>Mi Ficha & Salud</span>
         </button>
+
         <button @click="tab = 'editar'" 
-                :class="{ 'border-brand-light text-brand-light dark:text-brand-light': tab === 'editar', 'border-transparent text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300': tab !== 'editar' }"
-                class="pb-3 border-b-2 font-medium transition-colors">
-            <i class="fa-solid fa-pen-to-square mr-2"></i>Editar Perfil
+                :class="tab === 'editar' ? 'bg-brand-light text-white font-bold shadow-sm' : 'text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800'"
+                class="px-4 py-2.5 rounded-xl transition-all flex items-center space-x-2 whitespace-nowrap">
+            <i class="fa-solid fa-pen-to-square"></i>
+            <span>Editar Datos</span>
+        </button>
+
+        <button @click="tab = 'seguridad'" 
+                :class="tab === 'seguridad' ? 'bg-brand-light text-white font-bold shadow-sm' : 'text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800'"
+                class="px-4 py-2.5 rounded-xl transition-all flex items-center space-x-2 whitespace-nowrap">
+            <i class="fa-solid fa-shield-halved"></i>
+            <span>Seguridad & Cuenta</span>
         </button>
     </div>
 
-    <!-- Contenido de las Pestañas -->
-    <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-sm p-8 transition-colors duration-300">
+    <!-- ================================================================= -->
+    <!-- PESTAÑA 1: VER FICHA Y SALUD -->
+    <!-- ================================================================= -->
+    <div x-show="tab === 'ver'" class="space-y-6">
         
-        <!-- Pestaña: VER PERFIL -->
-        <div x-show="tab === 'ver'" class="space-y-6">
-            <h2 class="text-xl font-bold border-b border-gray-100 dark:border-gray-700 pb-2 mb-4">Estadísticas Físicas</h2>
-            <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
-                <!-- Tarjeta Métrica -->
-                <div class="bg-gray-50 dark:bg-gray-700/50 p-4 rounded-xl flex items-center justify-between">
+        <!-- Tarjetas de Métricas Físicas -->
+        <div class="bg-white dark:bg-gray-800 rounded-3xl p-6 sm:p-7 shadow-sm border border-gray-100 dark:border-gray-700/80 space-y-4">
+            <h2 class="text-base font-bold text-gray-900 dark:text-white flex items-center">
+                <i class="fa-solid fa-heart-pulse text-brand-light mr-2"></i> Estado Físico y Corporal
+            </h2>
+
+            <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                <!-- Peso -->
+                <div class="bg-gray-50 dark:bg-gray-900/60 p-4 rounded-2xl border border-gray-100 dark:border-gray-700/50 flex items-center justify-between">
                     <div>
-                        <p class="text-sm text-gray-500 dark:text-gray-400 uppercase font-semibold">Peso</p>
-                        <p class="text-2xl font-bold">{{ perfil.peso|default:"--" }} <span class="text-base font-normal text-gray-500">kg</span></p>
+                        <span class="text-xs font-bold text-gray-400 uppercase tracking-wider block">Peso</span>
+                        <span class="text-2xl font-black text-gray-900 dark:text-white">{{ perfil.peso|default:"--" }}</span>
+                        <span class="text-xs text-gray-400 font-medium">kg</span>
                     </div>
-                    <i class="fa-solid fa-weight-scale text-3xl text-brand-light opacity-50"></i>
-                </div>
-                
-                <div class="bg-gray-50 dark:bg-gray-700/50 p-4 rounded-xl flex items-center justify-between">
-                    <div>
-                        <p class="text-sm text-gray-500 dark:text-gray-400 uppercase font-semibold">Altura</p>
-                        <p class="text-2xl font-bold">{{ perfil.altura|default:"--" }} <span class="text-base font-normal text-gray-500">cm</span></p>
-                    </div>
-                    <i class="fa-solid fa-ruler-vertical text-3xl text-brand-light opacity-50"></i>
+                    <span class="w-10 h-10 rounded-xl bg-purple-50 dark:bg-purple-900/30 text-purple-600 dark:text-purple-400 flex items-center justify-center text-lg">
+                        <i class="fa-solid fa-weight-scale"></i>
+                    </span>
                 </div>
 
-                <div class="bg-gray-50 dark:bg-gray-700/50 p-4 rounded-xl flex items-center justify-between">
+                <!-- Altura -->
+                <div class="bg-gray-50 dark:bg-gray-900/60 p-4 rounded-2xl border border-gray-100 dark:border-gray-700/50 flex items-center justify-between">
                     <div>
-                        <p class="text-sm text-gray-500 dark:text-gray-400 uppercase font-semibold">IMC</p>
-                        <p class="text-2xl font-bold">{{ perfil.imc|default:"--" }}</p>
+                        <span class="text-xs font-bold text-gray-400 uppercase tracking-wider block">Altura</span>
+                        <span class="text-2xl font-black text-gray-900 dark:text-white">{{ perfil.altura|default:"--" }}</span>
+                        <span class="text-xs text-gray-400 font-medium">cm</span>
                     </div>
-                    <i class="fa-solid fa-heart-pulse text-3xl text-brand-light opacity-50"></i>
+                    <span class="w-10 h-10 rounded-xl bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 flex items-center justify-center text-lg">
+                        <i class="fa-solid fa-ruler-vertical"></i>
+                    </span>
+                </div>
+
+                <!-- IMC con Categoría -->
+                <div class="bg-gray-50 dark:bg-gray-900/60 p-4 rounded-2xl border border-gray-100 dark:border-gray-700/50 flex items-center justify-between">
+                    <div>
+                        <span class="text-xs font-bold text-gray-400 uppercase tracking-wider block">Índice IMC</span>
+                        <span class="text-2xl font-black text-gray-900 dark:text-white">{{ perfil.imc|default:"--" }}</span>
+                        {% if perfil.categoria_imc %}
+                        <span class="block mt-1 text-[10px] font-black px-2 py-0.5 rounded-full {{ perfil.categoria_imc.badge_class }}">
+                            {{ perfil.categoria_imc.nombre }}
+                        </span>
+                        {% endif %}
+                    </div>
+                    <span class="w-10 h-10 rounded-xl bg-emerald-50 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400 flex items-center justify-center text-lg">
+                        <i class="fa-solid fa-chart-pie"></i>
+                    </span>
                 </div>
             </div>
         </div>
 
-        <!-- Pestaña: EDITAR PERFIL -->
-        <div x-show="tab === 'editar'" style="display: none;">
-            <form method="post" enctype="multipart/form-data" class="space-y-6">
-                {% csrf_token %}
+        <!-- Resumen de Actividad Deportiva -->
+        <div class="bg-white dark:bg-gray-800 rounded-3xl p-6 sm:p-7 shadow-sm border border-gray-100 dark:border-gray-700/80 space-y-4">
+            <h2 class="text-base font-bold text-gray-900 dark:text-white flex items-center">
+                <i class="fa-solid fa-trophy text-brand-light mr-2"></i> Tu Actividad en FitApp
+            </h2>
+
+            <div class="grid grid-cols-2 sm:grid-cols-4 gap-4 text-center">
+                <div class="p-3.5 bg-gray-50 dark:bg-gray-900/60 rounded-2xl">
+                    <span class="text-2xl font-black text-brand-light block">{{ total_rutinas }}</span>
+                    <span class="text-xs text-gray-500 dark:text-gray-400 font-medium">Rutinas creadas</span>
+                </div>
+                <div class="p-3.5 bg-gray-50 dark:bg-gray-900/60 rounded-2xl">
+                    <span class="text-2xl font-black text-emerald-600 dark:text-emerald-400 block">{{ total_dias_entrenados }}</span>
+                    <span class="text-xs text-gray-500 dark:text-gray-400 font-medium">Días entrenados</span>
+                </div>
+                <div class="p-3.5 bg-gray-50 dark:bg-gray-900/60 rounded-2xl">
+                    <span class="text-2xl font-black text-purple-600 dark:text-purple-400 block">{{ total_series_hechas }}</span>
+                    <span class="text-xs text-gray-500 dark:text-gray-400 font-medium">Series totales</span>
+                </div>
+                <div class="p-3.5 bg-gray-50 dark:bg-gray-900/60 rounded-2xl">
+                    <span class="text-2xl font-black text-amber-600 dark:text-amber-400 block">{{ perfil.dias_objetivo_semana }}</span>
+                    <span class="text-xs text-gray-500 dark:text-gray-400 font-medium">Meta semanal (días)</span>
+                </div>
+            </div>
+
+            {% if ultimo_registro %}
+            <div class="pt-2 text-xs text-gray-500 dark:text-gray-400 flex items-center justify-between border-t border-gray-100 dark:border-gray-700/60">
+                <span>Último entrenamiento registrado:</span>
+                <span class="font-bold text-gray-800 dark:text-white">{{ ultimo_registro.fecha|date:"d M Y" }} ({{ ultimo_registro.etiqueta|default:"Sesión" }})</span>
+            </div>
+            {% endif %}
+        </div>
+
+    </div>
+
+    <!-- ================================================================= -->
+    <!-- PESTAÑA 2: EDITAR PERFIL -->
+    <!-- ================================================================= -->
+    <div x-show="tab === 'editar'" x-cloak class="bg-white dark:bg-gray-800 rounded-3xl p-6 sm:p-8 shadow-sm border border-gray-100 dark:border-gray-700/80">
+        
+        <form method="POST" enctype="multipart/form-data" class="space-y-6">
+            {% csrf_token %}
+            <input type="hidden" name="action" value="actualizar_perfil">
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                 
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
-                    <!-- Columna Datos Personales -->
+                <!-- Columna 1: Datos Personales -->
+                <div class="space-y-4">
+                    <h3 class="text-sm font-bold text-brand-light uppercase tracking-wider flex items-center">
+                        <i class="fa-solid fa-user mr-2"></i> Datos Personales
+                    </h3>
+
                     <div>
-                        <h3 class="text-lg font-bold text-brand-light mb-4 flex items-center"><i class="fa-solid fa-id-badge mr-2"></i>Datos Personales</h3>
-                        <div class="space-y-4">
-                            <!-- Renderizado manual básico para diseño Tailwind -->
-                            {% for field in user_form %}
-                            <div>
-                                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{{ field.label }}</label>
-                                {{ field }}
-                                {% if field.errors %}
-                                    <p class="text-red-500 text-xs mt-1">{{ field.errors.as_text }}</p>
-                                {% endif %}
-                            </div>
-                            {% endfor %}
-                        </div>
+                        <label class="block text-xs font-bold text-gray-700 dark:text-gray-300 uppercase tracking-wider mb-1">Nombre</label>
+                        {{ user_form.first_name }}
                     </div>
 
-                    <!-- Columna Datos Físicos -->
                     <div>
-                        <h3 class="text-lg font-bold text-brand-light mb-4 flex items-center"><i class="fa-solid fa-dumbbell mr-2"></i>Datos Deportivos</h3>
-                        <div class="space-y-4">
-                            {% for field in profile_form %}
-                            <div>
-                                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{{ field.label }}</label>
-                                {{ field }}
-                                {% if field.errors %}
-                                    <p class="text-red-500 text-xs mt-1">{{ field.errors.as_text }}</p>
-                                {% endif %}
-                            </div>
-                            {% endfor %}
-                        </div>
+                        <label class="block text-xs font-bold text-gray-700 dark:text-gray-300 uppercase tracking-wider mb-1">Apellidos</label>
+                        {{ user_form.last_name }}
+                    </div>
+
+                    <div>
+                        <label class="block text-xs font-bold text-gray-700 dark:text-gray-300 uppercase tracking-wider mb-1">Correo Electrónico</label>
+                        {{ user_form.email }}
+                    </div>
+
+                    <div>
+                        <label class="block text-xs font-bold text-gray-700 dark:text-gray-300 uppercase tracking-wider mb-1">Lema o Frase Motivadora</label>
+                        {{ profile_form.biografia }}
+                    </div>
+
+                    <div>
+                        <label class="block text-xs font-bold text-gray-700 dark:text-gray-300 uppercase tracking-wider mb-1">Foto de Perfil</label>
+                        {{ profile_form.foto_perfil }}
                     </div>
                 </div>
 
-                <div class="pt-6 border-t border-gray-200 dark:border-gray-700 text-right">
-                    <button type="submit" class="bg-brand-light hover:bg-brand-dark text-white font-bold py-3 px-8 rounded-lg shadow-md transition-colors focus:ring-4 focus:ring-brand-light/50">
-                        <i class="fa-solid fa-floppy-disk mr-2"></i>Guardar Cambios
+                <!-- Columna 2: Datos Físicos y Objetivos -->
+                <div class="space-y-4">
+                    <h3 class="text-sm font-bold text-brand-light uppercase tracking-wider flex items-center">
+                        <i class="fa-solid fa-dumbbell mr-2"></i> Métricas & Objetivos
+                    </h3>
+
+                    <div class="grid grid-cols-2 gap-3">
+                        <div>
+                            <label class="block text-xs font-bold text-gray-700 dark:text-gray-300 uppercase tracking-wider mb-1">Peso (kg)</label>
+                            {{ profile_form.peso }}
+                        </div>
+                        <div>
+                            <label class="block text-xs font-bold text-gray-700 dark:text-gray-300 uppercase tracking-wider mb-1">Altura (cm)</label>
+                            {{ profile_form.altura }}
+                        </div>
+                    </div>
+
+                    <div>
+                        <label class="block text-xs font-bold text-gray-700 dark:text-gray-300 uppercase tracking-wider mb-1">Fecha de Nacimiento</label>
+                        {{ profile_form.fecha_nacimiento }}
+                    </div>
+
+                    <div>
+                        <label class="block text-xs font-bold text-gray-700 dark:text-gray-300 uppercase tracking-wider mb-1">Nivel de Experiencia</label>
+                        {{ profile_form.nivel }}
+                    </div>
+
+                    <div>
+                        <label class="block text-xs font-bold text-gray-700 dark:text-gray-300 uppercase tracking-wider mb-1">Objetivo Principal</label>
+                        {{ profile_form.objetivo }}
+                    </div>
+
+                    <div>
+                        <label class="block text-xs font-bold text-gray-700 dark:text-gray-300 uppercase tracking-wider mb-1">Meta: Días por semana</label>
+                        {{ profile_form.dias_objetivo_semana }}
+                    </div>
+                </div>
+
+            </div>
+
+            <div class="pt-5 border-t border-gray-100 dark:border-gray-700/80 flex justify-end">
+                <button type="submit" class="py-3 px-6 rounded-xl bg-brand-light hover:bg-brand-dark text-white font-bold text-sm shadow-md shadow-brand-light/30 transition-all">
+                    <i class="fa-solid fa-floppy-disk mr-1.5"></i> Guardar Cambios
+                </button>
+            </div>
+        </form>
+
+    </div>
+
+    <!-- ================================================================= -->
+    <!-- PESTAÑA 3: SEGURIDAD Y CUENTA -->
+    <!-- ================================================================= -->
+    <div x-show="tab === 'seguridad'" x-cloak class="space-y-6">
+        
+        <!-- Formulario de Cambio de Contraseña -->
+        <div class="bg-white dark:bg-gray-800 rounded-3xl p-6 sm:p-8 shadow-sm border border-gray-100 dark:border-gray-700/80 space-y-4">
+            <h2 class="text-base font-bold text-gray-900 dark:text-white flex items-center">
+                <i class="fa-solid fa-key text-brand-light mr-2"></i> Cambiar Contraseña
+            </h2>
+            <p class="text-xs text-gray-500 dark:text-gray-400">
+                Mantén tu cuenta segura actualizando tu clave periódicamente.
+            </p>
+
+            <form method="POST" class="space-y-4 max-w-lg">
+                {% csrf_token %}
+                <input type="hidden" name="action" value="cambiar_password">
+
+                <div>
+                    <label class="block text-xs font-bold text-gray-700 dark:text-gray-300 uppercase tracking-wider mb-1">
+                        Contraseña Actual *
+                    </label>
+                    {{ password_form.old_password }}
+                </div>
+
+                <div>
+                    <label class="block text-xs font-bold text-gray-700 dark:text-gray-300 uppercase tracking-wider mb-1">
+                        Nueva Contraseña *
+                    </label>
+                    {{ password_form.new_password1 }}
+                </div>
+
+                <div>
+                    <label class="block text-xs font-bold text-gray-700 dark:text-gray-300 uppercase tracking-wider mb-1">
+                        Confirmar Nueva Contraseña *
+                    </label>
+                    {{ password_form.new_password2 }}
+                </div>
+
+                <div class="pt-2">
+                    <button type="submit" class="py-3 px-6 rounded-xl bg-brand-light hover:bg-brand-dark text-white font-bold text-sm shadow-md shadow-brand-light/30 transition-all">
+                        <i class="fa-solid fa-lock mr-1.5"></i> Actualizar Contraseña
                     </button>
                 </div>
             </form>
         </div>
 
-    </div>
-</div>
+        <!-- Información de Suscripción / Comercial -->
+        <div class="bg-white dark:bg-gray-800 rounded-3xl p-6 sm:p-8 shadow-sm border border-gray-100 dark:border-gray-700/80 space-y-4">
+            <h2 class="text-base font-bold text-gray-900 dark:text-white flex items-center">
+                <i class="fa-solid fa-credit-card text-brand-light mr-2"></i> Tu Membresía y Plan
+            </h2>
 
-<!-- Estilos extra para los inputs de los formularios generados por Django -->
-<style>
-    /* Forzamos a que los inputs de Django tengan el diseño de Tailwind */
-    input[type="text"], input[type="email"], input[type="number"], input[type="date"], select {
-        width: 100%;
-        padding: 0.5rem 0.75rem;
-        border-radius: 0.5rem;
-        border: 1px solid #d1d5db;
-        background-color: #f9fafb;
-        color: #111827;
-        transition: border-color 0.15s ease-in-out, box-shadow 0.15s ease-in-out;
-    }
-    .dark input[type="text"], .dark input[type="email"], .dark input[type="number"], .dark input[type="date"], .dark select {
-        background-color: #374151;
-        border-color: #4b5563;
-        color: #f9fafb;
-    }
-    input:focus, select:focus {
-        outline: none;
-        border-color: #4f46e5;
-        box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.2);
-    }
-</style>
+            <div class="p-4 rounded-2xl bg-gray-50 dark:bg-gray-900/60 flex items-center justify-between">
+                <div>
+                    <span class="text-xs text-gray-400 uppercase font-bold block">Plan Actual</span>
+                    <span class="text-lg font-black text-gray-900 dark:text-white">{{ perfil.get_tipo_suscripcion_display }}</span>
+                    {% if perfil.fecha_fin_suscripcion %}
+                    <span class="text-xs text-gray-500 block mt-0.5">Vence: {{ perfil.fecha_fin_suscripcion|date:"d M Y" }}</span>
+                    {% endif %}
+                </div>
+
+                <button type="button" @click="modalPlanes = true" class="px-4 py-2 rounded-xl bg-brand-light/10 text-brand-light hover:bg-brand-light/20 font-bold text-xs transition-colors">
+                    Ver Opciones
+                </button>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- ================================================================= -->
+    <!-- MODAL COMERCIAL: PLANES FITAPP PRO (MONETIZACIÓN) -->
+    <!-- ================================================================= -->
+    <div x-show="modalPlanes" x-cloak class="fixed inset-0 z-50 overflow-hidden flex items-center justify-center p-4">
+        <div class="fixed inset-0 bg-black/60 backdrop-blur-sm" @click="modalPlanes = false"></div>
+
+        <div class="relative w-full max-w-lg bg-white dark:bg-gray-800 rounded-3xl shadow-2xl p-6 sm:p-8 z-10 space-y-6">
+            
+            <div class="flex items-center justify-between">
+                <div class="flex items-center space-x-2">
+                    <span class="w-8 h-8 rounded-xl bg-amber-400/20 text-amber-500 flex items-center justify-center font-bold">
+                        <i class="fa-solid fa-crown text-sm"></i>
+                    </span>
+                    <h3 class="text-xl font-black text-gray-900 dark:text-white">Desbloquea FitApp PRO</h3>
+                </div>
+                <button type="button" @click="modalPlanes = false" class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200">
+                    <i class="fa-solid fa-xmark text-lg"></i>
+                </button>
+            </div>
+
+            <p class="text-xs sm:text-sm text-gray-500 dark:text-gray-400">
+                Lleva tus entrenamientos al siguiente nivel con todas las herramientas avanzadas sin límites.
+            </p>
+
+            <!-- Lista de Características PRO -->
+            <div class="space-y-3 text-xs sm:text-sm">
+                <div class="flex items-center space-x-3 p-2.5 rounded-xl bg-gray-50 dark:bg-gray-900/50">
+                    <i class="fa-solid fa-check text-emerald-500 shrink-0"></i>
+                    <span class="text-gray-800 dark:text-gray-200 font-medium">Rutinas ilimitadas y plantillas avanzadas</span>
+                </div>
+                <div class="flex items-center space-x-3 p-2.5 rounded-xl bg-gray-50 dark:bg-gray-900/50">
+                    <i class="fa-solid fa-check text-emerald-500 shrink-0"></i>
+                    <span class="text-gray-800 dark:text-gray-200 font-medium">Analítica profunda de 1RM y curvas de fuerza</span>
+                </div>
+                <div class="flex items-center space-x-3 p-2.5 rounded-xl bg-gray-50 dark:bg-gray-900/50">
+                    <i class="fa-solid fa-check text-emerald-500 shrink-0"></i>
+                    <span class="text-gray-800 dark:text-gray-200 font-medium">Exportación de historial a PDF y Excel</span>
+                </div>
+                <div class="flex items-center space-x-3 p-2.5 rounded-xl bg-gray-50 dark:bg-gray-900/50">
+                    <i class="fa-solid fa-check text-emerald-500 shrink-0"></i>
+                    <span class="text-gray-800 dark:text-gray-200 font-medium">Soporte prioritario y acceso anticipado a nuevas funciones</span>
+                </div>
+            </div>
+
+            <!-- Precio y CTA -->
+            <div class="pt-4 border-t border-gray-100 dark:border-gray-700 text-center space-y-3">
+                <div>
+                    <span class="text-3xl font-black text-gray-900 dark:text-white">4,99 €</span>
+                    <span class="text-xs text-gray-400">/ mes (o 39,99 €/año)</span>
+                </div>
+
+                <button type="button" @click="alert('¡Gracias por tu interés! La pasarela de pagos estará disponible muy pronto en la versión de lanzamiento comercial.'); modalPlanes = false;" 
+                        class="w-full py-3.5 px-6 rounded-xl bg-gradient-to-r from-amber-400 to-amber-500 hover:from-amber-500 hover:to-amber-600 text-gray-950 font-black text-sm shadow-lg shadow-amber-400/20 transition-all hover:scale-[1.02] active:scale-95">
+                    Suscribirme a FitApp PRO
+                </button>
+                <p class="text-[11px] text-gray-400">Cancela en cualquier momento sin compromiso.</p>
+            </div>
+
+        </div>
+    </div>
+
+</div>
 {% endblock %}

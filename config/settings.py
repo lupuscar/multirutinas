@@ -130,4 +130,22 @@ MEDIA_ROOT = BASE_DIR / 'media'
 # A dónde redirigir al usuario si el login es exitoso
 LOGIN_REDIRECT_URL = 'users:perfil'
 # A dónde redirigir al usuario después de cerrar sesión
-LOGOUT_REDIRECT_URL = 'users:perfil'
+LOGOUT_REDIRECT_URL = 'login'
+
+# =====================================================================
+# CONFIGURACIÓN DE CORREO ELECTRÓNICO (EMAIL)
+# =====================================================================
+# Si hay credenciales configuradas en .env o estamos en producción, usamos SMTP real.
+# En desarrollo local sin credenciales, se imprimen los correos en la consola/terminal.
+if os.getenv('EMAIL_HOST_USER'):
+    EMAIL_BACKEND = os.getenv('EMAIL_BACKEND', 'django.core.mail.backends.smtp.EmailBackend')
+else:
+    EMAIL_BACKEND = os.getenv('EMAIL_BACKEND', 'django.core.mail.backends.console.EmailBackend')
+
+EMAIL_HOST = os.getenv('EMAIL_HOST', 'smtp-relay.brevo.com')
+EMAIL_PORT = int(os.getenv('EMAIL_PORT', 587))
+EMAIL_USE_TLS = os.getenv('EMAIL_USE_TLS', 'True') == 'True'
+EMAIL_USE_SSL = os.getenv('EMAIL_USE_SSL', 'False') == 'True'
+EMAIL_HOST_USER = os.getenv('EMAIL_HOST_USER', '')
+EMAIL_HOST_PASSWORD = os.getenv('EMAIL_HOST_PASSWORD', '')
+DEFAULT_FROM_EMAIL = os.getenv('DEFAULT_FROM_EMAIL', 'FitApp <no-reply@fitapp.com>')
