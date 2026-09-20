@@ -8,6 +8,19 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{% block title %}OPTIFIT | Entrenamientos y Rutinas{% endblock %}</title>
 
+    <!-- PWA Web App Manifest & Metadatos Móviles -->
+    <link rel="manifest" href="/manifest.json">
+    <meta name="theme-color" content="#84cc16">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="OPTIFIT">
+    
+    <!-- Iconos PWA & iOS Touch Icons -->
+    <link rel="icon" type="image/x-icon" href="{% static 'img/favicon.ico' %}">
+    <link rel="icon" type="image/png" sizes="32x32" href="{% static 'img/favicon-32.png' %}">
+    <link rel="apple-touch-icon" href="{% static 'img/apple-touch-icon.png' %}">
+
     <!-- Script de inicialización inmediata para evitar parpadeos (Anti-FOUC) -->
     <script>
         (function () {
@@ -296,6 +309,48 @@
                 </nav>
             </div>
 
+            <!-- Botón de Instalación PWA (Visible en móvil o PC si no está instalada) -->
+            <div x-data="pwaInstaller()" x-cloak x-show="showInstallBtn" class="p-2 border-t border-gray-200 dark:border-gray-700/80">
+                <button @click="installApp()" 
+                        type="button"
+                        class="w-full flex items-center justify-center space-x-2 px-3 py-2.5 rounded-xl bg-gradient-to-r from-brand-light to-brand-dark text-white font-extrabold text-xs shadow-md shadow-brand-light/20 hover:scale-[1.02] active:scale-95 transition-all">
+                    <i class="fa-solid fa-cloud-arrow-down text-base shrink-0"></i>
+                    <span class="sidebar-text whitespace-nowrap">Instalar App</span>
+                </button>
+
+                <!-- Modal de Ayuda para instalación en iOS / iPhone Safari -->
+                <div x-show="showIosModal" 
+                     class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm"
+                     @click.self="showIosModal = false">
+                    <div class="bg-white dark:bg-gray-800 rounded-3xl p-6 max-w-sm w-full shadow-2xl border border-gray-200 dark:border-gray-700 text-center space-y-4">
+                        <div class="w-14 h-14 rounded-2xl bg-brand-light/20 text-brand-light flex items-center justify-center mx-auto text-2xl">
+                            <i class="fa-brands fa-apple"></i>
+                        </div>
+                        <h3 class="text-lg font-black text-gray-900 dark:text-white">Instalar OPTIFIT en iPhone</h3>
+                        <p class="text-xs text-gray-500 dark:text-gray-400">
+                            Para instalar la app en tu pantalla de inicio desde Safari:
+                        </p>
+                        <div class="space-y-2.5 text-xs text-left bg-gray-50 dark:bg-gray-900/60 p-4 rounded-2xl border border-gray-100 dark:border-gray-700/60">
+                            <div class="flex items-center space-x-3">
+                                <span class="w-6 h-6 rounded-full bg-brand-light text-white font-bold flex items-center justify-center text-[11px] shrink-0">1</span>
+                                <span>Toca el botón <strong>Compartir</strong> <i class="fa-solid fa-arrow-up-from-bracket text-brand-light mx-1"></i> en Safari.</span>
+                            </div>
+                            <div class="flex items-center space-x-3">
+                                <span class="w-6 h-6 rounded-full bg-brand-light text-white font-bold flex items-center justify-center text-[11px] shrink-0">2</span>
+                                <span>Desliza y pulsa <strong>«Añadir a pantalla de inicio»</strong> <i class="fa-regular fa-square-plus text-brand-light mx-1"></i>.</span>
+                            </div>
+                            <div class="flex items-center space-x-3">
+                                <span class="w-6 h-6 rounded-full bg-brand-light text-white font-bold flex items-center justify-center text-[11px] shrink-0">3</span>
+                                <span>Pulsa <strong>Añadir</strong> arriba a la derecha.</span>
+                            </div>
+                        </div>
+                        <button type="button" @click="showIosModal = false" class="w-full py-2.5 rounded-xl bg-brand-light text-white font-bold text-xs hover:bg-brand-dark transition-colors">
+                            ¡Entendido!
+                        </button>
+                    </div>
+                </div>
+            </div>
+
             <!-- Logout -->
             <div class="p-2 border-t border-gray-200 dark:border-gray-700/80">
                 <form method="post" action="{% url 'logout' %}">
@@ -510,6 +565,65 @@
             localStorage.setItem('theme_palette', palette);
             document.cookie = `theme_palette=${palette}; path=/; max-age=31536000; SameSite=Lax`;
             window.dispatchEvent(new CustomEvent('theme-palette-changed', { detail: { palette: palette } }));
+        }
+
+        // Registro de Service Worker PWA
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', function() {
+                navigator.serviceWorker.register('/sw.js', { scope: '/' })
+                    .then(function(reg) {
+                        console.log('ServiceWorker OPTIFIT registrado correctamente:', reg.scope);
+                    })
+                    .catch(function(err) {
+                        console.warn('Fallo registrando ServiceWorker:', err);
+                    });
+            });
+        }
+
+        // Controlador de instalación PWA con soporte Android, Chrome, Edge e iOS
+        function pwaInstaller() {
+            return {
+                deferredPrompt: null,
+                showInstallBtn: false,
+                showIosModal: false,
+                isIos: /iphone|ipad|ipod/.test(window.navigator.userAgent.toLowerCase()),
+                isStandalone: window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true,
+                init() {
+                    if (this.isStandalone) {
+                        this.showInstallBtn = false;
+                        return;
+                    }
+
+                    window.addEventListener('beforeinstallprompt', (e) => {
+                        e.preventDefault();
+                        this.deferredPrompt = e;
+                        this.showInstallBtn = true;
+                    });
+
+                    if (this.isIos && !this.isStandalone) {
+                        this.showInstallBtn = true;
+                    }
+
+                    window.addEventListener('appinstalled', () => {
+                        this.showInstallBtn = false;
+                        this.deferredPrompt = null;
+                    });
+                },
+                async installApp() {
+                    if (this.deferredPrompt) {
+                        this.deferredPrompt.prompt();
+                        const { outcome } = await this.deferredPrompt.userChoice;
+                        if (outcome === 'accepted') {
+                            this.showInstallBtn = false;
+                        }
+                        this.deferredPrompt = null;
+                    } else if (this.isIos) {
+                        this.showIosModal = true;
+                    } else {
+                        alert('Para instalar OPTIFIT en tu dispositivo, abre el menú de tu navegador y pulsa en "Instalar aplicación" o "Añadir a pantalla de inicio".');
+                    }
+                }
+            };
         }
     </script>
 </body>

@@ -1,0 +1,63 @@
+{
+  "name": "OPTIFIT — Entrenamientos y Rutinas",
+  "short_name": "OPTIFIT",
+  "description": "Plataforma deportiva integral: planificación semanal, registro de series en vivo y analítica de progreso.",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait-primary",
+  "background_color": "#0f172a",
+  "theme_color": "#84cc16",
+  "lang": "es",
+  "categories": ["fitness", "sports", "health", "lifestyle"],
+  "icons": [
+    {
+      "src": "/static/img/pwa-icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/static/img/pwa-icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/static/img/pwa-icon-maskable.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Dashboard",
+      "short_name": "Dashboard",
+      "description": "Ver mis analíticas, rachas y récords personales",
+      "url": "/dashboard/",
+      "icons": [{ "src": "/static/img/pwa-icon-192.png", "sizes": "192x192" }]
+    },
+    {
+      "name": "Mis Rutinas",
+      "short_name": "Rutinas",
+      "description": "Entrenar rutina de hoy o gestionar entrenamientos",
+      "url": "/rutinas/",
+      "icons": [{ "src": "/static/img/pwa-icon-192.png", "sizes": "192x192" }]
+    },
+    {
+      "name": "Catálogo de Ejercicios",
+      "short_name": "Ejercicios",
+      "description": "Explorar ejercicios o registrar sesión libre",
+      "url": "/ejercicios/",
+      "icons": [{ "src": "/static/img/pwa-icon-192.png", "sizes": "192x192" }]
+    },
+    {
+      "name": "Mi Perfil & Ajustes",
+      "short_name": "Perfil",
+      "description": "Ficha antropométrica, salud y apariencia",
+      "url": "/usuario/perfil/",
+      "icons": [{ "src": "/static/img/pwa-icon-192.png", "sizes": "192x192" }]
+    }
+  ]
+}

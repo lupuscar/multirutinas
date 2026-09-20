@@ -19,8 +19,8 @@ class MaintenanceModeMiddleware:
         if config.modo_mantenimiento:
             path = request.path_info
 
-            # 1. Recursos estáticos y multimedia siempre permitidos
-            if path.startswith('/static/') or path.startswith('/media/'):
+            # 1. Recursos estáticos, multimedia y PWA siempre permitidos
+            if path.startswith('/static/') or path.startswith('/media/') or path in ['/manifest.json', '/sw.js', '/offline/']:
                 return self.get_response(request)
 
             # 2. Panel administrativo siempre accesible para permitir desactivar el mantenimiento

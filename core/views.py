@@ -1,4 +1,8 @@
+import os
 from datetime import timedelta
+from django.conf import settings
+from django.http import HttpResponse, Http404
+from django.views.decorators.http import require_GET
 from django.shortcuts import render, redirect
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required, user_passes_test
@@ -120,3 +124,38 @@ def accion_mantenimiento_view(request, accion):
             messages.error(request, f"Error al purgar registros de log: {str(e)}")
 
     return redirect('core:configuracion_sistema')
+
+
+# =====================================================================
+# VISTAS PROGRESSIVE WEB APP (PWA)
+# =====================================================================
+@require_GET
+def pwa_manifest_view(request):
+    """Devuelve el manifest.json con el Content-Type oficial application/manifest+json."""
+    manifest_path = os.path.join(settings.BASE_DIR, 'templates', 'pwa', 'manifest.json')
+    try:
+        with open(manifest_path, 'r', encoding='utf-8') as f:
+            content = f.read()
+        return HttpResponse(content, content_type='application/manifest+json')
+    except FileNotFoundError:
+        raise Http404("Manifest no encontrado")
+
+
+@require_GET
+def pwa_service_worker_view(request):
+    """Devuelve el Service Worker con alcance root (Service-Worker-Allowed: /)."""
+    sw_path = os.path.join(settings.BASE_DIR, 'templates', 'pwa', 'sw.js')
+    try:
+        with open(sw_path, 'r', encoding='utf-8') as f:
+            content = f.read()
+        response = HttpResponse(content, content_type='application/javascript')
+        response['Service-Worker-Allowed'] = '/'
+        return response
+    except FileNotFoundError:
+        raise Http404("Service Worker no encontrado")
+
+
+def pwa_offline_view(request):
+    """Página mostrada por el Service Worker cuando no hay conexión a internet."""
+    return render(request, 'pwa/offline.html')
+

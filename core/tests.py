@@ -282,3 +282,33 @@ class PanelConfiguracionWebTest(TestCase):
 
         self.assertFalse(LogActividad.objects.filter(mensaje='Evento muy viejo').exists())
         self.assertTrue(LogActividad.objects.filter(mensaje='Evento de ayer').exists())
+
+
+class PWATests(TestCase):
+    def setUp(self):
+        self.client = Client()
+
+    def test_manifest_disponible_y_valido(self):
+        """Verifica que el manifest.json se sirve con application/manifest+json y contiene configuración válida"""
+        response = self.client.get('/manifest.json')
+        self.assertEqual(response.status_code, 200)
+        self.assertIn('application/manifest+json', response['Content-Type'])
+        data = response.json()
+        self.assertEqual(data['short_name'], 'OPTIFIT')
+        self.assertEqual(data['display'], 'standalone')
+        self.assertTrue(len(data['icons']) >= 3)
+
+    def test_service_worker_disponible_y_valido(self):
+        """Verifica que sw.js se sirve con application/javascript y cabecera de alcance root"""
+        response = self.client.get('/sw.js')
+        self.assertEqual(response.status_code, 200)
+        self.assertIn('application/javascript', response['Content-Type'])
+        self.assertEqual(response.get('Service-Worker-Allowed'), '/')
+        self.assertIn('CACHE_NAME', response.content.decode('utf-8'))
+
+    def test_pagina_offline_disponible(self):
+        """Verifica que la pantalla offline responde con HTTP 200"""
+        response = self.client.get('/offline/')
+        self.assertEqual(response.status_code, 200)
+        self.assertIn('Sin conexión a Internet', response.content.decode('utf-8'))
+

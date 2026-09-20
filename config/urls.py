@@ -4,6 +4,7 @@ from django.shortcuts import redirect
 from django.conf import settings
 from django.conf.urls.static import static
 from django.contrib.auth import views as auth_views
+from core import views as core_views
 
 urlpatterns = [
     path('admin/', admin.site.urls),
@@ -24,6 +25,12 @@ urlpatterns = [
     ),
     # Añadimos el resto de URLs de autenticación por defecto de Django
     path('accounts/', include('django.contrib.auth.urls')), 
+
+    # Progressive Web App (PWA)
+    path('manifest.json', core_views.pwa_manifest_view, name='pwa_manifest'),
+    path('sw.js', core_views.pwa_service_worker_view, name='pwa_service_worker'),
+    path('offline/', core_views.pwa_offline_view, name='pwa_offline'),
+
     path('', lambda request: redirect('users:perfil', permanent=False)),
 ]
 
