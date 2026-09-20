@@ -24,6 +24,10 @@ Este documento sirve como **memoria persistente y guía contextual** de **Multir
 - **`context_processors.py` (`configuracion_sitio`):** Inyecta `config_sitio` globalmente en todas las plantillas para banners y lógica visual.
 - **Panel Web de Ajustes (`/configuracion/sistema/`):** Pantalla administrativa con estética FitApp, métricas en vivo, switches reactivos con Alpine.js y botones de 1 clic (limpiar sesiones caducadas y purga de logs antiguos).
 - **Django Admin (`/admin/core/configuracionsitio/`):** Administración nativa con restricciones singleton (no permite añadir más ni borrar).
+- **PWA (Progressive Web App):**
+  - Endpoints raíz: `pwa_manifest_view` (`/manifest.json`), `pwa_service_worker_view` (`/sw.js` con cabecera HTTP `Service-Worker-Allowed: /`), `pwa_offline_view` (`/offline/`).
+  - Estrategia Service Worker: Precaching del app shell, Network First para navegación con pantalla de reserva offline (`templates/pwa/offline.html`), y Cache First para estáticos/CDNs.
+  - Integración con Mantenimiento: `MaintenanceModeMiddleware` permite siempre `/manifest.json`, `/sw.js` y `/offline/`.
 
 ### `users` (Usuarios, Salud y Auditoría)
 - **`Profile`:** Extensión del modelo `User` con ficha antropométrica (`genero`: `H`, `M`, `O`; `peso_kg`, `altura_cm`, `fecha_nacimiento`, `foto`), meta semanal (`dias_objetivo_semana`), objetivo deportivo (`HIP`, `FUE`, `DEF`, `RES`, `SAL`), nivel, membresía comercial (`tipo_suscripcion`: `FREE`, `PRO`, `COACH`) y estado de verificación de correo (`email_verificado`).
@@ -85,7 +89,7 @@ El entorno virtual se encuentra en `.venv`. Comandos ejecutables:
 # Aplicar migraciones pendientes
 .venv/bin/python manage.py migrate
 
-# Ejecutar la suite completa de pruebas unitarias (100% pasando, 71 tests)
+# Ejecutar la suite completa de pruebas unitarias (100% pasando, 74 tests)
 .venv/bin/python manage.py test core.tests users.tests dashboard.tests ejercicios.tests rutinas.tests
 
 # Sincronizar catálogo oficial de ejercicios predeterminados (+52 ejercicios)
@@ -113,6 +117,11 @@ El entorno virtual se encuentra en `.venv`. Comandos ejecutables:
 - **Selectores de Apariencia:**
   - Pestaña táctil **🎨 Tema & Apariencia** en el perfil de usuario (`/usuario/perfil/?tab=apariencia`) con vista previa en vivo de componentes.
   - Dropdown interactivo de acceso rápido en la cabecera global (`templates/base.html`).
+- **Experiencia Móvil PWA & Instalación:**
+  - Web App Manifest completo (`templates/pwa/manifest.json`) con `display: "standalone"`, iconos optimizados (192x192, 512x512, 512x512 maskable, apple-touch-icon 180x180) y accesos directos (Dashboard, Rutinas, Ejercicios, Perfil).
+  - Manejador reactivo Alpine.js (`pwaInstaller`) que intercepta `beforeinstallprompt` y gestiona la instalación desde la barra lateral y el perfil de usuario.
+  - Soporte para iOS Safari mediante modal explicativo paso a paso ("Compartir" -> "Añadir a pantalla de inicio").
+  - Ocultamiento inteligente de llamadas a la acción cuando la app ya se ejecuta en modo standalone.
 - **Reactividad Ligera:** **Alpine.js** (`x-data`, `x-show`, `x-bind`, `x-cloak`) para evitar sobrecarga de frameworks SPA pesados.
 - **Gráficos:** **Chart.js** con tooltips estilizados y degradados transparentes.
 - **Audio:** `AudioContext` sintético del navegador (tonos sinusoidales puros a 440 Hz / 880 Hz) para avisos sonoros sin dependencias de archivos de audio externos.
