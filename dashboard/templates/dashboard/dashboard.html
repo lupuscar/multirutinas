@@ -183,14 +183,32 @@
     </div>
 
     <!-- ================================================================= -->
-    <!-- TARJETAS DE MÉTRICAS CLAVE (KPIS) CON TENDENCIA SEMANAL -->
+    <!-- TARJETAS DE MÉTRICAS CLAVE (KPIS) HÍBRIDAS CON TENDENCIA SEMANAL -->
     <!-- ================================================================= -->
     <div class="grid grid-cols-2 lg:grid-cols-4 gap-4">
         
-        <!-- Sesiones este mes -->
+        <!-- Tiempo Activo Total -->
         <div class="bg-white dark:bg-gray-800 rounded-3xl p-4 sm:p-5 border border-gray-100 dark:border-gray-700/80 shadow-sm flex flex-col justify-between">
             <div class="flex items-center justify-between text-gray-400 mb-2">
-                <span class="text-xs font-bold uppercase tracking-wider">Este Mes</span>
+                <span class="text-xs font-bold uppercase tracking-wider">Tiempo Activo</span>
+                <span class="w-8 h-8 rounded-xl bg-emerald-50 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400 flex items-center justify-center text-sm">
+                    <i class="fa-solid fa-stopwatch"></i>
+                </span>
+            </div>
+            <div>
+                <span class="text-2xl sm:text-3xl font-black text-gray-900 dark:text-white">{{ tiempo_mes_str }}</span>
+                <span class="text-xs text-gray-500 dark:text-gray-400 block mt-0.5">activo este mes</span>
+            </div>
+            <div class="mt-3 pt-2.5 border-t border-gray-100 dark:border-gray-700/60 flex items-center text-[11px] text-gray-400">
+                <i class="fa-solid fa-bolt text-emerald-500 mr-1.5"></i>
+                <span>{{ tiempo_sem_str }} esta semana</span>
+            </div>
+        </div>
+
+        <!-- Días Activos / Constancia -->
+        <div class="bg-white dark:bg-gray-800 rounded-3xl p-4 sm:p-5 border border-gray-100 dark:border-gray-700/80 shadow-sm flex flex-col justify-between">
+            <div class="flex items-center justify-between text-gray-400 mb-2">
+                <span class="text-xs font-bold uppercase tracking-wider">Constancia</span>
                 <span class="w-8 h-8 rounded-xl bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 flex items-center justify-center text-sm">
                     <i class="fa-solid fa-calendar-check"></i>
                 </span>
@@ -205,10 +223,10 @@
             </div>
         </div>
 
-        <!-- Carga / Volumen Total -->
+        <!-- Carga / Volumen de Fuerza -->
         <div class="bg-white dark:bg-gray-800 rounded-3xl p-4 sm:p-5 border border-gray-100 dark:border-gray-700/80 shadow-sm flex flex-col justify-between">
             <div class="flex items-center justify-between text-gray-400 mb-2">
-                <span class="text-xs font-bold uppercase tracking-wider">Volumen Total</span>
+                <span class="text-xs font-bold uppercase tracking-wider">Volumen Fuerza</span>
                 <span class="w-8 h-8 rounded-xl bg-purple-50 dark:bg-purple-900/30 text-purple-600 dark:text-purple-400 flex items-center justify-center text-sm">
                     <i class="fa-solid fa-weight-hanging"></i>
                 </span>
@@ -236,11 +254,11 @@
             </div>
         </div>
 
-        <!-- Series Completadas -->
+        <!-- Series y Bloques -->
         <div class="bg-white dark:bg-gray-800 rounded-3xl p-4 sm:p-5 border border-gray-100 dark:border-gray-700/80 shadow-sm flex flex-col justify-between">
             <div class="flex items-center justify-between text-gray-400 mb-2">
-                <span class="text-xs font-bold uppercase tracking-wider">Series</span>
-                <span class="w-8 h-8 rounded-xl bg-emerald-50 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400 flex items-center justify-center text-sm">
+                <span class="text-xs font-bold uppercase tracking-wider">Series & Bloques</span>
+                <span class="w-8 h-8 rounded-xl bg-amber-50 dark:bg-amber-900/30 text-amber-600 dark:text-amber-400 flex items-center justify-center text-sm">
                     <i class="fa-solid fa-bolt"></i>
                 </span>
             </div>
@@ -248,143 +266,162 @@
                 <span class="text-2xl sm:text-3xl font-black text-gray-900 dark:text-white">{{ total_series }}</span>
                 <span class="text-xs text-gray-500 dark:text-gray-400 block mt-0.5">series registradas</span>
             </div>
-            <div class="mt-3 pt-2.5 border-t border-gray-100 dark:border-gray-700/60 flex items-center text-[11px]">
-                {% if series_cambio_pct is not None %}
-                    {% if series_cambio_pct >= 0 %}
-                    <span class="text-emerald-600 dark:text-emerald-400 font-bold flex items-center">
-                        <i class="fa-solid fa-arrow-up mr-1"></i> +{{ series_cambio_pct }}%
-                    </span>
-                    <span class="text-gray-400 ml-1">vs sem. anterior</span>
-                    {% else %}
-                    <span class="text-rose-600 dark:text-rose-400 font-bold flex items-center">
-                        <i class="fa-solid fa-arrow-down mr-1"></i> {{ series_cambio_pct }}%
-                    </span>
-                    <span class="text-gray-400 ml-1">vs sem. anterior</span>
-                    {% endif %}
-                {% else %}
-                    <span class="text-gray-400">{{ series_sem_actual }} series esta semana</span>
-                {% endif %}
-            </div>
-        </div>
-
-        <!-- Rutinas Creadas -->
-        <div class="bg-white dark:bg-gray-800 rounded-3xl p-4 sm:p-5 border border-gray-100 dark:border-gray-700/80 shadow-sm flex flex-col justify-between">
-            <div class="flex items-center justify-between text-gray-400 mb-2">
-                <span class="text-xs font-bold uppercase tracking-wider">Planes</span>
-                <span class="w-8 h-8 rounded-xl bg-amber-50 dark:bg-amber-900/30 text-amber-600 dark:text-amber-400 flex items-center justify-center text-sm">
-                    <i class="fa-solid fa-clipboard-list"></i>
-                </span>
-            </div>
-            <div>
-                <span class="text-2xl sm:text-3xl font-black text-gray-900 dark:text-white">{{ total_rutinas }}</span>
-                <span class="text-xs text-gray-500 dark:text-gray-400 block mt-0.5">rutinas activas</span>
-            </div>
             <div class="mt-3 pt-2.5 border-t border-gray-100 dark:border-gray-700/60 flex items-center text-[11px] text-gray-400">
-                <i class="fa-solid fa-star text-amber-400 mr-1.5"></i>
-                <span>Listas para ejecutar</span>
+                <i class="fa-solid fa-clipboard-list text-amber-500 mr-1.5"></i>
+                <span>{{ total_rutinas }} rutinas activas</span>
             </div>
         </div>
 
     </div>
 
     <!-- ================================================================= -->
-    <!-- SALÓN DE RÉCORDS PERSONALES (PRS) Y 1RM ESTIMADO -->
+    <!-- SALÓN DE RÉCORDS PERSONALES (PRS) ADAPTATIVO (FUERZA, TIEMPO, CALISTENIA) -->
     <!-- ================================================================= -->
     <div class="bg-white dark:bg-gray-800 rounded-3xl p-5 sm:p-6 border border-gray-100 dark:border-gray-700/80 shadow-sm space-y-4">
-        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
             <div>
                 <h2 class="text-lg font-black text-gray-900 dark:text-white flex items-center">
                     <i class="fa-solid fa-trophy text-amber-400 mr-2"></i> Salón de Récords Personales (PRs)
                 </h2>
                 <p class="text-xs text-gray-500 dark:text-gray-400">
-                    Tus mejores levantamientos históricos y fuerza máxima estimada a 1 repetición (1RM).
+                    Tus hitos históricos en fuerza máxima (1RM), resistencia continua y repeticiones corporales.
                 </p>
             </div>
-            <span class="text-[11px] font-bold text-gray-400 self-start sm:self-auto bg-gray-50 dark:bg-gray-900 px-3 py-1.5 rounded-xl">
-                Fórmula de Epley (1RM)
-            </span>
+
+            <!-- Filtros de Categoría de Récords con Alpine.js -->
+            <div class="flex flex-wrap items-center gap-1.5 bg-gray-100 dark:bg-gray-900/80 p-1 rounded-2xl text-xs">
+                <button type="button" @click="filtroPR = 'todos'" 
+                        :class="filtroPR === 'todos' ? 'bg-white dark:bg-gray-800 font-bold text-brand-light shadow-xs' : 'text-gray-500'" 
+                        class="px-3 py-1.5 rounded-xl transition-all">
+                    Todos ({{ records_personales|length }})
+                </button>
+                <button type="button" @click="filtroPR = 'fuerza'" 
+                        :class="filtroPR === 'fuerza' ? 'bg-white dark:bg-gray-800 font-bold text-indigo-500 shadow-xs' : 'text-gray-500'" 
+                        class="px-3 py-1.5 rounded-xl transition-all flex items-center space-x-1">
+                    <span>🏋️ Fuerza</span>
+                    <span class="text-[10px] opacity-75">({{ total_prs_fuerza }})</span>
+                </button>
+                <button type="button" @click="filtroPR = 'tiempo'" 
+                        :class="filtroPR === 'tiempo' ? 'bg-white dark:bg-gray-800 font-bold text-emerald-500 shadow-xs' : 'text-gray-500'" 
+                        class="px-3 py-1.5 rounded-xl transition-all flex items-center space-x-1">
+                    <span>⏱️ Cardio / Deportes</span>
+                    <span class="text-[10px] opacity-75">({{ total_prs_tiempo }})</span>
+                </button>
+                <button type="button" @click="filtroPR = 'calistenia'" 
+                        :class="filtroPR === 'calistenia' ? 'bg-white dark:bg-gray-800 font-bold text-cyan-500 shadow-xs' : 'text-gray-500'" 
+                        class="px-3 py-1.5 rounded-xl transition-all flex items-center space-x-1">
+                    <span>🤸 Calistenia</span>
+                    <span class="text-[10px] opacity-75">({{ total_prs_calistenia }})</span>
+                </button>
+            </div>
         </div>
 
         <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 pt-2">
             {% for rec in records_personales %}
-            <div class="p-4 rounded-2xl bg-gray-50 dark:bg-gray-900/50 border border-gray-100 dark:border-gray-700/70 hover:border-amber-400/50 transition-all flex flex-col justify-between space-y-3 group">
+            <div x-show="filtroPR === 'todos' || filtroPR === '{{ rec.categoria }}'" 
+                 x-transition
+                 class="p-4 rounded-2xl bg-gray-50 dark:bg-gray-900/50 border border-gray-100 dark:border-gray-700/70 hover:border-amber-400/50 transition-all flex flex-col justify-between space-y-3 group">
+                
                 <div class="flex items-start justify-between">
                     <div>
-                        <span class="text-[10px] font-bold uppercase tracking-wider text-brand-light block">
-                            {{ rec.ejercicio.get_grupo_muscular_display }}
-                        </span>
+                        <div class="flex items-center space-x-1.5 mb-0.5">
+                            <span class="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-md 
+                                {% if rec.categoria == 'fuerza' %}bg-indigo-100 text-indigo-700 dark:bg-indigo-900/40 dark:text-indigo-300
+                                {% elif rec.categoria == 'tiempo' %}bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300
+                                {% else %}bg-cyan-100 text-cyan-700 dark:bg-cyan-900/40 dark:text-cyan-300{% endif %}">
+                                {{ rec.categoria_label }}
+                            </span>
+                            <span class="text-[10px] text-gray-400">•</span>
+                            <span class="text-[10px] text-gray-400">{{ rec.ejercicio.get_grupo_muscular_display }}</span>
+                        </div>
                         <h4 class="text-sm font-black text-gray-900 dark:text-white group-hover:text-brand-light transition-colors">
                             {{ rec.ejercicio.nombre }}
                         </h4>
                     </div>
-                    <span class="w-7 h-7 rounded-lg bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300 flex items-center justify-center text-xs shrink-0">
-                        <i class="fa-solid fa-medal"></i>
+                    <span class="w-8 h-8 rounded-xl bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300 flex items-center justify-center text-xs shrink-0">
+                        <i class="{{ rec.categoria_icono }}"></i>
                     </span>
                 </div>
 
-                <div class="grid grid-cols-2 gap-2 pt-1 border-t border-gray-200/50 dark:border-gray-700/50">
+                <div class="pt-2 border-t border-gray-200/50 dark:border-gray-700/50 flex items-center justify-between">
                     <div>
-                        <span class="text-[10px] text-gray-400 uppercase font-bold block">Peso Máx</span>
-                        <span class="text-base font-black text-gray-900 dark:text-white">
-                            {{ rec.max_peso }} <span class="text-xs font-semibold text-gray-400">kg</span>
+                        <span class="text-[10px] text-amber-500 uppercase font-bold block">{{ rec.valor_sub }}</span>
+                        <span class="text-xl font-black text-gray-900 dark:text-white">
+                            {{ rec.valor_principal }}
                         </span>
-                        <span class="text-[10px] text-gray-400 block">x {{ rec.max_peso_reps }} reps</span>
+                        <span class="text-[11px] text-gray-500 dark:text-gray-400 block">{{ rec.detalle }}</span>
                     </div>
 
-                    <div>
-                        <span class="text-[10px] text-amber-500 uppercase font-bold block">1RM Estimado</span>
-                        <span class="text-base font-black text-amber-500">
-                            {{ rec.max_1rm }} <span class="text-xs font-semibold text-amber-400/80">kg</span>
-                        </span>
-                        <span class="text-[10px] text-gray-400 block">{{ rec.max_1rm_fecha|date:"d M Y" }}</span>
+                    <div class="text-right self-end">
+                        <span class="text-[10px] text-gray-400 block">{{ rec.fecha|date:"d M Y" }}</span>
                     </div>
                 </div>
             </div>
             {% empty %}
             <div class="col-span-full py-8 text-center text-gray-400 text-xs">
-                Aún no has registrado series con peso para calcular tus récords personales.
+                Aún no has registrado sesiones para calcular tus récords personales. Registra una actividad libre o entrena una rutina para ver tus logros aquí.
             </div>
             {% endfor %}
         </div>
     </div>
 
     <!-- ================================================================= -->
-    <!-- GRÁFICA INTERACTIVA DE PROGRESIÓN POR EJERCICIO -->
+    <!-- GRÁFICA INTERACTIVA DE PROGRESIÓN UNIVERSAL POR EJERCICIO -->
     <!-- ================================================================= -->
     <div class="bg-white dark:bg-gray-800 rounded-3xl p-5 sm:p-6 border border-gray-100 dark:border-gray-700/80 shadow-sm space-y-4">
         
         <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
             <div>
                 <h2 class="text-lg font-black text-gray-900 dark:text-white flex items-center">
-                    <i class="fa-solid fa-arrow-trend-up text-brand-light mr-2"></i> Evolución de Carga y Rendimiento
+                    <i class="fa-solid fa-arrow-trend-up text-brand-light mr-2"></i> Evolución y Rendimiento Deportivo
                 </h2>
-                <p class="text-xs text-gray-500 dark:text-gray-400">Observa cómo aumentan tus cargas a lo largo de las semanas.</p>
+                <p class="text-xs text-gray-500 dark:text-gray-400">Observa cómo mejoras en fuerza (kg), duración continua (min) o resistencia en repeticiones.</p>
             </div>
 
-            <!-- Selector de Ejercicio -->
-            <div class="flex items-center space-x-2">
+            <!-- Selector de Ejercicio & Toggle Adaptativo -->
+            <div class="flex flex-wrap items-center gap-2">
                 <select x-model="ejercicioSeleccionado" @change="actualizarGrafico()" 
                         class="px-3.5 py-2 rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900 text-xs sm:text-sm font-bold text-gray-900 dark:text-white outline-none focus:ring-2 focus:ring-brand-light">
                     {% for ej in ejercicios_con_datos %}
-                    <option value="{{ ej.id }}">{{ ej.nombre }} ({{ ej.get_grupo_muscular_display }})</option>
+                    <option value="{{ ej.id }}">{{ ej.nombre }} ({{ ej.get_tipo_display }})</option>
                     {% empty %}
-                    <option value="">Aún no has registrado series</option>
+                    <option value="">Aún no has registrado actividades</option>
                     {% endfor %}
                 </select>
 
-                <!-- Toggle Métrica (Peso Máx vs Volumen) -->
-                <div class="hidden sm:flex bg-gray-100 dark:bg-gray-900 p-1 rounded-xl text-xs">
-                    <button type="button" @click="tipoMetrica = 'peso'; actualizarGrafico()" 
-                            :class="tipoMetrica === 'peso' ? 'bg-white dark:bg-gray-800 font-bold text-brand-light shadow-xs' : 'text-gray-500'" 
-                            class="px-3 py-1.5 rounded-lg transition-all">Peso Máx</button>
-                    <button type="button" @click="tipoMetrica = 'volumen'; actualizarGrafico()" 
-                            :class="tipoMetrica === 'volumen' ? 'bg-white dark:bg-gray-800 font-bold text-brand-light shadow-xs' : 'text-gray-500'" 
-                            class="px-3 py-1.5 rounded-lg transition-all">Volumen (kg)</button>
-                </div>
+                <!-- Toggles Adaptativos según el tipo de ejercicio -->
+                <template x-if="ejercicioActualInfo && ejercicioActualInfo.tipo_progresion === 'tiempo'">
+                    <span class="px-3 py-1.5 rounded-xl bg-emerald-50 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400 text-xs font-bold flex items-center space-x-1">
+                        <i class="fa-solid fa-stopwatch mr-1"></i>
+                        <span>Duración (minutos)</span>
+                    </span>
+                </template>
+
+                <template x-if="ejercicioActualInfo && ejercicioActualInfo.tipo_progresion === 'calistenia'">
+                    <div class="flex bg-gray-100 dark:bg-gray-900 p-1 rounded-xl text-xs">
+                        <button type="button" @click="tipoMetrica = 'principal'; actualizarGrafico()" 
+                                :class="tipoMetrica === 'principal' ? 'bg-white dark:bg-gray-800 font-bold text-cyan-600 dark:text-cyan-400 shadow-xs' : 'text-gray-500'" 
+                                class="px-3 py-1.5 rounded-lg transition-all">Máx. Reps</button>
+                        <button type="button" @click="tipoMetrica = 'secundaria'; actualizarGrafico()" 
+                                :class="tipoMetrica === 'secundaria' ? 'bg-white dark:bg-gray-800 font-bold text-cyan-600 dark:text-cyan-400 shadow-xs' : 'text-gray-500'" 
+                                class="px-3 py-1.5 rounded-lg transition-all">Reps Totales</button>
+                    </div>
+                </template>
+
+                <template x-if="ejercicioActualInfo && ejercicioActualInfo.tipo_progresion === 'fuerza'">
+                    <div class="flex bg-gray-100 dark:bg-gray-900 p-1 rounded-xl text-xs">
+                        <button type="button" @click="tipoMetrica = 'principal'; actualizarGrafico()" 
+                                :class="tipoMetrica === 'principal' ? 'bg-white dark:bg-gray-800 font-bold text-brand-light shadow-xs' : 'text-gray-500'" 
+                                class="px-3 py-1.5 rounded-lg transition-all">Peso Máx (kg)</button>
+                        <button type="button" @click="tipoMetrica = 'secundaria'; actualizarGrafico()" 
+                                :class="tipoMetrica === 'secundaria' ? 'bg-white dark:bg-gray-800 font-bold text-brand-light shadow-xs' : 'text-gray-500'" 
+                                class="px-3 py-1.5 rounded-lg transition-all">Volumen (kg)</button>
+                    </div>
+                </template>
             </div>
         </div>
 
-        <!-- Canvas Gráfico -->
+        <!-- Canvas Gráfico Universal -->
         <div class="relative h-64 sm:h-80 w-full pt-2">
             <canvas id="graficoProgresion"></canvas>
             
@@ -392,14 +429,14 @@
             <div x-show="!hayDatosGrafico" class="absolute inset-0 flex flex-col items-center justify-center bg-white/80 dark:bg-gray-800/80 rounded-2xl">
                 <i class="fa-solid fa-chart-simple text-4xl text-gray-300 dark:text-gray-600 mb-2"></i>
                 <p class="font-bold text-sm text-gray-700 dark:text-gray-300">Sin historial suficiente</p>
-                <p class="text-xs text-gray-400 mt-0.5">Completa series de este ejercicio en tus entrenamientos para ver tu progreso.</p>
+                <p class="text-xs text-gray-400 mt-0.5">Completa series o sesiones de este ejercicio para ver tu gráfica de evolución.</p>
             </div>
         </div>
 
     </div>
 
     <!-- ================================================================= -->
-    <!-- HISTORIAL RECIENTE Y DISTRIBUCIÓN MUSCULAR -->
+    <!-- HISTORIAL RECIENTE Y DISTRIBUCIÓN MULTIDISCIPLINAR -->
     <!-- ================================================================= -->
     <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
         
@@ -414,7 +451,7 @@
                 <div class="py-3.5 flex items-center justify-between">
                     <div class="flex items-center space-x-3">
                         <div class="w-10 h-10 rounded-xl bg-brand-light/10 text-brand-light flex items-center justify-center font-bold text-sm">
-                            <i class="fa-solid fa-dumbbell"></i>
+                            <i class="{{ sesion.icono }}"></i>
                         </div>
                         <div>
                             <span class="font-bold text-sm text-gray-900 dark:text-white block">{{ sesion.fecha|date:"l, d M Y"|capfirst }}</span>
@@ -423,7 +460,7 @@
                     </div>
                     <div class="text-right">
                         <span class="text-xs font-bold text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-900/30 px-2.5 py-1 rounded-full">
-                            {{ sesion.total_series }} series
+                            {{ sesion.total_series }} {% if sesion.total_series == 1 %}bloque{% else %}series{% endif %}
                         </span>
                     </div>
                 </div>
@@ -435,15 +472,26 @@
             </div>
         </div>
 
-        <!-- Distribución por Grupo Muscular (1 columna) -->
+        <!-- Distribución Multidisciplinar (1 columna) con Toggle Disciplina vs Músculo -->
         <div class="bg-white dark:bg-gray-800 rounded-3xl p-5 sm:p-6 border border-gray-100 dark:border-gray-700/80 shadow-sm space-y-4">
-            <h2 class="text-base font-black text-gray-900 dark:text-white flex items-center">
-                <i class="fa-solid fa-pie-chart text-brand-light mr-2"></i> Enfoque Muscular
-            </h2>
+            <div class="flex items-center justify-between">
+                <h2 class="text-base font-black text-gray-900 dark:text-white flex items-center">
+                    <i class="fa-solid fa-pie-chart text-brand-light mr-2"></i> Balance Deportivo
+                </h2>
+
+                <div class="flex bg-gray-100 dark:bg-gray-900 p-0.5 rounded-xl text-[11px]">
+                    <button type="button" @click="cambiarDistribucion('disciplina')" 
+                            :class="tipoDistribucion === 'disciplina' ? 'bg-white dark:bg-gray-800 font-bold text-brand-light shadow-xs' : 'text-gray-500'" 
+                            class="px-2.5 py-1 rounded-lg transition-all">Disciplina</button>
+                    <button type="button" @click="cambiarDistribucion('muscular')" 
+                            :class="tipoDistribucion === 'muscular' ? 'bg-white dark:bg-gray-800 font-bold text-brand-light shadow-xs' : 'text-gray-500'" 
+                            class="px-2.5 py-1 rounded-lg transition-all">Músculo</button>
+                </div>
+            </div>
 
             <div class="relative h-56 w-full flex items-center justify-center">
                 <canvas id="graficoMuscular"></canvas>
-                <div x-show="distribucion.length === 0" class="absolute inset-0 flex items-center justify-center text-xs text-gray-400">
+                <div x-show="distribucionActual.length === 0" class="absolute inset-0 flex items-center justify-center text-xs text-gray-400">
                     Sin datos aún.
                 </div>
             </div>
@@ -495,25 +543,32 @@
                     <p class="text-xs text-indigo-200">Atleta en FitApp • {{ dias_entrenados_mes }} días entrenados este mes</p>
                 </div>
 
-                <div class="grid grid-cols-2 gap-3 pt-2 border-t border-white/10 text-center">
-                    <div class="bg-white/5 p-3 rounded-2xl">
-                        <span class="text-[10px] uppercase font-bold text-indigo-300 block">Carga Total</span>
-                        <span class="text-lg font-black text-white">{{ volumen_total|floatformat:0 }} kg</span>
+                <div class="grid grid-cols-3 gap-2 pt-2 border-t border-white/10 text-center">
+                    <div class="bg-white/5 p-2.5 rounded-2xl">
+                        <span class="text-[10px] uppercase font-bold text-emerald-300 block">Tiempo</span>
+                        <span class="text-base font-black text-white">{{ tiempo_total_str }}</span>
                     </div>
-                    <div class="bg-white/5 p-3 rounded-2xl">
-                        <span class="text-[10px] uppercase font-bold text-indigo-300 block">Series Totales</span>
-                        <span class="text-lg font-black text-white">{{ total_series }}</span>
+                    <div class="bg-white/5 p-2.5 rounded-2xl">
+                        <span class="text-[10px] uppercase font-bold text-indigo-300 block">Carga</span>
+                        <span class="text-base font-black text-white">{{ volumen_total|floatformat:0 }} kg</span>
+                    </div>
+                    <div class="bg-white/5 p-2.5 rounded-2xl">
+                        <span class="text-[10px] uppercase font-bold text-amber-300 block">Bloques</span>
+                        <span class="text-base font-black text-white">{{ total_series }}</span>
                     </div>
                 </div>
 
                 {% if records_personales %}
                 <div class="pt-2 border-t border-white/10">
-                    <span class="text-[10px] uppercase font-bold text-amber-300 block mb-1.5">Top Récords 1RM:</span>
-                    <div class="space-y-1">
-                        {% for r in records_personales|slice:":2" %}
+                    <span class="text-[10px] uppercase font-bold text-amber-300 block mb-1.5">Mejores Marcas Personales:</span>
+                    <div class="space-y-1.5">
+                        {% for r in records_personales|slice:":3" %}
                         <div class="flex items-center justify-between text-xs bg-white/5 px-3 py-1.5 rounded-xl">
-                            <span class="font-medium text-gray-200">{{ r.ejercicio.nombre }}</span>
-                            <span class="font-black text-amber-400">{{ r.max_1rm }} kg 1RM</span>
+                            <span class="font-medium text-gray-200 truncate pr-2">
+                                <i class="{{ r.categoria_icono }} text-[10px] mr-1 text-amber-300"></i>
+                                {{ r.ejercicio.nombre }}
+                            </span>
+                            <span class="font-black text-amber-400 shrink-0">{{ r.valor_principal }}</span>
                         </div>
                         {% endfor %}
                     </div>
@@ -707,14 +762,17 @@
 function dashboardAnalytics() {
     return {
         datosProgresion: JSON.parse('{{ datos_progresion_json|escapejs }}'),
-        distribucion: JSON.parse('{{ distribucion_json|escapejs }}'),
+        distribucionDisciplinas: JSON.parse('{{ distribucion_disciplinas_json|escapejs }}' || '[]'),
+        distribucionMuscular: JSON.parse('{{ distribucion_muscular_json|escapejs }}' || '[]'),
+        tipoDistribucion: 'disciplina',
         ejercicioSeleccionado: '',
-        tipoMetrica: 'peso',
+        tipoMetrica: 'principal',
         hayDatosGrafico: false,
         chartProgresion: null,
         chartMuscular: null,
         modalCompartir: false,
         textoCopiado: false,
+        filtroPR: 'todos',
 
         // Estado para Registro de Actividad Libre
         modalActividadLibre: false,
@@ -725,6 +783,17 @@ function dashboardAnalytics() {
         seriesActividadTotales: 3,
         repsActividad: 10,
         pesoActividad: '',
+
+        get distribucionActual() {
+            return this.tipoDistribucion === 'disciplina' ? this.distribucionDisciplinas : this.distribucionMuscular;
+        },
+
+        get ejercicioActualInfo() {
+            if (!this.ejercicioSeleccionado || !this.datosProgresion[this.ejercicioSeleccionado]) {
+                return null;
+            }
+            return this.datosProgresion[this.ejercicioSeleccionado];
+        },
 
         get ejerciciosFiltradosActividad() {
             if (!this.filtroBusquedaActividad.trim()) {
@@ -746,6 +815,11 @@ function dashboardAnalytics() {
 
         seleccionarEjercicioLibre(ej) {
             this.ejercicioSeleccionadoLibre = ej;
+        },
+
+        cambiarDistribucion(tipo) {
+            this.tipoDistribucion = tipo;
+            this.renderizarGraficoMuscular();
         },
 
         iniciarGraficos() {
@@ -773,8 +847,15 @@ function dashboardAnalytics() {
 
             this.hayDatosGrafico = true;
             const labels = datosEj.fechas;
-            const dataValores = this.tipoMetrica === 'peso' ? datosEj.pesos_max : datosEj.volumen;
-            const labelMetrica = this.tipoMetrica === 'peso' ? 'Peso Máximo Levantado (kg)' : 'Volumen Total (kg)';
+            
+            let dataValores = datosEj.valores;
+            let labelMetrica = datosEj.label_metrica;
+            let unidad = datosEj.unidad || '';
+
+            if (this.tipoMetrica === 'secundaria' && datosEj.valores_sec) {
+                dataValores = datosEj.valores_sec;
+                labelMetrica = datosEj.label_secundaria || labelMetrica;
+            }
 
             if (this.chartProgresion) {
                 this.chartProgresion.destroy();
@@ -784,6 +865,16 @@ function dashboardAnalytics() {
             const colorTexto = esModoOscuro ? '#9ca3af' : '#6b7280';
             const colorGrid = esModoOscuro ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0, 0, 0, 0.05)';
 
+            let colorLinea = '#4f46e5';
+            let colorFondo = 'rgba(79, 70, 229, 0.1)';
+            if (datosEj.tipo_progresion === 'tiempo') {
+                colorLinea = '#10b981';
+                colorFondo = 'rgba(16, 185, 129, 0.1)';
+            } else if (datosEj.tipo_progresion === 'calistenia') {
+                colorLinea = '#06b6d4';
+                colorFondo = 'rgba(6, 182, 212, 0.1)';
+            }
+
             this.chartProgresion = new Chart(ctx, {
                 type: 'line',
                 data: {
@@ -791,10 +882,10 @@ function dashboardAnalytics() {
                     datasets: [{
                         label: labelMetrica,
                         data: dataValores,
-                        borderColor: '#4f46e5',
-                        backgroundColor: 'rgba(79, 70, 229, 0.1)',
+                        borderColor: colorLinea,
+                        backgroundColor: colorFondo,
                         borderWidth: 3,
-                        pointBackgroundColor: '#4f46e5',
+                        pointBackgroundColor: colorLinea,
                         pointBorderColor: '#ffffff',
                         pointBorderWidth: 2,
                         pointRadius: 5,
@@ -812,7 +903,12 @@ function dashboardAnalytics() {
                             backgroundColor: 'rgba(17, 24, 39, 0.9)',
                             titleFont: { weight: 'bold' },
                             padding: 10,
-                            displayColors: false
+                            displayColors: false,
+                            callbacks: {
+                                label: function(context) {
+                                    return `${context.dataset.label}: ${context.parsed.y} ${unidad}`;
+                                }
+                            }
                         }
                     },
                     scales: {
@@ -821,7 +917,13 @@ function dashboardAnalytics() {
                             grid: { color: colorGrid }
                         },
                         y: {
-                            ticks: { color: colorTexto, font: { size: 11 } },
+                            ticks: { 
+                                color: colorTexto, 
+                                font: { size: 11 },
+                                callback: function(value) {
+                                    return `${value} ${unidad}`;
+                                }
+                            },
                             grid: { color: colorGrid }
                         }
                     }
@@ -831,10 +933,17 @@ function dashboardAnalytics() {
 
         renderizarGraficoMuscular() {
             const ctx = document.getElementById('graficoMuscular');
-            if (!ctx || this.distribucion.length === 0) return;
+            const dataLista = this.distribucionActual;
+            if (!ctx || !dataLista || dataLista.length === 0) {
+                if (this.chartMuscular) this.chartMuscular.destroy();
+                return;
+            }
 
-            const labels = this.distribucion.map(d => d.grupo);
-            const valores = this.distribucion.map(d => d.total);
+            const labels = dataLista.map(d => d.nombre);
+            const valores = dataLista.map(d => d.total);
+            const colores = dataLista.map((d, i) => d.color || [
+                '#4f46e5', '#10b981', '#f59e0b', '#ec4899', '#06b6d4', '#8b5cf6', '#64748b'
+            ][i % 7]);
 
             if (this.chartMuscular) {
                 this.chartMuscular.destroy();
@@ -846,9 +955,7 @@ function dashboardAnalytics() {
                     labels: labels,
                     datasets: [{
                         data: valores,
-                        backgroundColor: [
-                            '#4f46e5', '#10b981', '#f59e0b', '#ec4899', '#06b6d4', '#8b5cf6', '#64748b'
-                        ],
+                        backgroundColor: colores,
                         borderWidth: 0
                     }]
                 },
@@ -875,11 +982,12 @@ function dashboardAnalytics() {
         },
 
         copiarTextoLogro() {
-            const texto = `🔥 ¡Mi progreso en FitApp!\n` +
+            const texto = `🔥 ¡Mi progreso deportivo en FitApp!\n` +
                           `• Racha actual: {{ racha_semanas }} semanas consecutivas\n` +
-                          `• Volumen acumulado: {{ volumen_total|floatformat:0 }} kg levantados\n` +
-                          `• Series completadas: {{ total_series }}\n` +
-                          `\n¡Entrena y supera tus límites en FitApp!`;
+                          `• Tiempo activo acumulado: {{ tiempo_total_str }}\n` +
+                          `• Carga total levantada: {{ volumen_total|floatformat:0 }} kg\n` +
+                          `• Sesiones y bloques realizados: {{ total_series }}\n` +
+                          `\n¡Entrena y supera tus límites multidisciplinares en FitApp!`;
             
             navigator.clipboard.writeText(texto).then(() => {
                 this.textoCopiado = true;

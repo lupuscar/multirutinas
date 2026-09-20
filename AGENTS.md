@@ -60,10 +60,16 @@ Este documento sirve como **memoria persistente y guía contextual** de **Multir
 - **Modo Gym (`ejecutar_rutina.html`):** Interfaz en vivo con llamadas a `guardar_serie_ajax`, autopropagación inteligente de pesos a series siguientes, carga de valores de la última sesión con 1 toque, steppers ágiles (+/- 5kg), timers de descanso y audio synth.
 - **Formulario Reactivo (`form_rutina.html`):** Alpine.js controla la selección interactiva de los 7 días de la semana y la configuración de 3 columnas (Series x Reps @ Peso kg) con steppers y chips rápidos.
 
-### `dashboard` (Centro de Mando Analítico)
+### `dashboard` (Centro de Mando Analítico Híbrido y Multidisciplinar)
 - **Rachas y Calendario:** Algoritmo que calcula semanas continuas entrenando (`racha_semanas`) y desglose Lunes-Domingo de la semana en curso.
-- **Tendencias Semanales:** Comparativas porcentuales ($\pm\%$) de volumen total ($kg \times reps$) y series respecto a la semana previa.
-- **1RM & PRs:** Fórmula de Epley ($1RM = \text{Peso} \times (1 + \text{Reps} / 30)$) sobre el historial de series.
+- **Métricas Globales Equitativas:** Tiempo total activo (horas y minutos este mes y semana), constancia de días entrenados, volumen de fuerza ($kg \times reps$) y series/bloques completados.
+- **Salón de Récords Adaptativo (PRs por Disciplina):**
+  - Fuerza: 1RM con fórmula de Epley ($1RM = \text{Peso} \times (1 + \text{Reps} / 30)$) y peso máximo en kg.
+  - Cardio & Deportes: Mayor duración continua (minutos / horas) para running, ciclismo, pádel, fútbol, yoga, etc.
+  - Calistenia & Corporal: Máximas repeticiones en una sola serie para ejercicios con peso corporal.
+  - Filtros interactivos reactivos con Alpine.js por categoría (Todos, Fuerza, Cardio/Deportes, Calistenia).
+- **Curva de Progresión Universal (Chart.js):** Detecta automáticamente la modalidad del ejercicio (Fuerza en kg, Tiempo en minutos o Calistenia en repeticiones) y adapta los ejes, tooltips y botones de alternancia.
+- **Distribución Multidisciplinar:** Gráfico interactivo tipo *doughnut* con alternancia instantánea entre **Por Disciplina** (Fuerza, Cardio, Deportes, Calistenia, Yoga/Danza) y **Por Grupo Muscular**.
 - **Recomendador Prioritario:** Recomienda primero la rutina programada para el día actual (`es_programada_hoy`) si está pendiente; si no, aplica rotación por fecha más antigua.
 
 ---
@@ -79,7 +85,7 @@ El entorno virtual se encuentra en `.venv`. Comandos ejecutables:
 # Aplicar migraciones pendientes
 .venv/bin/python manage.py migrate
 
-# Ejecutar la suite completa de pruebas unitarias (100% pasando, 70 tests)
+# Ejecutar la suite completa de pruebas unitarias (100% pasando, 71 tests)
 .venv/bin/python manage.py test core.tests users.tests dashboard.tests ejercicios.tests rutinas.tests
 
 # Sincronizar catálogo oficial de ejercicios predeterminados (+52 ejercicios)

@@ -138,53 +138,130 @@ def dashboard(request):
     if series_sem_ant > 0:
         series_cambio_pct = round(float((series_sem_actual - series_sem_ant) / series_sem_ant) * 100, 1)
 
-    # =====================================================================
-    # 3. SALÓN DE RÉCORDS PERSONALES (PRS) Y ESTIMACIÓN DE 1RM
-    # =====================================================================
-    series_usuario = Serie.objects.filter(
+    # Tiempo Activo de Entrenamiento (Total, Mes y Semana)
+    tiempo_total_seg = Serie.objects.filter(
         registro__usuario=usuario,
-        peso_kg__gt=0,
-        repeticiones__gt=0
+        tiempo_segundos__isnull=False
+    ).aggregate(t=Sum('tiempo_segundos'))['t'] or 0
+
+    tiempo_mes_seg = Serie.objects.filter(
+        registro__usuario=usuario,
+        registro__fecha__gte=inicio_mes,
+        tiempo_segundos__isnull=False
+    ).aggregate(t=Sum('tiempo_segundos'))['t'] or 0
+
+    tiempo_sem_seg = Serie.objects.filter(
+        registro__usuario=usuario,
+        registro__fecha__gte=inicio_semana,
+        registro__fecha__lte=fin_semana,
+        tiempo_segundos__isnull=False
+    ).aggregate(t=Sum('tiempo_segundos'))['t'] or 0
+
+    def formatear_segundos(segundos):
+        if not segundos or segundos <= 0:
+            return "0m"
+        horas, rem = divmod(int(segundos), 3600)
+        minutos = rem // 60
+        if horas > 0:
+            return f"{horas}h {minutos}m" if minutos > 0 else f"{horas}h"
+        return f"{minutos}m"
+
+    tiempo_total_str = formatear_segundos(tiempo_total_seg)
+    tiempo_mes_str = formatear_segundos(tiempo_mes_seg)
+    tiempo_sem_str = formatear_segundos(tiempo_sem_seg)
+
+    # =====================================================================
+    # 3. SALÓN DE RÉCORDS PERSONALES (PRS) ADAPTATIVO POR DISCIPLINA
+    # =====================================================================
+    todas_series_usuario = Serie.objects.filter(
+        registro__usuario=usuario
     ).select_related('registro__ejercicio')
 
-    ejercicios_records = {}
-    for s in series_usuario:
-        ej_id = s.registro.ejercicio_id
-        peso = float(s.peso_kg)
-        reps = s.repeticiones
-        # Fórmula de Epley: 1RM = Peso * (1 + reps / 30)
-        un_rm = round(peso * (1.0 + (reps / 30.0)), 1)
+    records_fuerza = {}
+    records_tiempo = {}
+    records_calistenia = {}
+
+    for s in todas_series_usuario:
+        ej = s.registro.ejercicio
+        ej_id = ej.id
         fecha_serie = s.registro.fecha
 
-        if ej_id not in ejercicios_records:
-            ejercicios_records[ej_id] = {
-                'ejercicio': s.registro.ejercicio,
-                'max_peso': peso,
-                'max_peso_reps': reps,
-                'max_peso_fecha': fecha_serie,
-                'max_1rm': un_rm,
-                'max_1rm_peso': peso,
-                'max_1rm_reps': reps,
-                'max_1rm_fecha': fecha_serie,
-            }
-        else:
-            rec = ejercicios_records[ej_id]
-            if peso > rec['max_peso']:
-                rec['max_peso'] = peso
-                rec['max_peso_reps'] = reps
-                rec['max_peso_fecha'] = fecha_serie
-            if un_rm > rec['max_1rm']:
-                rec['max_1rm'] = un_rm
-                rec['max_1rm_peso'] = peso
-                rec['max_1rm_reps'] = reps
-                rec['max_1rm_fecha'] = fecha_serie
+        # 1. Récord de FUERZA (Pesas / Máquinas con kg y reps)
+        if s.peso_kg and s.peso_kg > 0 and s.repeticiones and s.repeticiones > 0:
+            peso = float(s.peso_kg)
+            reps = s.repeticiones
+            un_rm = round(peso * (1.0 + (reps / 30.0)), 1)
+            if ej_id not in records_fuerza:
+                records_fuerza[ej_id] = {
+                    'ejercicio': ej,
+                    'categoria': 'fuerza',
+                    'categoria_label': 'Fuerza',
+                    'categoria_icono': 'fa-solid fa-dumbbell',
+                    'max_peso': peso,
+                    'max_peso_reps': reps,
+                    'max_1rm': un_rm,
+                    'valor_principal': f"{un_rm} kg",
+                    'valor_sub': "1RM Estimado",
+                    'detalle': f"{peso} kg × {reps} reps",
+                    'fecha': fecha_serie,
+                    'orden': un_rm,
+                }
+            else:
+                rec = records_fuerza[ej_id]
+                if un_rm > rec['max_1rm']:
+                    rec['max_1rm'] = un_rm
+                    rec['valor_principal'] = f"{un_rm} kg"
+                    rec['max_peso'] = peso
+                    rec['max_peso_reps'] = reps
+                    rec['detalle'] = f"{peso} kg × {reps} reps"
+                    rec['fecha'] = fecha_serie
+                    rec['orden'] = un_rm
 
-    # Ordenamos por mayor 1RM y limitamos a los 6 más destacados
-    records_personales = sorted(
-        ejercicios_records.values(),
-        key=lambda x: x['max_1rm'],
-        reverse=True
-    )[:6]
+        # 2. Récord de TIEMPO / CARDIO / DEPORTES (Running, Pádel, Danza, Yoga...)
+        if s.tiempo_segundos and s.tiempo_segundos > 0:
+            seg = s.tiempo_segundos
+            if ej_id not in records_tiempo or seg > records_tiempo[ej_id]['max_segundos']:
+                records_tiempo[ej_id] = {
+                    'ejercicio': ej,
+                    'categoria': 'tiempo',
+                    'categoria_label': 'Cardio & Deporte',
+                    'categoria_icono': ej.icono,
+                    'max_segundos': seg,
+                    'valor_principal': formatear_segundos(seg),
+                    'valor_sub': "Mayor Duración",
+                    'detalle': f"{round(seg / 60)} min continuos",
+                    'fecha': fecha_serie,
+                    'orden': seg,
+                }
+
+        # 3. Récord de CALISTENIA / PESO CORPORAL (Dominadas, Flexiones, Fondos...)
+        if (s.peso_kg is None or s.peso_kg == 0) and s.repeticiones and s.repeticiones > 0:
+            reps = s.repeticiones
+            if ej_id not in records_fuerza and (ej.tipo == 'CAL' or ej.modalidad == 'REPS_PESO'):
+                if ej_id not in records_calistenia or reps > records_calistenia[ej_id]['max_reps']:
+                    records_calistenia[ej_id] = {
+                        'ejercicio': ej,
+                        'categoria': 'calistenia',
+                        'categoria_label': 'Calistenia',
+                        'categoria_icono': 'fa-solid fa-person-walking',
+                        'max_reps': reps,
+                        'valor_principal': f"{reps} reps",
+                        'valor_sub': "Máx. Reps por Serie",
+                        'detalle': "Peso corporal",
+                        'fecha': fecha_serie,
+                        'orden': reps,
+                    }
+
+    lista_fuerza = sorted(records_fuerza.values(), key=lambda x: x['orden'], reverse=True)
+    lista_tiempo = sorted(records_tiempo.values(), key=lambda x: x['orden'], reverse=True)
+    lista_calistenia = sorted(records_calistenia.values(), key=lambda x: x['orden'], reverse=True)
+
+    # Combinamos para la vista general (priorizando los más destacados de cada ámbito)
+    records_personales = []
+    max_cada = 4
+    records_personales.extend(lista_fuerza[:max_cada])
+    records_personales.extend(lista_tiempo[:max_cada])
+    records_personales.extend(lista_calistenia[:max_cada])
 
     # =====================================================================
     # 4. SIGUIENTE ENTRENAMIENTO RECOMENDADO (PRIORIDAD POR DÍA ASIGNADO)
@@ -216,19 +293,17 @@ def dashboard(request):
                 'ya_entrenada_hoy': ya_entrenada_hoy,
             })
 
-        # 1. Si hay alguna rutina programada específicamente para hoy que aún no se haya realizado hoy
         rutinas_hoy_pendientes = [r for r in rutinas_con_fecha if r['es_programada_hoy'] and not r['ya_entrenada_hoy']]
         if rutinas_hoy_pendientes:
             rutina_sugerida = rutinas_hoy_pendientes[0]
         else:
-            # 2. Si no hay rutina de hoy o ya se entrenó: ordenamos por la que hace más tiempo que no se entrena
             rutinas_con_fecha.sort(
                 key=lambda x: (x['ultima_fecha'] is not None, x['ultima_fecha'] or datetime.date.min)
             )
             rutina_sugerida = rutinas_con_fecha[0]
 
     # =====================================================================
-    # 5. HISTORIAL DE SESIONES RECIENTES
+    # 5. HISTORIAL DE SESIONES RECIENTES CON ICONOS Y FORMATO HÍBRIDO
     # =====================================================================
     sesiones_recientes = []
     fechas_recientes = RegistroEjercicio.objects.filter(
@@ -244,15 +319,20 @@ def dashboard(request):
         total_series_dia = sum(r.series_detalle.count() for r in registros_dia)
         nombres_ejercicios = [r.ejercicio.nombre for r in registros_dia]
 
+        # Resumen de actividad principal
+        primer_ej = registros_dia[0].ejercicio if registros_dia else None
+        icono_dia = primer_ej.icono if primer_ej else 'fa-solid fa-dumbbell'
+
         sesiones_recientes.append({
             'fecha': fecha,
             'total_ejercicios': len(registros_dia),
             'total_series': total_series_dia,
+            'icono': icono_dia,
             'ejercicios_resumen': ", ".join(nombres_ejercicios[:3]) + ("..." if len(nombres_ejercicios) > 3 else ""),
         })
 
     # =====================================================================
-    # 6. CURVA DE PROGRESIÓN DE CARGAS POR EJERCICIO (CHART.JS)
+    # 6. CURVA DE PROGRESIÓN UNIVERSAL (FUERZA, TIEMPO Y CALISTENIA)
     # =====================================================================
     ejercicios_con_datos = Ejercicio.objects.filter(
         historial__usuario=usuario
@@ -266,41 +346,116 @@ def dashboard(request):
         ).order_by('fecha', 'id')
 
         fechas_lista = []
-        pesos_maximos = []
-        volumen_lista = []
+        valores_principales = []
+        valores_secundarios = []
 
-        for reg in registros:
-            max_peso = reg.series_detalle.aggregate(Max('peso_kg'))['peso_kg__max']
-            vol_dia = reg.series_detalle.filter(
-                repeticiones__isnull=False,
-                peso_kg__isnull=False
-            ).aggregate(v=Sum(volumen_expr))['v'] or 0
+        # Caso 1: Ejercicio por Tiempo (Running, Ciclismo, Danza, Yoga, Deportes...)
+        if ej.modalidad == 'TIEMPO':
+            for reg in registros:
+                seg = reg.series_detalle.aggregate(Max('tiempo_segundos'))['tiempo_segundos__max']
+                if seg is not None and seg > 0:
+                    fechas_lista.append(reg.fecha.strftime('%d/%m/%Y'))
+                    valores_principales.append(round(seg / 60.0, 1))
 
-            if max_peso is not None:
-                fechas_lista.append(reg.fecha.strftime('%d/%m/%Y'))
-                pesos_maximos.append(float(max_peso))
-                volumen_lista.append(float(vol_dia))
+            if fechas_lista:
+                datos_progresion[str(ej.id)] = {
+                    'nombre': ej.nombre,
+                    'tipo_progresion': 'tiempo',
+                    'unidad': 'min',
+                    'fechas': fechas_lista,
+                    'valores': valores_principales,
+                    'label_metrica': 'Duración (minutos)',
+                    'tiene_secundaria': False,
+                }
 
-        if fechas_lista:
-            datos_progresion[str(ej.id)] = {
-                'nombre': ej.nombre,
-                'modalidad': ej.modalidad,
-                'fechas': fechas_lista,
-                'pesos_max': pesos_maximos,
-                'volumen': volumen_lista,
-            }
+        # Caso 2 & 3: Calistenia o Fuerza
+        else:
+            tiene_series_con_peso = Serie.objects.filter(registro__usuario=usuario, registro__ejercicio=ej, peso_kg__gt=0).exists()
+            if ej.tipo == 'CAL' or not tiene_series_con_peso:
+                for reg in registros:
+                    max_reps = reg.series_detalle.aggregate(Max('repeticiones'))['repeticiones__max']
+                    tot_reps = reg.series_detalle.aggregate(Sum('repeticiones'))['repeticiones__sum']
+                    if max_reps is not None and max_reps > 0:
+                        fechas_lista.append(reg.fecha.strftime('%d/%m/%Y'))
+                        valores_principales.append(int(max_reps))
+                        valores_secundarios.append(int(tot_reps or max_reps))
+
+                if fechas_lista:
+                    datos_progresion[str(ej.id)] = {
+                        'nombre': ej.nombre,
+                        'tipo_progresion': 'calistenia',
+                        'unidad': 'reps',
+                        'fechas': fechas_lista,
+                        'valores': valores_principales,
+                        'valores_sec': valores_secundarios,
+                        'label_metrica': 'Máx. Reps por Serie',
+                        'label_secundaria': 'Reps Totales',
+                        'tiene_secundaria': True,
+                    }
+            else:
+                for reg in registros:
+                    max_peso = reg.series_detalle.aggregate(Max('peso_kg'))['peso_kg__max']
+                    vol_dia = reg.series_detalle.filter(
+                        repeticiones__isnull=False,
+                        peso_kg__isnull=False
+                    ).aggregate(v=Sum(volumen_expr))['v'] or 0
+
+                    if max_peso is not None:
+                        fechas_lista.append(reg.fecha.strftime('%d/%m/%Y'))
+                        valores_principales.append(float(max_peso))
+                        valores_secundarios.append(float(vol_dia))
+
+                if fechas_lista:
+                    datos_progresion[str(ej.id)] = {
+                        'nombre': ej.nombre,
+                        'tipo_progresion': 'fuerza',
+                        'unidad': 'kg',
+                        'fechas': fechas_lista,
+                        'valores': valores_principales,
+                        'valores_sec': valores_secundarios,
+                        'label_metrica': 'Peso Máximo (kg)',
+                        'label_secundaria': 'Volumen Total (kg)',
+                        'tiene_secundaria': True,
+                    }
 
     # =====================================================================
-    # 7. DISTRIBUCIÓN POR GRUPO MUSCULAR
+    # 7. DISTRIBUCIÓN POR DISCIPLINA Y POR GRUPO MUSCULAR
     # =====================================================================
+    # Desglose por Tipo de Actividad / Disciplina
+    disciplinas_map = {
+        'MAQ': ('Fuerza (Máquinas)', '#4f46e5'),
+        'LIB': ('Fuerza (Peso Libre)', '#6366f1'),
+        'CAL': ('Calistenia', '#06b6d4'),
+        'CAR': ('Cardio', '#10b981'),
+        'DEP': ('Deportes (Pádel, etc.)', '#f59e0b'),
+        'DAN': ('Danza / Baile', '#ec4899'),
+        'OUT': ('Outdoor / Aire Libre', '#14b8a6'),
+        'FLL': ('Yoga / Movilidad', '#8b5cf6'),
+    }
+
+    distribucion_tipos_raw = RegistroEjercicio.objects.filter(
+        usuario=usuario
+    ).values('ejercicio__tipo').annotate(total=Count('id')).order_by('-total')
+
+    distribucion_disciplinas_json = []
+    for item in distribucion_tipos_raw:
+        codigo_tipo = item['ejercicio__tipo']
+        nombre_disc, color_disc = disciplinas_map.get(codigo_tipo, ('Otro', '#64748b'))
+        distribucion_disciplinas_json.append({
+            'nombre': nombre_disc,
+            'total': item['total'],
+            'color': color_disc,
+        })
+
+    # Desglose Anatómico por Grupo Muscular
     distribucion_raw = RegistroEjercicio.objects.filter(
         usuario=usuario
     ).values('ejercicio__grupo_muscular').annotate(total=Count('id')).order_by('-total')
 
     nombres_grupos = dict(Ejercicio.GRUPO_MUSCULAR_CHOICES)
-    distribucion_json = [
+    distribucion_muscular_json = [
         {
-            'grupo': nombres_grupos.get(item['ejercicio__grupo_muscular'], item['ejercicio__grupo_muscular']),
+            'nombre': nombres_grupos.get(item['ejercicio__grupo_muscular'], item['ejercicio__grupo_muscular']),
             'total': item['total']
         }
         for item in distribucion_raw
@@ -316,8 +471,11 @@ def dashboard(request):
         'rutina_sugerida': rutina_sugerida,
         'dia_hoy_nombre': dia_hoy_nombre,
 
-        # KPIs y Tendencias
+        # KPIs Híbridos y Tendencias
         'dias_entrenados_mes': dias_entrenados_mes,
+        'tiempo_total_str': tiempo_total_str,
+        'tiempo_mes_str': tiempo_mes_str,
+        'tiempo_sem_str': tiempo_sem_str,
         'volumen_total': round(volumen_total, 1),
         'vol_sem_actual': round(vol_sem_actual, 1),
         'vol_cambio_pct': vol_cambio_pct,
@@ -326,14 +484,19 @@ def dashboard(request):
         'series_cambio_pct': series_cambio_pct,
         'total_rutinas': total_rutinas,
 
-        # Récords y Rendimiento
+        # Récords Adaptativos
         'records_personales': records_personales,
+        'total_prs_fuerza': len(lista_fuerza),
+        'total_prs_tiempo': len(lista_tiempo),
+        'total_prs_calistenia': len(lista_calistenia),
 
         # Historial y Gráficos
         'sesiones_recientes': sesiones_recientes,
         'ejercicios_con_datos': ejercicios_con_datos,
         'datos_progresion_json': json.dumps(datos_progresion),
-        'distribucion_json': json.dumps(distribucion_json),
+        'distribucion_disciplinas_json': json.dumps(distribucion_disciplinas_json),
+        'distribucion_muscular_json': json.dumps(distribucion_muscular_json),
+        'distribucion_json': json.dumps(distribucion_disciplinas_json or distribucion_muscular_json),
         'ejercicios_catalogo_json': json.dumps([
             {
                 'id': ej.id,

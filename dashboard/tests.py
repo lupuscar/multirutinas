@@ -113,3 +113,64 @@ class DashboardViewTests(TestCase):
         self.assertTrue(response.context['rutina_sugerida']['es_programada_hoy'])
         self.assertContains(response, 'Toca Hoy')
 
+    def test_dashboard_records_multidisciplinares_tiempo_y_calistenia(self):
+        """Verifica que ejercicios de cardio/tiempo y calistenia sin peso tengan sus propios PRs y métricas"""
+        self.client.login(username='atletadash', password='Password123!')
+
+        # 1. Ejercicio de tiempo / running
+        ej_running = Ejercicio.objects.create(
+            nombre='Running Outdoor',
+            tipo='OUT',
+            modalidad='TIEMPO',
+            grupo_muscular='CAR'
+        )
+        reg_run = RegistroEjercicio.objects.create(usuario=self.user, ejercicio=ej_running)
+        Serie.objects.create(registro=reg_run, numero_serie=1, tiempo_segundos=2700) # 45 min
+
+        # 2. Ejercicio de calistenia / dominadas
+        ej_calistenia = Ejercicio.objects.create(
+            nombre='Dominadas Pronas',
+            tipo='CAL',
+            modalidad='REPS_PESO',
+            grupo_muscular='ESP'
+        )
+        reg_cal = RegistroEjercicio.objects.create(usuario=self.user, ejercicio=ej_calistenia)
+        Serie.objects.create(registro=reg_cal, numero_serie=1, repeticiones=18, peso_kg=None)
+
+        response = self.client.get(reverse('dashboard:dashboard'))
+        self.assertEqual(response.status_code, 200)
+
+        # Verificamos KPIs de tiempo
+        self.assertEqual(response.context['tiempo_mes_str'], '45m')
+        self.assertContains(response, 'Tiempo Activo')
+
+        # Verificamos PRs adaptativos
+        records = response.context['records_personales']
+        categorias_prs = {r['categoria'] for r in records}
+        self.assertIn('tiempo', categorias_prs)
+        self.assertIn('calistenia', categorias_prs)
+
+        pr_run = next(r for r in records if r['categoria'] == 'tiempo')
+        self.assertEqual(pr_run['ejercicio'].nombre, 'Running Outdoor')
+        self.assertEqual(pr_run['valor_principal'], '45m')
+
+        pr_cal = next(r for r in records if r['categoria'] == 'calistenia')
+        self.assertEqual(pr_cal['ejercicio'].nombre, 'Dominadas Pronas')
+        self.assertEqual(pr_cal['valor_principal'], '18 reps')
+
+        # Verificamos curva de progresión universal
+        import json
+        progresion = json.loads(response.context['datos_progresion_json'])
+        self.assertIn(str(ej_running.id), progresion)
+        self.assertEqual(progresion[str(ej_running.id)]['tipo_progresion'], 'tiempo')
+        self.assertEqual(progresion[str(ej_running.id)]['unidad'], 'min')
+
+        self.assertIn(str(ej_calistenia.id), progresion)
+        self.assertEqual(progresion[str(ej_calistenia.id)]['tipo_progresion'], 'calistenia')
+        self.assertEqual(progresion[str(ej_calistenia.id)]['unidad'], 'reps')
+
+        # Verificamos distribución multidisciplinar
+        dist_disc = json.loads(response.context['distribucion_disciplinas_json'])
+        self.assertTrue(len(dist_disc) >= 2)
+
+
