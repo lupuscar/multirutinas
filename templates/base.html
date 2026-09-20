@@ -106,10 +106,15 @@
                     </a>
 
                     {% if user.is_staff or user.is_superuser %}
-                    <!-- Admin -->
+                    <!-- Admin Django -->
                     <a href="/admin/" class="flex items-center px-4 py-3 text-gray-600 dark:text-gray-300 hover:bg-brand-light hover:text-white rounded-lg transition-colors group">
                         <i class="fa-solid fa-shield-halved text-lg"></i>
-                        <span class="sidebar-text ml-4 font-medium">Admin</span>
+                        <span class="sidebar-text ml-4 font-medium">Django Admin</span>
+                    </a>
+                    <!-- Ajustes del Sistema -->
+                    <a href="{% url 'core:configuracion_sistema' %}" class="flex items-center px-4 py-3 rounded-lg transition-colors group {% if request.resolver_match.app_name == 'core' %}bg-brand-light text-white{% else %}text-gray-600 dark:text-gray-300 hover:bg-brand-light hover:text-white{% endif %}">
+                        <i class="fa-solid fa-sliders text-lg"></i>
+                        <span class="sidebar-text ml-4 font-medium">Ajustes Web</span>
                     </a>
                     {% endif %}
 
@@ -158,7 +163,34 @@
 
         <!-- Contenido Principal -->
         <main class="flex-1 flex flex-col h-full overflow-hidden w-full">
-            <header class="h-16 bg-white dark:bg-gray-800 shadow-sm flex items-center justify-between px-6 transition-colors duration-300 z-10">
+            {% if config_sitio.modo_mantenimiento and user.is_staff %}
+            <!-- Banner Alerta Mantenimiento Activo para Staff -->
+            <div class="bg-amber-500 text-gray-950 px-4 py-2 text-xs font-black flex items-center justify-between shadow-md z-30 shrink-0">
+                <div class="flex items-center space-x-2">
+                    <i class="fa-solid fa-triangle-exclamation text-sm animate-pulse"></i>
+                    <span>MODO MANTENIMIENTO ACTIVO — El público general ve la pantalla 503. Tienes acceso prioritario como Staff.</span>
+                </div>
+                <a href="{% url 'core:configuracion_sistema' %}" class="underline hover:text-white font-bold ml-2 shrink-0">
+                    Administrar Ajustes &rarr;
+                </a>
+            </div>
+            {% endif %}
+
+            {% if config_sitio.banner_activo and user.is_authenticated %}
+            <!-- Banner Global de Anuncios -->
+            <div class="px-4 py-2.5 text-xs font-semibold flex items-center justify-between shadow-sm z-20 shrink-0 
+                {% if config_sitio.banner_tipo == 'INFO' %}bg-indigo-600 text-white
+                {% elif config_sitio.banner_tipo == 'WARNING' %}bg-amber-500 text-gray-950 font-bold
+                {% elif config_sitio.banner_tipo == 'SUCCESS' %}bg-emerald-600 text-white
+                {% elif config_sitio.banner_tipo == 'DANGER' %}bg-red-600 text-white{% endif %}">
+                <div class="flex items-center space-x-2">
+                    <i class="fa-solid fa-bullhorn text-sm shrink-0"></i>
+                    <span>{{ config_sitio.banner_texto }}</span>
+                </div>
+            </div>
+            {% endif %}
+
+            <header class="h-16 bg-white dark:bg-gray-800 shadow-sm flex items-center justify-between px-6 transition-colors duration-300 z-10 shrink-0">
                 {% if user.is_authenticated %}
                 <button onclick="toggleSidebar()" class="text-gray-500 hover:text-brand-light focus:outline-none">
                     <i class="fa-solid fa-bars text-xl"></i>

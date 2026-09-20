@@ -7,6 +7,7 @@ from django.db.models import Max
 
 from .models import Ejercicio, RegistroEjercicio, Serie
 from .forms import EjercicioForm
+from core.models import ConfiguracionSitio
 
 
 def lista_ejercicios(request):
@@ -75,8 +76,14 @@ def lista_ejercicios(request):
 @login_required
 def crear_ejercicio(request):
     """
-    Permite al usuario crear un nuevo ejercicio desde la interfaz web o móvil.
+    Permite al usuario crear un nuevo ejercicio desde la interfaz web o móvil
+    siempre que esté permitido en la configuración global o sea staff.
     """
+    config = ConfiguracionSitio.get_config()
+    if not config.usuarios_pueden_crear_ejercicios and not (request.user.is_staff or request.user.is_superuser):
+        messages.warning(request, "La creación de ejercicios personalizados está desactivada por el administrador.")
+        return redirect('ejercicios:ejercicios')
+
     if request.method == 'POST':
         form = EjercicioForm(request.POST, request.FILES)
         if form.is_valid():

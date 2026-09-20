@@ -17,6 +17,14 @@ Este documento sirve como **memoria persistente y guía contextual** de **Multir
 
 ## 🏗️ 2. Arquitectura de Aplicaciones y Modelos
 
+### `core` (Configuración Global, Mantenimiento y Operaciones)
+- **`ConfiguracionSitio`:** Modelo Singleton (ID=1) con almacenamiento en caché (`django.core.cache`) para 0 overhead por petición.
+  - Campos: `modo_mantenimiento`, `mensaje_mantenimiento`, `tiempo_estimado_reapertura`, `registro_abierto`, `mensaje_registro_cerrado`, `banner_activo`, `banner_texto`, `banner_tipo`, `usuarios_pueden_crear_ejercicios`, `nombre_sitio`, `email_soporte`.
+- **`middleware.py` (`MaintenanceModeMiddleware`):** Intercepta peticiones cuando el modo mantenimiento está activo. Ofrece bypass a Staff/Superusuarios y rutas `/admin/`, login y estáticos; para el resto devuelve respuesta HTTP 503 personalizada (`templates/core/503.html`).
+- **`context_processors.py` (`configuracion_sitio`):** Inyecta `config_sitio` globalmente en todas las plantillas para banners y lógica visual.
+- **Panel Web de Ajustes (`/configuracion/sistema/`):** Pantalla administrativa con estética FitApp, métricas en vivo, switches reactivos con Alpine.js y botones de 1 clic (limpiar sesiones caducadas y purga de logs antiguos).
+- **Django Admin (`/admin/core/configuracionsitio/`):** Administración nativa con restricciones singleton (no permite añadir más ni borrar).
+
 ### `users` (Usuarios, Salud y Auditoría)
 - **`Profile`:** Extensión del modelo `User` con ficha antropométrica (`peso_kg`, `altura_cm`, `fecha_nacimiento`, `foto`), meta semanal (`dias_objetivo_semana`), objetivo deportivo (`HIP`, `FUE`, `DEF`, `RES`, `SAL`), nivel, membresía comercial (`tipo_suscripcion`: `FREE`, `PRO`, `COACH`) y estado de verificación de correo (`email_verificado`).
   - `@property categoria_imc`: Clasificación dinámica del IMC (*Bajo peso*, *Peso normal*, *Sobrepeso*, *Obesidad*).
@@ -66,8 +74,8 @@ El entorno virtual se encuentra en `.venv`. Comandos ejecutables:
 # Aplicar migraciones pendientes
 .venv/bin/python manage.py migrate
 
-# Ejecutar la suite completa de pruebas unitarias (100% pasando, 34 tests)
-.venv/bin/python manage.py test users.tests dashboard.tests ejercicios.tests rutinas.tests
+# Ejecutar la suite completa de pruebas unitarias (100% pasando, 59 tests)
+.venv/bin/python manage.py test core.tests users.tests dashboard.tests ejercicios.tests rutinas.tests
 
 # Generar datos de prueba para el Dashboard (todas las cuentas o una específica)
 .venv/bin/python manage.py crear_datos_demo

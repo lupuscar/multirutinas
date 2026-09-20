@@ -300,5 +300,44 @@ class UsersAuthTests(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, 'Estado de Cuenta')
 
+    def test_cambiar_foto_perfil_exitoso(self):
+        """Verifica la actualización de la foto de perfil desde el modal interactivo"""
+        from django.core.files.uploadedfile import SimpleUploadedFile
+        self.client.login(username='atleta1', password='Password123!')
+        
+        fake_img = (
+            b'\x47\x49\x46\x38\x39\x61\x01\x00\x01\x00\x80\x00\x00\x00\x00\x00'
+            b'\xff\xff\xff\x21\xf9\x04\x01\x00\x00\x00\x00\x2c\x00\x00\x00\x00'
+            b'\x01\x00\x01\x00\x00\x02\x02\x44\x01\x00\x3b'
+        )
+        foto = SimpleUploadedFile("avatar.gif", fake_img, content_type="image/gif")
+        
+        res = self.client.post(reverse('users:perfil'), {
+            'action': 'cambiar_foto',
+            'foto_perfil': foto,
+        })
+        self.assertRedirects(res, reverse('users:perfil'))
+        self.user.profile.refresh_from_db()
+        self.assertTrue(bool(self.user.profile.foto_perfil))
 
+    def test_eliminar_foto_perfil(self):
+        """Verifica que un usuario pueda eliminar su foto de perfil actual"""
+        from django.core.files.uploadedfile import SimpleUploadedFile
+        self.client.login(username='atleta1', password='Password123!')
+        
+        fake_img = (
+            b'\x47\x49\x46\x38\x39\x61\x01\x00\x01\x00\x80\x00\x00\x00\x00\x00'
+            b'\xff\xff\xff\x21\xf9\x04\x01\x00\x00\x00\x00\x2c\x00\x00\x00\x00'
+            b'\x01\x00\x01\x00\x00\x02\x02\x44\x01\x00\x3b'
+        )
+        self.user.profile.foto_perfil = SimpleUploadedFile("avatar.gif", fake_img, content_type="image/gif")
+        self.user.profile.save()
+        self.assertTrue(bool(self.user.profile.foto_perfil))
 
+        res = self.client.post(reverse('users:perfil'), {
+            'action': 'cambiar_foto',
+            'eliminar_foto': '1'
+        })
+        self.assertRedirects(res, reverse('users:perfil'))
+        self.user.profile.refresh_from_db()
+        self.assertFalse(bool(self.user.profile.foto_perfil))

@@ -52,11 +52,11 @@ class Rutina(models.Model):
 
     @property
     def lista_dias_numeros(self):
-        """Devuelve una lista de enteros con los días asignados [0, 1, ..., 6]"""
+        """Devuelve una lista ordenada de enteros con los días asignados [0, 1, ..., 6]"""
         if not self.dias_semana:
             return []
         try:
-            return [int(d.strip()) for d in str(self.dias_semana).split(',') if d.strip().isdigit()]
+            return sorted([int(d.strip()) for d in str(self.dias_semana).split(',') if d.strip().isdigit()])
         except Exception:
             return []
 

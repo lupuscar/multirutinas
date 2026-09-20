@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="es" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mantenimiento en Curso | {{ config_sitio.nombre_sitio|default:"FitApp" }}</title>
+    
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        'brand-dark': '#0f172a',
+                        'brand-light': '#6366f1',
+                    }
+                }
+            }
+        }
+    </script>
+    
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Google Fonts Inter -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+        @keyframes float {
+            0%, 100% { transform: translateY(0px) rotate(0deg); }
+            50% { transform: translateY(-12px) rotate(-3deg); }
+        }
+        .animate-float {
+            animation: float 4s ease-in-out infinite;
+        }
+        @keyframes pulse-slow {
+            0%, 100% { opacity: 0.2; transform: scale(1); }
+            50% { opacity: 0.35; transform: scale(1.08); }
+        }
+        .animate-pulse-slow {
+            animation: pulse-slow 5s ease-in-out infinite;
+        }
+    </style>
+</head>
+<body class="bg-gray-950 text-gray-100 min-h-screen flex flex-col justify-between overflow-x-hidden relative selection:bg-brand-light selection:text-white">
+
+    <!-- Efectos de fondo difuminados (glows) -->
+    <div class="absolute top-1/4 left-1/2 -translate-x-1/2 -translate-y-1/2 w-96 sm:w-[550px] h-96 sm:h-[550px] bg-brand-light/20 rounded-full blur-3xl pointer-events-none animate-pulse-slow"></div>
+    <div class="absolute bottom-10 right-10 w-72 h-72 bg-amber-500/10 rounded-full blur-3xl pointer-events-none"></div>
+
+    <!-- Header minimalista -->
+    <header class="w-full max-w-6xl mx-auto px-6 py-6 flex items-center justify-between z-10">
+        <div class="flex items-center space-x-3">
+            <div class="w-10 h-10 rounded-xl bg-brand-light/20 border border-brand-light/30 flex items-center justify-center text-brand-light">
+                <i class="fa-solid fa-dumbbell text-lg"></i>
+            </div>
+            <span class="font-extrabold text-lg tracking-wider text-white">
+                {{ config_sitio.nombre_sitio|default:"FITAPP" }}
+            </span>
+        </div>
+        <div class="inline-flex items-center space-x-2 bg-amber-500/10 border border-amber-500/20 px-3 py-1.5 rounded-full text-xs font-semibold text-amber-400">
+            <span class="w-2 h-2 rounded-full bg-amber-400 animate-ping"></span>
+            <span>Modo Mantenimiento</span>
+        </div>
+    </header>
+
+    <!-- Contenido Central -->
+    <main class="w-full max-w-2xl mx-auto px-6 py-12 flex flex-col items-center text-center z-10 my-auto">
+        
+        <!-- Ilustración / Icono flotante con temática gym -->
+        <div class="relative mb-8">
+            <div class="w-28 h-28 sm:w-32 sm:h-32 rounded-3xl bg-gradient-to-tr from-brand-light/30 to-indigo-500/10 border border-indigo-500/30 flex items-center justify-center shadow-2xl shadow-brand-light/20 animate-float">
+                <i class="fa-solid fa-screwdriver-wrench text-5xl sm:text-6xl text-brand-light"></i>
+            </div>
+            <div class="absolute -bottom-2 -right-2 w-10 h-10 rounded-2xl bg-gray-900 border border-gray-700 flex items-center justify-center text-amber-400 shadow-lg">
+                <i class="fa-solid fa-dumbbell text-sm"></i>
+            </div>
+        </div>
+
+        <!-- Título -->
+        <h1 class="text-3xl sm:text-5xl font-black tracking-tight text-white mb-4">
+            Ajustando las máquinas...
+        </h1>
+
+        <!-- Mensaje de mantenimiento dinámico -->
+        <p class="text-gray-300 sm:text-lg max-w-lg leading-relaxed mb-6 font-normal">
+            {{ config_sitio.mensaje_mantenimiento|default:"Estamos realizando labores de optimización y mantenimiento en FitApp. Estaremos de vuelta muy pronto."|linebreaksbr }}
+        </p>
+
+        <!-- Tarjeta de tiempo estimado si está configurado -->
+        {% if config_sitio.tiempo_estimado_reapertura %}
+        <div class="inline-flex items-center space-x-3 bg-gray-900/90 border border-gray-800 px-5 py-3 rounded-2xl shadow-lg mb-8">
+            <div class="w-8 h-8 rounded-xl bg-brand-light/20 flex items-center justify-center text-brand-light shrink-0">
+                <i class="fa-regular fa-clock text-sm"></i>
+            </div>
+            <div class="text-left text-xs sm:text-sm">
+                <span class="text-gray-400 block font-medium">Reapertura estimada:</span>
+                <strong class="text-white font-bold">{{ config_sitio.tiempo_estimado_reapertura }}</strong>
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- Barra de progreso decorativa -->
+        <div class="w-full max-w-xs bg-gray-800/80 h-2 rounded-full overflow-hidden mb-8 border border-gray-700/50">
+            <div class="h-full bg-gradient-to-r from-brand-light to-amber-400 rounded-full w-2/3 animate-pulse"></div>
+        </div>
+
+        <p class="text-xs text-gray-500 max-w-md">
+            Agradecemos tu paciencia. Tus rutinas, series y marcas están a buen recaudo. Enseguida volvemos a la carga.
+        </p>
+
+    </main>
+
+    <!-- Footer discreto con acceso administrativo -->
+    <footer class="w-full max-w-6xl mx-auto px-6 py-6 flex flex-col sm:flex-row items-center justify-between border-t border-gray-800/50 text-xs text-gray-500 z-10 space-y-3 sm:space-y-0">
+        <div>
+            &copy; {% now "Y" %} {{ config_sitio.nombre_sitio|default:"FitApp" }}. Todos los derechos reservados.
+        </div>
+        <div class="flex items-center space-x-4">
+            {% if config_sitio.email_soporte %}
+            <a href="mailto:{{ config_sitio.email_soporte }}" class="hover:text-gray-300 transition-colors flex items-center space-x-1">
+                <i class="fa-regular fa-envelope"></i>
+                <span>Soporte</span>
+            </a>
+            {% endif %}
+            <span class="text-gray-700">•</span>
+            <a href="/usuario/login/" class="text-gray-400 hover:text-brand-light transition-colors flex items-center space-x-1">
+                <i class="fa-solid fa-lock text-[10px]"></i>
+                <span>Acceso Staff</span>
+            </a>
+        </div>
+    </footer>
+
+</body>
+</html>

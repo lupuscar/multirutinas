@@ -16,7 +16,7 @@
             </p>
         </div>
 
-        {% if user.is_authenticated %}
+        {% if user.is_authenticated and config_sitio.usuarios_pueden_crear_ejercicios or user.is_staff %}
         <!-- Botón Crear Nuevo Ejercicio -->
         <a href="{% url 'ejercicios:crear_ejercicio' %}" 
            class="inline-flex items-center justify-center px-5 py-3 bg-brand-light hover:bg-brand-dark text-white font-bold text-sm rounded-xl shadow-lg shadow-brand-light/30 transition-all hover:scale-105 active:scale-95">
@@ -205,7 +205,7 @@
             <p class="text-sm text-gray-500 dark:text-gray-400 mt-2 max-w-sm mx-auto">
                 Prueba cambiando los filtros de búsqueda o crea tu propio ejercicio personalizado.
             </p>
-            {% if user.is_authenticated %}
+            {% if user.is_authenticated and config_sitio.usuarios_pueden_crear_ejercicios or user.is_staff %}
             <a href="{% url 'ejercicios:crear_ejercicio' %}" class="mt-6 inline-flex items-center px-6 py-3 bg-brand-light hover:bg-brand-dark text-white font-bold text-sm rounded-xl shadow-lg shadow-brand-light/30 transition-all">
                 <i class="fa-solid fa-plus mr-2"></i> Crear Nuevo Ejercicio
             </a>

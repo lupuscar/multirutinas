@@ -81,10 +81,17 @@
 
         <div
             class="mt-6 pt-5 border-t border-gray-100 dark:border-gray-700 text-center text-xs text-gray-500 dark:text-gray-400">
-            ¿Aún no tienes una cuenta?
-            <a href="{% url 'users:registro' %}" class="text-brand-light font-bold hover:underline ml-1">
-                Regístrate gratis aquí
-            </a>
+            {% if config_sitio.registro_abierto %}
+                ¿Aún no tienes una cuenta?
+                <a href="{% url 'users:registro' %}" class="text-brand-light font-bold hover:underline ml-1">
+                    Regístrate gratis aquí
+                </a>
+            {% else %}
+                <span class="text-gray-400 italic flex items-center justify-center space-x-1.5">
+                    <i class="fa-solid fa-lock text-[10px]"></i>
+                    <span>El registro de nuevas cuentas está cerrado temporalmente.</span>
+                </span>
+            {% endif %}
         </div>
 
     </div>

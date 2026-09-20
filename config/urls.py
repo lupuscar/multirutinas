@@ -11,6 +11,7 @@ urlpatterns = [
     path('ejercicios/', include('ejercicios.urls')),
     path('dashboard/', include('dashboard.urls')),
     path('rutinas/', include('rutinas.urls')),
+    path('configuracion/', include('core.urls')),
     # Configuración personalizada de restablecimiento para enviar correo HTML interpretado + texto plano
     path(
         'accounts/password_reset/',

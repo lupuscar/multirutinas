@@ -1,0 +1,415 @@
+{% extends 'base.html' %}
+
+{% block title %}Configuración del Sistema | FitApp{% endblock %}
+
+{% block content %}
+<div class="max-w-6xl mx-auto space-y-8 pb-16" x-data="{
+    tab: 'general',
+    maintActive: {{ form.modo_mantenimiento.value|yesno:'true,false' }},
+    regActive: {{ form.registro_abierto.value|yesno:'true,false' }},
+    bannerActive: {{ form.banner_activo.value|yesno:'true,false' }},
+    bannerType: '{{ form.banner_tipo.value|default:"INFO" }}',
+    bannerText: '{{ form.banner_texto.value|default:""|escapejs }}'
+}">
+
+    <!-- Cabecera Principal -->
+    <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-gray-200 dark:border-gray-800 pb-6">
+        <div>
+            <div class="inline-flex items-center space-x-2 text-xs font-bold uppercase tracking-wider text-brand-light bg-brand-light/10 px-3 py-1 rounded-full mb-2">
+                <i class="fa-solid fa-shield-halved"></i>
+                <span>Panel Administrativo Exclusivo</span>
+            </div>
+            <h1 class="text-3xl font-black text-gray-900 dark:text-white tracking-tight">
+                Configuración del Sistema
+            </h1>
+            <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">
+                Gestiona el estado de mantenimiento, control de registros y parámetros globales de la plataforma.
+            </p>
+        </div>
+
+        <div class="flex items-center space-x-3">
+            <a href="/admin/core/configuracionsitio/" 
+               class="px-4 py-2.5 rounded-xl border border-gray-300 dark:border-gray-700 hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-700 dark:text-gray-200 text-xs font-semibold flex items-center space-x-2 transition-colors">
+                <i class="fa-solid fa-arrow-up-right-from-square text-xs"></i>
+                <span>Abrir en Django Admin</span>
+            </a>
+            <a href="/admin/users/logactividad/" 
+               class="px-4 py-2.5 rounded-xl bg-gray-900 dark:bg-gray-800 hover:bg-gray-800 text-white text-xs font-semibold flex items-center space-x-2 shadow-sm transition-colors">
+                <i class="fa-solid fa-list-check"></i>
+                <span>Auditoría</span>
+            </a>
+        </div>
+    </div>
+
+    <!-- Tarjetas de Métricas Rápidas -->
+    <div class="grid grid-cols-2 sm:grid-cols-4 gap-4">
+        <!-- Usuarios -->
+        <div class="bg-white dark:bg-gray-800 p-5 rounded-2xl border border-gray-100 dark:border-gray-700/80 shadow-sm flex items-center justify-between">
+            <div>
+                <span class="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider block">Usuarios</span>
+                <span class="text-2xl font-black text-gray-900 dark:text-white mt-1 block">{{ stats.total_usuarios }}</span>
+                <span class="text-[11px] text-emerald-600 dark:text-emerald-400 font-medium">{{ stats.total_activos }} verificados</span>
+            </div>
+            <div class="w-12 h-12 rounded-xl bg-indigo-50 dark:bg-indigo-900/30 text-brand-light flex items-center justify-center text-xl">
+                <i class="fa-solid fa-users"></i>
+            </div>
+        </div>
+
+        <!-- Ejercicios -->
+        <div class="bg-white dark:bg-gray-800 p-5 rounded-2xl border border-gray-100 dark:border-gray-700/80 shadow-sm flex items-center justify-between">
+            <div>
+                <span class="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider block">Catálogo</span>
+                <span class="text-2xl font-black text-gray-900 dark:text-white mt-1 block">{{ stats.total_ejercicios }}</span>
+                <span class="text-[11px] text-gray-500 dark:text-gray-400">Ejercicios listos</span>
+            </div>
+            <div class="w-12 h-12 rounded-xl bg-emerald-50 dark:bg-emerald-900/30 text-emerald-500 flex items-center justify-center text-xl">
+                <i class="fa-solid fa-dumbbell"></i>
+            </div>
+        </div>
+
+        <!-- Rutinas -->
+        <div class="bg-white dark:bg-gray-800 p-5 rounded-2xl border border-gray-100 dark:border-gray-700/80 shadow-sm flex items-center justify-between">
+            <div>
+                <span class="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider block">Rutinas</span>
+                <span class="text-2xl font-black text-gray-900 dark:text-white mt-1 block">{{ stats.total_rutinas }}</span>
+                <span class="text-[11px] text-gray-500 dark:text-gray-400">Diseñadas en total</span>
+            </div>
+            <div class="w-12 h-12 rounded-xl bg-purple-50 dark:bg-purple-900/30 text-purple-500 flex items-center justify-center text-xl">
+                <i class="fa-solid fa-calendar-check"></i>
+            </div>
+        </div>
+
+        <!-- Errores 500 recientes -->
+        <div class="bg-white dark:bg-gray-800 p-5 rounded-2xl border border-gray-100 dark:border-gray-700/80 shadow-sm flex items-center justify-between">
+            <div>
+                <span class="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider block">Incidencias (7d)</span>
+                <span class="text-2xl font-black {% if stats.total_errores_recientes > 0 %}text-red-500{% else %}text-gray-900 dark:text-white{% endif %} mt-1 block">
+                    {{ stats.total_errores_recientes }}
+                </span>
+                <span class="text-[11px] {% if stats.total_errores_recientes > 0 %}text-red-500 font-bold{% else %}text-emerald-500{% endif %}">
+                    {% if stats.total_errores_recientes > 0 %}Requiere atención{% else %}Todo saludable{% endif %}
+                </span>
+            </div>
+            <div class="w-12 h-12 rounded-xl {% if stats.total_errores_recientes > 0 %}bg-red-50 dark:bg-red-900/30 text-red-500{% else %}bg-emerald-50 dark:bg-emerald-900/30 text-emerald-500{% endif %} flex items-center justify-center text-xl">
+                <i class="fa-solid {% if stats.total_errores_recientes > 0 %}fa-triangle-exclamation{% else %}fa-circle-check{% endif %}"></i>
+            </div>
+        </div>
+    </div>
+
+    <!-- FORMULARIO DE AJUSTES -->
+    <form method="post" class="space-y-8">
+        {% csrf_token %}
+
+        <!-- BLOQUE 1: MODO MANTENIMIENTO GLOBAL -->
+        <div class="bg-white dark:bg-gray-800 rounded-3xl p-6 sm:p-8 border shadow-sm transition-all"
+             :class="maintActive ? 'border-amber-500/80 ring-2 ring-amber-500/20' : 'border-gray-100 dark:border-gray-700/80'">
+            
+            <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-6 border-b border-gray-100 dark:border-gray-700">
+                <div class="flex items-start space-x-4">
+                    <div class="w-12 h-12 rounded-2xl flex items-center justify-center shrink-0 transition-colors"
+                         :class="maintActive ? 'bg-amber-500/20 text-amber-500' : 'bg-gray-100 dark:bg-gray-700 text-gray-500'">
+                        <i class="fa-solid fa-screwdriver-wrench text-xl"></i>
+                    </div>
+                    <div>
+                        <h2 class="text-xl font-bold text-gray-900 dark:text-white flex items-center gap-2">
+                            <span>Modo Mantenimiento</span>
+                            <template x-if="maintActive">
+                                <span class="bg-amber-500/20 text-amber-500 border border-amber-500/30 text-[10px] font-extrabold px-2.5 py-0.5 rounded-full uppercase tracking-wider animate-pulse">
+                                    En Vivo
+                                </span>
+                            </template>
+                        </h2>
+                        <p class="text-xs sm:text-sm text-gray-500 dark:text-gray-400 mt-1">
+                            Pausa el acceso general a la web devolviendo la pantalla de cortesía 503. Administradores y Staff tienen acceso completo.
+                        </p>
+                    </div>
+                </div>
+
+                <!-- Toggle Switch con Alpine.js -->
+                <label class="relative inline-flex items-center cursor-pointer select-none">
+                    <input type="checkbox" name="modo_mantenimiento" id="id_modo_mantenimiento" class="sr-only"
+                           x-model="maintActive" {% if form.modo_mantenimiento.value %}checked{% endif %}>
+                    <div class="w-14 h-7 bg-gray-200 peer-focus:outline-none dark:bg-gray-700 rounded-full transition-colors relative"
+                         :class="maintActive ? '!bg-amber-500' : ''">
+                        <div class="absolute top-1 left-1 bg-white w-5 h-5 rounded-full transition-transform"
+                             :class="maintActive ? 'transform translate-x-7' : ''"></div>
+                    </div>
+                </label>
+            </div>
+
+            <!-- Campos detallados de mantenimiento -->
+            <div class="mt-6 grid grid-cols-1 md:grid-cols-2 gap-6" x-show="maintActive" x-transition>
+                <div class="md:col-span-2">
+                    <label class="block text-xs font-bold text-gray-700 dark:text-gray-300 uppercase tracking-wider mb-2">
+                        Mensaje para los Deportistas y Visitantes
+                    </label>
+                    {{ form.mensaje_mantenimiento }}
+                    <span class="text-xs text-gray-400 mt-1 block">Este texto se presentará centrado en la pantalla de mantenimiento 503.</span>
+                </div>
+
+                <div>
+                    <label class="block text-xs font-bold text-gray-700 dark:text-gray-300 uppercase tracking-wider mb-2">
+                        Tiempo Estimado de Reapertura (Opcional)
+                    </label>
+                    {{ form.tiempo_estimado_reapertura }}
+                    <span class="text-xs text-gray-400 mt-1 block">Ejemplo: "En 30 minutos" o "Hoy a las 18:00 h".</span>
+                </div>
+
+                <div class="bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800/60 rounded-2xl p-4 flex items-start space-x-3 text-xs text-amber-900 dark:text-amber-200">
+                    <i class="fa-solid fa-triangle-exclamation text-amber-500 text-base mt-0.5 shrink-0"></i>
+                    <div>
+                        <strong class="font-bold">Bypass de Staff Activo:</strong>
+                        <p class="mt-0.5">Tú y el resto del equipo administrativo podéis seguir navegando y probando la plataforma con normalidad. Los usuarios normales verán la pantalla de pausa.</p>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+
+        <!-- BLOQUE 2: CONTROL DE REGISTRO PÚBLICO -->
+        <div class="bg-white dark:bg-gray-800 rounded-3xl p-6 sm:p-8 border border-gray-100 dark:border-gray-700/80 shadow-sm">
+            <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-6 border-b border-gray-100 dark:border-gray-700">
+                <div class="flex items-start space-x-4">
+                    <div class="w-12 h-12 rounded-2xl flex items-center justify-center shrink-0 transition-colors"
+                         :class="regActive ? 'bg-indigo-50 dark:bg-indigo-900/30 text-brand-light' : 'bg-red-50 dark:bg-red-900/30 text-red-500'">
+                        <i class="fa-solid fa-user-plus text-xl"></i>
+                    </div>
+                    <div>
+                        <h2 class="text-xl font-bold text-gray-900 dark:text-white flex items-center gap-2">
+                            <span>Registro Libre de Nuevos Usuarios</span>
+                            <span class="text-xs font-bold px-2.5 py-0.5 rounded-full"
+                                  :class="regActive ? 'bg-emerald-100 dark:bg-emerald-900/40 text-emerald-600 dark:text-emerald-400' : 'bg-red-100 dark:bg-red-900/40 text-red-600 dark:text-red-400'"
+                                  x-text="regActive ? 'Abierto' : 'Cerrado'">
+                            </span>
+                        </h2>
+                        <p class="text-xs sm:text-sm text-gray-500 dark:text-gray-400 mt-1">
+                            Habilita o deshabilita la posibilidad de que nuevos usuarios se registren desde el formulario público.
+                        </p>
+                    </div>
+                </div>
+
+                <!-- Toggle Switch -->
+                <label class="relative inline-flex items-center cursor-pointer select-none">
+                    <input type="checkbox" name="registro_abierto" id="id_registro_abierto" class="sr-only"
+                           x-model="regActive" {% if form.registro_abierto.value %}checked{% endif %}>
+                    <div class="w-14 h-7 bg-gray-200 peer-focus:outline-none dark:bg-gray-700 rounded-full transition-colors relative"
+                         :class="regActive ? '!bg-brand-light' : ''">
+                        <div class="absolute top-1 left-1 bg-white w-5 h-5 rounded-full transition-transform"
+                             :class="regActive ? 'transform translate-x-7' : ''"></div>
+                    </div>
+                </label>
+            </div>
+
+            <div class="mt-6" x-show="!regActive" x-transition>
+                <label class="block text-xs font-bold text-gray-700 dark:text-gray-300 uppercase tracking-wider mb-2">
+                    Mensaje de Explicación para los Nuevos Visitantes
+                </label>
+                {{ form.mensaje_registro_cerrado }}
+                <span class="text-xs text-gray-400 mt-1 block">
+                    Este mensaje se mostrará a cualquiera que intente acceder a la dirección <code class="text-brand-light">/usuario/registro/</code>.
+                </span>
+            </div>
+        </div>
+
+        <!-- BLOQUE 3: AVISOS GLOBALES (BROADCAST BANNER) -->
+        <div class="bg-white dark:bg-gray-800 rounded-3xl p-6 sm:p-8 border border-gray-100 dark:border-gray-700/80 shadow-sm">
+            <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-6 border-b border-gray-100 dark:border-gray-700">
+                <div class="flex items-start space-x-4">
+                    <div class="w-12 h-12 rounded-2xl bg-amber-50 dark:bg-amber-900/30 text-amber-500 flex items-center justify-center shrink-0">
+                        <i class="fa-solid fa-bullhorn text-xl"></i>
+                    </div>
+                    <div>
+                        <h2 class="text-xl font-bold text-gray-900 dark:text-white">
+                            Banner Global de Anuncios
+                        </h2>
+                        <p class="text-xs sm:text-sm text-gray-500 dark:text-gray-400 mt-1">
+                            Publica un anuncio visible en la parte superior de todas las pantallas para los deportistas logueados.
+                        </p>
+                    </div>
+                </div>
+
+                <!-- Toggle Switch -->
+                <label class="relative inline-flex items-center cursor-pointer select-none">
+                    <input type="checkbox" name="banner_activo" id="id_banner_activo" class="sr-only"
+                           x-model="bannerActive" {% if form.banner_activo.value %}checked{% endif %}>
+                    <div class="w-14 h-7 bg-gray-200 peer-focus:outline-none dark:bg-gray-700 rounded-full transition-colors relative"
+                         :class="bannerActive ? '!bg-brand-light' : ''">
+                        <div class="absolute top-1 left-1 bg-white w-5 h-5 rounded-full transition-transform"
+                             :class="bannerActive ? 'transform translate-x-7' : ''"></div>
+                    </div>
+                </label>
+            </div>
+
+            <div class="mt-6 space-y-4" x-show="bannerActive" x-transition>
+                <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                    <div class="sm:col-span-2">
+                        <label class="block text-xs font-bold text-gray-700 dark:text-gray-300 uppercase tracking-wider mb-2">
+                            Texto del Anuncio
+                        </label>
+                        <input type="text" name="banner_texto" id="id_banner_texto" 
+                               x-model="bannerText" value="{{ form.banner_texto.value|default:'' }}"
+                               placeholder="Ej. El próximo festivo las instalaciones cerrarán a las 14:00"
+                               class="w-full px-4 py-2.5 rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-white outline-none focus:ring-2 focus:ring-brand-light text-sm">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-gray-700 dark:text-gray-300 uppercase tracking-wider mb-2">
+                            Tipo de Alerta
+                        </label>
+                        <select name="banner_tipo" id="id_banner_tipo" x-model="bannerType"
+                                class="w-full px-4 py-2.5 rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-white outline-none focus:ring-2 focus:ring-brand-light text-sm">
+                            <option value="INFO" {% if form.banner_tipo.value == 'INFO' %}selected{% endif %}>Información (Azul)</option>
+                            <option value="WARNING" {% if form.banner_tipo.value == 'WARNING' %}selected{% endif %}>Advertencia (Ámbar)</option>
+                            <option value="SUCCESS" {% if form.banner_tipo.value == 'SUCCESS' %}selected{% endif %}>Éxito (Esmeralda)</option>
+                            <option value="DANGER" {% if form.banner_tipo.value == 'DANGER' %}selected{% endif %}>Urgente (Rojo)</option>
+                        </select>
+                    </div>
+                </div>
+
+                <!-- Vista previa interactiva -->
+                <div class="pt-3">
+                    <span class="text-xs font-semibold text-gray-400 block mb-1">Vista previa del banner:</span>
+                    <div class="p-3.5 rounded-xl text-xs font-semibold flex items-center justify-between transition-colors"
+                         :class="{
+                             'bg-indigo-600 text-white': bannerType === 'INFO',
+                             'bg-amber-500 text-gray-950 font-bold': bannerType === 'WARNING',
+                             'bg-emerald-600 text-white': bannerType === 'SUCCESS',
+                             'bg-red-600 text-white': bannerType === 'DANGER'
+                         }">
+                        <div class="flex items-center space-x-2">
+                            <i class="fa-solid fa-bullhorn text-sm"></i>
+                            <span x-text="bannerText || 'Escribe un texto de aviso arriba para previsualizarlo'"></span>
+                        </div>
+                        <span class="text-[10px] uppercase opacity-80 font-bold px-2 py-0.5 rounded bg-black/10">Anuncio</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- BLOQUE 4: REGLAS DEPORTIVAS E IDENTIDAD -->
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+            
+            <!-- Reglas Catálogo -->
+            <div class="bg-white dark:bg-gray-800 rounded-3xl p-6 sm:p-8 border border-gray-100 dark:border-gray-700/80 shadow-sm flex flex-col justify-between">
+                <div>
+                    <div class="w-12 h-12 rounded-2xl bg-purple-50 dark:bg-purple-900/30 text-purple-500 flex items-center justify-center mb-4">
+                        <i class="fa-solid fa-dumbbell text-xl"></i>
+                    </div>
+                    <h3 class="text-lg font-bold text-gray-900 dark:text-white">
+                        Creación de Ejercicios por Deportistas
+                    </h3>
+                    <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                        Si desactivas esta opción, los usuarios no podrán añadir ejercicios personalizados y solo usarán el catálogo oficial del centro.
+                    </p>
+                </div>
+
+                <div class="mt-6 pt-4 border-t border-gray-100 dark:border-gray-700 flex items-center justify-between">
+                    <span class="text-xs font-bold text-gray-700 dark:text-gray-300">Permitir Crear Ejercicios</span>
+                    <label class="relative inline-flex items-center cursor-pointer select-none">
+                        <input type="checkbox" name="usuarios_pueden_crear_ejercicios" id="id_usuarios_pueden_crear_ejercicios" class="sr-only peer"
+                               {% if form.usuarios_pueden_crear_ejercicios.value %}checked{% endif %}>
+                        <div class="w-11 h-6 bg-gray-200 peer-focus:outline-none dark:bg-gray-700 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-purple-600"></div>
+                    </label>
+                </div>
+            </div>
+
+            <!-- Identidad y Soporte -->
+            <div class="bg-white dark:bg-gray-800 rounded-3xl p-6 sm:p-8 border border-gray-100 dark:border-gray-700/80 shadow-sm space-y-4">
+                <div class="flex items-center space-x-3 mb-2">
+                    <div class="w-12 h-12 rounded-2xl bg-indigo-50 dark:bg-indigo-900/30 text-brand-light flex items-center justify-center shrink-0">
+                        <i class="fa-solid fa-building text-xl"></i>
+                    </div>
+                    <div>
+                        <h3 class="text-lg font-bold text-gray-900 dark:text-white">Identidad y Soporte</h3>
+                        <p class="text-xs text-gray-500 dark:text-gray-400">Nombre del centro y correo de contacto.</p>
+                    </div>
+                </div>
+
+                <div>
+                    <label class="block text-xs font-bold text-gray-700 dark:text-gray-300 uppercase tracking-wider mb-1">
+                        Nombre de la Plataforma
+                    </label>
+                    {{ form.nombre_sitio }}
+                </div>
+
+                <div>
+                    <label class="block text-xs font-bold text-gray-700 dark:text-gray-300 uppercase tracking-wider mb-1">
+                        Email de Soporte / Ayuda
+                    </label>
+                    {{ form.email_soporte }}
+                </div>
+            </div>
+
+        </div>
+
+        <!-- BOTÓN GUARDAR CAMBIOS -->
+        <div class="flex items-center justify-end space-x-4 pt-4">
+            <button type="submit" 
+                    class="px-8 py-4 bg-brand-light hover:bg-brand-dark text-white font-black text-sm rounded-2xl shadow-lg shadow-brand-light/30 transition-all hover:scale-[1.02] active:scale-95 flex items-center space-x-3">
+                <i class="fa-solid fa-floppy-disk text-base"></i>
+                <span>Guardar Cambios de Configuración</span>
+            </button>
+        </div>
+
+    </form>
+
+    <!-- BLOQUE 5: ACCIONES RÁPIDAS DE MANTENIMIENTO (ONE-CLICK) -->
+    <div class="bg-white dark:bg-gray-800 rounded-3xl p-6 sm:p-8 border border-gray-100 dark:border-gray-700/80 shadow-sm mt-8">
+        <div class="border-b border-gray-100 dark:border-gray-700 pb-4 mb-6">
+            <h2 class="text-lg font-bold text-gray-900 dark:text-white flex items-center space-x-2">
+                <i class="fa-solid fa-wand-magic-sparkles text-amber-500"></i>
+                <span>Acciones Rápidas de Mantenimiento</span>
+            </h2>
+            <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                Operaciones automáticas para mantener la base de datos ligera y libre de datos huérfanos.
+            </p>
+        </div>
+
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            
+            <!-- Limpiar sesiones caducadas -->
+            <div class="p-4 rounded-2xl bg-gray-50 dark:bg-gray-900/60 border border-gray-200/70 dark:border-gray-700/70 flex flex-col justify-between">
+                <div>
+                    <div class="font-bold text-sm text-gray-900 dark:text-white flex items-center space-x-2">
+                        <i class="fa-solid fa-broom text-indigo-500"></i>
+                        <span>Limpiar Sesiones Caducadas</span>
+                    </div>
+                    <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                        Ejecuta <code class="text-brand-light">clearsessions</code> para purgar cookies y sesiones expiradas de la base de datos.
+                    </p>
+                </div>
+                <form method="post" action="{% url 'core:accion_mantenimiento' 'clearsessions' %}" class="mt-4">
+                    {% csrf_token %}
+                    <button type="submit" onclick="return confirm('¿Deseas purgar las sesiones caducadas ahora?')"
+                            class="w-full py-2.5 px-4 rounded-xl bg-white dark:bg-gray-800 hover:bg-gray-100 dark:hover:bg-gray-700 border border-gray-200 dark:border-gray-700 text-xs font-bold text-gray-800 dark:text-gray-200 transition-colors shadow-sm flex items-center justify-center space-x-2">
+                        <i class="fa-solid fa-play text-xs text-indigo-500"></i>
+                        <span>Ejecutar Limpieza de Sesiones</span>
+                    </button>
+                </form>
+            </div>
+
+            <!-- Purgar Logs antiguos -->
+            <div class="p-4 rounded-2xl bg-gray-50 dark:bg-gray-900/60 border border-gray-200/70 dark:border-gray-700/70 flex flex-col justify-between">
+                <div>
+                    <div class="font-bold text-sm text-gray-900 dark:text-white flex items-center space-x-2">
+                        <i class="fa-solid fa-clock-rotate-left text-amber-500"></i>
+                        <span>Purgar Auditoría (> 60 días)</span>
+                    </div>
+                    <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                        Elimina eventos antiguos de <code class="text-amber-500">LogActividad</code> para mantener las consultas ágiles.
+                    </p>
+                </div>
+                <form method="post" action="{% url 'core:accion_mantenimiento' 'purgar_logs' %}" class="mt-4">
+                    {% csrf_token %}
+                    <button type="submit" onclick="return confirm('¿Confirmas que deseas eliminar los logs de auditoría con más de 60 días?')"
+                            class="w-full py-2.5 px-4 rounded-xl bg-white dark:bg-gray-800 hover:bg-gray-100 dark:hover:bg-gray-700 border border-gray-200 dark:border-gray-700 text-xs font-bold text-gray-800 dark:text-gray-200 transition-colors shadow-sm flex items-center justify-center space-x-2">
+                        <i class="fa-solid fa-trash-can text-xs text-amber-500"></i>
+                        <span>Purgar Logs Antiguos</span>
+                    </button>
+                </form>
+            </div>
+
+        </div>
+    </div>
+
+</div>
+{% endblock %}

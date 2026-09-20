@@ -17,18 +17,26 @@ from .forms import (
 )
 from rutinas.models import Rutina
 from ejercicios.models import RegistroEjercicio, Serie
+from core.models import ConfiguracionSitio
 
 User = get_user_model()
 
 
 def registro_view(request):
     """
-    Permite el registro público de nuevos usuarios.
+    Permite el registro público de nuevos usuarios si está habilitado en ConfiguracionSitio.
     Crea la cuenta en estado inactivo (is_active=False) y envía un correo
     con un enlace seguro para activar la cuenta antes del primer acceso.
     """
     if request.user.is_authenticated:
         return redirect('users:perfil')
+
+    config = ConfiguracionSitio.get_config()
+    if not config.registro_abierto:
+        if request.method == 'POST':
+            messages.warning(request, config.mensaje_registro_cerrado)
+            return redirect('login')
+        return render(request, 'users/registro_cerrado.html', {'config_sitio': config})
 
     if request.method == 'POST':
         form = RegistroUsuarioForm(request.POST)
@@ -236,6 +244,45 @@ def perfil_view(request):
                 return redirect('users:perfil')
             else:
                 messages.error(request, 'No se pudo cambiar la contraseña. Verifica los requisitos.')
+
+        elif action == 'cambiar_foto':
+            if request.POST.get('eliminar_foto') == '1':
+                if perfil.foto_perfil:
+                    perfil.foto_perfil.delete(save=False)
+                    perfil.foto_perfil = None
+                    perfil.save()
+                    registrar_log(
+                        request=request,
+                        usuario=usuario,
+                        nivel='INFO',
+                        tipo='PERFIL_EDIT',
+                        mensaje="Foto de perfil eliminada por el usuario."
+                    )
+                    messages.success(request, 'Tu foto de perfil ha sido eliminada.')
+                return redirect('users:perfil')
+
+            elif 'foto_perfil' in request.FILES:
+                foto = request.FILES['foto_perfil']
+                # Validar tipo de archivo
+                if not foto.content_type.startswith('image/'):
+                    messages.error(request, 'El archivo subido no es una imagen válida (debe ser JPG, PNG o WebP).')
+                elif foto.size > 8 * 1024 * 1024:  # 8 MB máx
+                    messages.error(request, 'La imagen no debe superar los 8 MB de tamaño.')
+                else:
+                    perfil.foto_perfil = foto
+                    perfil.save()
+                    registrar_log(
+                        request=request,
+                        usuario=usuario,
+                        nivel='INFO',
+                        tipo='PERFIL_EDIT',
+                        mensaje="Foto de perfil actualizada exitosamente."
+                    )
+                    messages.success(request, '¡Foto de perfil actualizada con éxito!')
+                return redirect('users:perfil')
+            else:
+                messages.warning(request, 'No se ha seleccionado ninguna imagen.')
+                return redirect('users:perfil')
 
     # Resumen de actividad deportiva
     total_rutinas = Rutina.objects.filter(usuario=usuario).count()
