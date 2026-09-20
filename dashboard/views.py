@@ -3,7 +3,7 @@ import datetime
 from datetime import timedelta
 from django.shortcuts import render
 from django.contrib.auth.decorators import login_required
-from django.db.models import Sum, Count, Max, F, ExpressionWrapper, DecimalField
+from django.db.models import Sum, Count, Max, F, ExpressionWrapper, DecimalField, Q
 from django.utils import timezone
 
 from ejercicios.models import RegistroEjercicio, Serie, Ejercicio
@@ -334,5 +334,15 @@ def dashboard(request):
         'ejercicios_con_datos': ejercicios_con_datos,
         'datos_progresion_json': json.dumps(datos_progresion),
         'distribucion_json': json.dumps(distribucion_json),
+        'ejercicios_catalogo_json': json.dumps([
+            {
+                'id': ej.id,
+                'nombre': ej.nombre,
+                'modalidad': ej.modalidad,
+                'tipo': ej.get_tipo_display(),
+                'grupo_muscular': ej.get_grupo_muscular_display(),
+            }
+            for ej in Ejercicio.objects.filter(Q(creado_por=None) | Q(creado_por=usuario)).order_by('nombre')
+        ]),
     }
     return render(request, 'dashboard/dashboard.html', context)

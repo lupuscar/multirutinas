@@ -1,9 +1,14 @@
+import json
+import datetime
 from django.shortcuts import render, get_object_or_404, redirect
+from django.http import JsonResponse
+from django.urls import reverse
 from django.contrib.auth.decorators import login_required
 from django.views.decorators.http import require_POST
 from django.contrib import messages
-from django.db import models
+from django.db import models, transaction
 from django.db.models import Max
+from django.utils import timezone
 
 from .models import Ejercicio, RegistroEjercicio, Serie
 from .forms import EjercicioForm
@@ -195,3 +200,109 @@ def detalle_ejercicio(request, ejercicio_id):
         'historial_reciente': historial_reciente,
     }
     return render(request, 'ejercicios/detalle_ejercicio.html', context)
+
+
+@login_required
+@require_POST
+def registrar_sesion_libre(request, ejercicio_id=None):
+    """
+    Permite registrar un entrenamiento o actividad suelta (ej. correr 45 minutos,
+    un partido de pádel o una sesión de pesas fuera de una rutina programada).
+    Crea el RegistroEjercicio y las Series correspondientes, impactando inmediatamente
+    en las rachas, el calendario de 7 días y las analíticas del Dashboard.
+    """
+    try:
+        if request.content_type == 'application/json':
+            datos = json.loads(request.body)
+        else:
+            datos = request.POST
+
+        ej_id = ejercicio_id or datos.get('ejercicio_id')
+        if not ej_id:
+            msg = "Debes indicar un ejercicio válido."
+            if request.content_type == 'application/json':
+                return JsonResponse({'status': 'error', 'message': msg}, status=400)
+            messages.error(request, msg)
+            return redirect('ejercicios:ejercicios')
+
+        ejercicio = get_object_or_404(Ejercicio, id=ej_id)
+
+        # Fecha (por defecto hoy, o parseada)
+        fecha_str = datos.get('fecha')
+        if fecha_str:
+            try:
+                fecha_sesion = datetime.date.fromisoformat(str(fecha_str).strip())
+            except Exception:
+                fecha_sesion = timezone.now().date()
+        else:
+            fecha_sesion = timezone.now().date()
+
+        notas = datos.get('notas', '').strip()
+        etiqueta = datos.get('etiqueta', '').strip() or 'Actividad Libre'
+
+        with transaction.atomic():
+            registro = RegistroEjercicio.objects.create(
+                usuario=request.user,
+                ejercicio=ejercicio,
+                fecha=fecha_sesion,
+                notas=notas,
+                etiqueta=etiqueta
+            )
+
+            # Si es por tiempo (running, senderismo, deportes, danza, etc.)
+            if ejercicio.modalidad == 'TIEMPO':
+                duracion_minutos = float(datos.get('duracion_minutos') or 0)
+                segundos_directos = int(datos.get('tiempo_segundos') or 0)
+                segundos_totales = int(duracion_minutos * 60) if duracion_minutos > 0 else segundos_directos
+                if segundos_totales <= 0:
+                    segundos_totales = 1800  # 30 min por defecto si vino vacío
+
+                Serie.objects.create(
+                    registro=registro,
+                    numero_serie=1,
+                    tiempo_segundos=segundos_totales,
+                    repeticiones=None,
+                    peso_kg=None
+                )
+            else:
+                # Modalidad Reps + Peso
+                series_data = datos.get('series')
+                if isinstance(series_data, list) and len(series_data) > 0:
+                    for idx, s in enumerate(series_data, start=1):
+                        reps = int(s.get('repeticiones') or 10)
+                        peso = float(s.get('peso_kg')) if s.get('peso_kg') not in (None, '', 'null') else None
+                        Serie.objects.create(
+                            registro=registro,
+                            numero_serie=idx,
+                            repeticiones=reps,
+                            peso_kg=peso
+                        )
+                else:
+                    # Datos planos desde formulario simple
+                    num_series = int(datos.get('series_totales') or 1)
+                    reps_gral = int(datos.get('repeticiones') or 10)
+                    peso_raw = datos.get('peso_kg')
+                    peso_gral = float(peso_raw) if peso_raw not in (None, '', 'null') else None
+
+                    for idx in range(1, num_series + 1):
+                        Serie.objects.create(
+                            registro=registro,
+                            numero_serie=idx,
+                            repeticiones=reps_gral,
+                            peso_kg=peso_gral
+                        )
+
+        messages.success(request, f"¡Sesión de '{ejercicio.nombre}' registrada correctamente!")
+        if request.content_type == 'application/json':
+            return JsonResponse({
+                'status': 'success',
+                'message': f"Sesión de '{ejercicio.nombre}' guardada con éxito.",
+                'redirect_url': reverse('ejercicios:detalle_ejercicio', args=[ejercicio.id])
+            })
+        return redirect('ejercicios:detalle_ejercicio', ejercicio_id=ejercicio.id)
+
+    except Exception as e:
+        if request.content_type == 'application/json':
+            return JsonResponse({'status': 'error', 'message': str(e)}, status=400)
+        messages.error(request, f"Error al registrar la actividad: {e}")
+        return redirect('ejercicios:ejercicios')

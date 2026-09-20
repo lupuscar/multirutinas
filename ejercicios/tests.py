@@ -248,4 +248,77 @@ class EjerciciosAppTests(TestCase):
         call_command('poblar_catalogo', stdout=out)
         self.assertIn("Catálogo oficial sincronizado con éxito", out.getvalue())
 
+    def test_registrar_sesion_libre_tiempo(self):
+        """Verifica que un usuario pueda registrar una sesión libre de correr 45 min sin ninguna rutina"""
+        self.client.login(username='carlos', password='password123')
+        ej_correr = Ejercicio.objects.create(
+            nombre='Correr Libre',
+            modalidad='TIEMPO',
+            grupo_muscular='CAR',
+            tipo='OUT'
+        )
+
+        data = {
+            'duracion_minutos': '45',
+            'notas': '5.5 km por el paseo marítimo',
+            'fecha': '2026-09-20'
+        }
+        res = self.client.post(
+            reverse('ejercicios:registrar_sesion_libre_ejercicio', args=[ej_correr.id]),
+            data
+        )
+        self.assertRedirects(res, reverse('ejercicios:detalle_ejercicio', args=[ej_correr.id]))
+
+        # Comprobar que se guardó el registro y la serie
+        reg = RegistroEjercicio.objects.filter(usuario=self.user1, ejercicio=ej_correr).first()
+        self.assertIsNotNone(reg)
+        self.assertEqual(reg.notas, '5.5 km por el paseo marítimo')
+        self.assertEqual(reg.series_detalle.count(), 1)
+        self.assertEqual(reg.series_detalle.first().tiempo_segundos, 2700) # 45 min * 60s
+
+    def test_registrar_sesion_libre_reps_peso(self):
+        """Verifica que un usuario pueda registrar un ejercicio de fuerza suelto con series y peso"""
+        self.client.login(username='carlos', password='password123')
+
+        data = {
+            'series_totales': '3',
+            'repeticiones': '12',
+            'peso_kg': '50',
+            'notas': 'Sesión rápida en hotel'
+        }
+        res = self.client.post(
+            reverse('ejercicios:registrar_sesion_libre_ejercicio', args=[self.ej_oficial.id]),
+            data
+        )
+        self.assertRedirects(res, reverse('ejercicios:detalle_ejercicio', args=[self.ej_oficial.id]))
+
+        reg = RegistroEjercicio.objects.filter(usuario=self.user1, ejercicio=self.ej_oficial).first()
+        self.assertIsNotNone(reg)
+        self.assertEqual(reg.series_detalle.count(), 3)
+        self.assertEqual(reg.series_detalle.first().repeticiones, 12)
+        self.assertEqual(float(reg.series_detalle.first().peso_kg), 50.0)
+
+    def test_registrar_sesion_libre_via_json(self):
+        """Verifica que el endpoint de registrar sesión libre responda JSON al enviar datos via API"""
+        import json
+        self.client.login(username='carlos', password='password123')
+
+        payload = {
+            'ejercicio_id': self.ej_oficial.id,
+            'duracion_minutos': None,
+            'series_totales': 2,
+            'repeticiones': 8,
+            'peso_kg': 65.0,
+            'notas': 'Entrenamiento AJAX libre'
+        }
+        res = self.client.post(
+            reverse('ejercicios:registrar_sesion_libre'),
+            data=json.dumps(payload),
+            content_type='application/json'
+        )
+        self.assertEqual(res.status_code, 200)
+        json_resp = res.json()
+        self.assertEqual(json_resp.get('status'), 'success')
+
+
 

@@ -9,4 +9,6 @@ urlpatterns = [
     path('editar/<int:ejercicio_id>/', views.editar_ejercicio, name='editar_ejercicio'),
     path('eliminar/<int:ejercicio_id>/', views.eliminar_ejercicio, name='eliminar_ejercicio'),
     path('detalle/<int:ejercicio_id>/', views.detalle_ejercicio, name='detalle_ejercicio'),
+    path('registrar-sesion/', views.registrar_sesion_libre, name='registrar_sesion_libre'),
+    path('registrar-sesion/<int:ejercicio_id>/', views.registrar_sesion_libre, name='registrar_sesion_libre_ejercicio'),
 ]

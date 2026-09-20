@@ -32,17 +32,23 @@
             </p>
         </div>
 
-        <div class="flex items-center space-x-3">
+        <div class="flex items-center space-x-2 sm:space-x-3">
+            <!-- Botón Registrar Actividad Libre -->
+            <button type="button" @click="abrirModalActividadLibre()"
+                    class="inline-flex items-center justify-center px-3.5 sm:px-4 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs sm:text-sm shadow-md shadow-emerald-600/25 transition-all hover:scale-105 active:scale-95">
+                <i class="fa-solid fa-person-running mr-1.5 text-xs sm:text-sm"></i> + Actividad Libre
+            </button>
+
             <!-- Botón Compartir Logros (Modal) -->
             <button type="button" @click="modalCompartir = true"
-                    class="inline-flex items-center justify-center px-4 py-2.5 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-200 font-bold text-xs sm:text-sm shadow-xs transition-all hover:scale-105 active:scale-95">
-                <i class="fa-solid fa-share-nodes mr-2 text-brand-light"></i> Compartir Logros
+                    class="inline-flex items-center justify-center px-3.5 sm:px-4 py-2.5 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-200 font-bold text-xs sm:text-sm shadow-xs transition-all hover:scale-105 active:scale-95">
+                <i class="fa-solid fa-share-nodes mr-1.5 text-brand-light"></i> Compartir
             </button>
 
             <!-- Botón Ir a Rutinas -->
             <a href="{% url 'rutinas:lista_rutinas' %}" 
-               class="inline-flex items-center justify-center px-5 py-2.5 rounded-xl bg-brand-light hover:bg-brand-dark text-white font-bold text-xs sm:text-sm shadow-md shadow-brand-light/30 transition-all hover:scale-105 active:scale-95">
-                <i class="fa-solid fa-play mr-2 text-xs"></i> Ver Rutinas
+               class="inline-flex items-center justify-center px-4 sm:px-5 py-2.5 rounded-xl bg-brand-light hover:bg-brand-dark text-white font-bold text-xs sm:text-sm shadow-md shadow-brand-light/30 transition-all hover:scale-105 active:scale-95">
+                <i class="fa-solid fa-play mr-1.5 text-xs"></i> Ver Rutinas
             </a>
         </div>
     </div>
@@ -529,6 +535,158 @@
                 </button>
             </div>
 
+    <!-- ================================================================= -->
+    <!-- MODAL: REGISTRAR ACTIVIDAD LIBRE (SIN RUTINA) -->
+    <!-- ================================================================= -->
+    <div x-show="modalActividadLibre" x-cloak class="fixed inset-0 z-50 overflow-hidden flex items-end sm:items-center justify-center p-0 sm:p-4">
+        <!-- Backdrop -->
+        <div class="fixed inset-0 bg-black/60 backdrop-blur-sm transition-opacity" @click="modalActividadLibre = false"></div>
+
+        <!-- Contenedor Modal -->
+        <div class="relative w-full max-w-lg bg-white dark:bg-gray-800 rounded-t-3xl sm:rounded-3xl shadow-2xl overflow-hidden z-10 border border-gray-100 dark:border-gray-700/80 animate-in fade-in zoom-in-95 duration-200 max-h-[90vh] flex flex-col">
+            
+            <div class="p-5 border-b border-gray-100 dark:border-gray-700/80 flex items-center justify-between">
+                <div class="flex items-center space-x-3">
+                    <div class="w-10 h-10 rounded-2xl bg-emerald-500/10 text-emerald-500 flex items-center justify-center text-xl font-bold">
+                        <i class="fa-solid fa-person-running"></i>
+                    </div>
+                    <div>
+                        <h2 class="text-lg font-black text-gray-900 dark:text-white">Registrar Actividad Libre</h2>
+                        <p class="text-xs text-gray-500 dark:text-gray-400">Guarda una sesión suelta sin necesidad de rutina</p>
+                    </div>
+                </div>
+                <button type="button" @click="modalActividadLibre = false" class="w-8 h-8 rounded-full bg-gray-100 dark:bg-gray-700 text-gray-500 hover:text-gray-900 dark:hover:text-white flex items-center justify-center">
+                    <i class="fa-solid fa-xmark text-sm"></i>
+                </button>
+            </div>
+
+            <!-- PASO 1: Elegir Ejercicio si no está seleccionado -->
+            <div x-show="!ejercicioSeleccionadoLibre" class="p-5 overflow-y-auto space-y-3">
+                <div class="relative">
+                    <i class="fa-solid fa-magnifying-glass absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400 text-sm"></i>
+                    <input type="text" x-model="filtroBusquedaActividad" placeholder="Buscar actividad (ej: Correr, Pádel, Bici, Press)..." 
+                           class="w-full pl-10 pr-4 py-2.5 rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900 text-sm text-gray-900 dark:text-white outline-none focus:ring-2 focus:ring-emerald-500">
+                </div>
+
+                <div class="space-y-1.5 max-h-60 overflow-y-auto pr-1 divide-y divide-gray-100 dark:divide-gray-700/40">
+                    <template x-for="ej in ejerciciosFiltradosActividad" :key="ej.id">
+                        <div @click="seleccionarEjercicioLibre(ej)" 
+                             class="pt-2 pb-2 px-3 flex items-center justify-between hover:bg-gray-50 dark:hover:bg-gray-700/40 rounded-xl cursor-pointer transition-colors group">
+                            <div>
+                                <h4 class="font-bold text-sm text-gray-900 dark:text-white group-hover:text-emerald-500 transition-colors" x-text="ej.nombre"></h4>
+                                <div class="flex items-center space-x-2 text-xs text-gray-500 dark:text-gray-400">
+                                    <span x-text="ej.grupo_muscular"></span>
+                                    <span>•</span>
+                                    <span x-text="ej.tipo"></span>
+                                </div>
+                            </div>
+                            <span class="text-xs font-bold px-2 py-0.5 rounded-md"
+                                  :class="ej.modalidad === 'TIEMPO' ? 'bg-amber-100 dark:bg-amber-900/30 text-amber-800 dark:text-amber-300' : 'bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-300'"
+                                  x-text="ej.modalidad === 'TIEMPO' ? '⏱️ Tiempo' : '🏋️ Carga'">
+                            </span>
+                        </div>
+                    </template>
+                </div>
+            </div>
+
+            <!-- PASO 2: Rellenar datos de la actividad -->
+            <form x-show="ejercicioSeleccionadoLibre" method="post" action="{% url 'ejercicios:registrar_sesion_libre' %}" class="p-5 space-y-4 overflow-y-auto">
+                {% csrf_token %}
+                <input type="hidden" name="ejercicio_id" :value="ejercicioSeleccionadoLibre ? ejercicioSeleccionadoLibre.id : ''">
+
+                <!-- Ejercicio Seleccionado con botón de cambiar -->
+                <div class="p-3 bg-gray-50 dark:bg-gray-900/60 rounded-2xl flex items-center justify-between border border-gray-100 dark:border-gray-700/60">
+                    <div>
+                        <span class="text-[10px] uppercase font-bold text-gray-400 block">Actividad Elegida:</span>
+                        <span class="text-sm font-black text-gray-900 dark:text-white" x-text="ejercicioSeleccionadoLibre ? ejercicioSeleccionadoLibre.nombre : ''"></span>
+                    </div>
+                    <button type="button" @click="ejercicioSeleccionadoLibre = null" class="text-xs text-brand-light hover:underline font-bold">
+                        Cambiar
+                    </button>
+                </div>
+
+                <!-- Fecha del Entrenamiento -->
+                <div>
+                    <label class="block text-xs font-bold text-gray-700 dark:text-gray-300 uppercase tracking-wider mb-1.5">
+                        <i class="fa-solid fa-calendar-day mr-1 text-emerald-500"></i> Fecha de la Actividad
+                    </label>
+                    <input type="date" name="fecha" value="{% now 'Y-m-d' %}" 
+                           class="w-full px-4 py-2.5 rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-white outline-none focus:ring-2 focus:ring-emerald-500 text-sm font-medium"
+                           required>
+                </div>
+
+                <!-- Si la actividad es por TIEMPO -->
+                <template x-if="ejercicioSeleccionadoLibre && ejercicioSeleccionadoLibre.modalidad === 'TIEMPO'">
+                    <div>
+                        <div class="flex items-center justify-between mb-1.5">
+                            <label class="block text-xs font-bold text-gray-700 dark:text-gray-300 uppercase tracking-wider">
+                                <i class="fa-solid fa-stopwatch mr-1 text-amber-500"></i> Duración (Minutos)
+                            </label>
+                            <span class="text-xs text-emerald-600 dark:text-emerald-400 font-bold" x-text="duracionActividadMinutos + ' min'"></span>
+                        </div>
+
+                        <div class="flex items-center space-x-2">
+                            <button type="button" @click="duracionActividadMinutos = Math.max(5, (parseInt(duracionActividadMinutos) || 30) - 5)" class="w-10 h-10 rounded-xl bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-200 font-bold hover:bg-gray-200 flex items-center justify-center text-lg">-</button>
+                            <input type="number" name="duracion_minutos" x-model="duracionActividadMinutos" min="1" step="1" 
+                                   class="flex-1 text-center font-black text-lg py-2 rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-white outline-none focus:ring-2 focus:ring-emerald-500"
+                                   required>
+                            <button type="button" @click="duracionActividadMinutos = (parseInt(duracionActividadMinutos) || 30) + 5" class="w-10 h-10 rounded-xl bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-200 font-bold hover:bg-gray-200 flex items-center justify-center text-lg">+</button>
+                        </div>
+
+                        <!-- Presets de tiempo rápido -->
+                        <div class="flex items-center justify-center gap-1.5 mt-2.5">
+                            <button type="button" @click="duracionActividadMinutos = 15" :class="duracionActividadMinutos == 15 ? 'bg-emerald-600 text-white font-bold' : 'bg-gray-100 dark:bg-gray-700/60 text-gray-600 dark:text-gray-300'" class="px-3 py-1 rounded-lg text-xs transition-colors">15m</button>
+                            <button type="button" @click="duracionActividadMinutos = 30" :class="duracionActividadMinutos == 30 ? 'bg-emerald-600 text-white font-bold' : 'bg-gray-100 dark:bg-gray-700/60 text-gray-600 dark:text-gray-300'" class="px-3 py-1 rounded-lg text-xs transition-colors">30m</button>
+                            <button type="button" @click="duracionActividadMinutos = 45" :class="duracionActividadMinutos == 45 ? 'bg-emerald-600 text-white font-bold' : 'bg-gray-100 dark:bg-gray-700/60 text-gray-600 dark:text-gray-300'" class="px-3 py-1 rounded-lg text-xs transition-colors">45m</button>
+                            <button type="button" @click="duracionActividadMinutos = 60" :class="duracionActividadMinutos == 60 ? 'bg-emerald-600 text-white font-bold' : 'bg-gray-100 dark:bg-gray-700/60 text-gray-600 dark:text-gray-300'" class="px-3 py-1 rounded-lg text-xs transition-colors">60m</button>
+                            <button type="button" @click="duracionActividadMinutos = 90" :class="duracionActividadMinutos == 90 ? 'bg-emerald-600 text-white font-bold' : 'bg-gray-100 dark:bg-gray-700/60 text-gray-600 dark:text-gray-300'" class="px-3 py-1 rounded-lg text-xs transition-colors">90m</button>
+                        </div>
+                    </div>
+                </template>
+
+                <!-- Si la actividad es por REPETICIONES Y PESO -->
+                <template x-if="ejercicioSeleccionadoLibre && ejercicioSeleccionadoLibre.modalidad !== 'TIEMPO'">
+                    <div class="grid grid-cols-3 gap-3">
+                        <div>
+                            <label class="block text-xs font-bold text-gray-700 dark:text-gray-300 uppercase tracking-wider mb-1">Series</label>
+                            <input type="number" name="series_totales" x-model="seriesActividadTotales" min="1" max="20" 
+                                   class="w-full text-center font-black py-2.5 rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-white outline-none focus:ring-2 focus:ring-emerald-500 text-sm"
+                                   required>
+                        </div>
+                        <div>
+                            <label class="block text-xs font-bold text-gray-700 dark:text-gray-300 uppercase tracking-wider mb-1">Reps</label>
+                            <input type="number" name="repeticiones" x-model="repsActividad" min="1" 
+                                   class="w-full text-center font-black py-2.5 rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-white outline-none focus:ring-2 focus:ring-emerald-500 text-sm"
+                                   required>
+                        </div>
+                        <div>
+                            <label class="block text-xs font-bold text-gray-700 dark:text-gray-300 uppercase tracking-wider mb-1">Peso (kg)</label>
+                            <input type="number" step="0.5" name="peso_kg" x-model="pesoActividad" placeholder="Libre" 
+                                   class="w-full text-center font-black py-2.5 rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-white outline-none focus:ring-2 focus:ring-emerald-500 text-sm">
+                        </div>
+                    </div>
+                </template>
+
+                <!-- Notas y sensaciones -->
+                <div>
+                    <label class="block text-xs font-bold text-gray-700 dark:text-gray-300 uppercase tracking-wider mb-1.5">
+                        <i class="fa-solid fa-note-sticky mr-1 text-gray-400"></i> Notas u observaciones (Opcional)
+                    </label>
+                    <input type="text" name="notas" placeholder="Ej: 5 km carrera continua, buenas pulsaciones..." 
+                           class="w-full px-4 py-2.5 rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-white outline-none focus:ring-2 focus:ring-emerald-500 text-sm">
+                </div>
+
+                <div class="pt-3 border-t border-gray-100 dark:border-gray-700/80 flex items-center justify-end space-x-3">
+                    <button type="button" @click="modalActividadLibre = false" class="px-4 py-2.5 rounded-xl bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 font-bold text-xs hover:bg-gray-200 transition-colors">
+                        Cancelar
+                    </button>
+                    <button type="submit" class="px-5 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-black text-xs shadow-md shadow-emerald-600/25 transition-all hover:scale-105 active:scale-95 flex items-center space-x-1.5">
+                        <i class="fa-solid fa-floppy-disk"></i>
+                        <span>Guardar Actividad</span>
+                    </button>
+                </div>
+            </form>
+
         </div>
     </div>
 
@@ -546,6 +704,38 @@ function dashboardAnalytics() {
         chartMuscular: null,
         modalCompartir: false,
         textoCopiado: false,
+
+        // Estado para Registro de Actividad Libre
+        modalActividadLibre: false,
+        catalogoEjercicios: JSON.parse('{{ ejercicios_catalogo_json|escapejs }}' || '[]'),
+        filtroBusquedaActividad: '',
+        ejercicioSeleccionadoLibre: null,
+        duracionActividadMinutos: 45,
+        seriesActividadTotales: 3,
+        repsActividad: 10,
+        pesoActividad: '',
+
+        get ejerciciosFiltradosActividad() {
+            if (!this.filtroBusquedaActividad.trim()) {
+                return this.catalogoEjercicios.slice(0, 15);
+            }
+            const q = this.filtroBusquedaActividad.toLowerCase();
+            return this.catalogoEjercicios.filter(e => 
+                e.nombre.toLowerCase().includes(q) || 
+                (e.grupo_muscular && e.grupo_muscular.toLowerCase().includes(q)) ||
+                (e.tipo && e.tipo.toLowerCase().includes(q))
+            );
+        },
+
+        abrirModalActividadLibre() {
+            this.filtroBusquedaActividad = '';
+            this.ejercicioSeleccionadoLibre = null;
+            this.modalActividadLibre = true;
+        },
+
+        seleccionarEjercicioLibre(ej) {
+            this.ejercicioSeleccionadoLibre = ej;
+        },
 
         iniciarGraficos() {
             const ids = Object.keys(this.datosProgresion);

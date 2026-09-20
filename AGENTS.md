@@ -45,6 +45,10 @@ Este documento sirve como **memoria persistente y guía contextual** de **Multir
   - `icono`: Asigna dinámicamente iconos FontAwesome según la disciplina.
 - **`RegistroEjercicio`:** Registro de una sesión de entrenamiento para un ejercicio y usuario.
 - **`Serie`:** Series individuales (`numero_serie`, `repeticiones`, `peso_kg`, `tiempo_segundos`, `distancia_metros`, `rpe`).
+- **Registro de Actividad Libre / Sesión Rápida (`registrar_sesion_libre`):**
+  - Permite a los usuarios registrar entrenamientos independientes (running, pádel, series sueltas, etc.) sin vincularlos a ninguna rutina predefinida.
+  - Accesible desde la ficha del ejercicio (`/ejercicios/detalle/<id>/`) y directamente desde el Dashboard (`/dashboard/`) mediante modal interactivo en Alpine.js con búsqueda reactiva de ejercicios y presets de tiempo.
+  - Alimenta de forma automática la racha semanal, el calendario de 7 días, el volumen total y el cálculo de PRs/1RM.
 
 ### `rutinas` (Planificación, Calendarización y Modo Gym)
 - **`Rutina`:**
@@ -75,7 +79,7 @@ El entorno virtual se encuentra en `.venv`. Comandos ejecutables:
 # Aplicar migraciones pendientes
 .venv/bin/python manage.py migrate
 
-# Ejecutar la suite completa de pruebas unitarias (100% pasando, 67 tests)
+# Ejecutar la suite completa de pruebas unitarias (100% pasando, 70 tests)
 .venv/bin/python manage.py test core.tests users.tests dashboard.tests ejercicios.tests rutinas.tests
 
 # Sincronizar catálogo oficial de ejercicios predeterminados (+52 ejercicios)
