@@ -26,8 +26,9 @@ Este documento sirve como **memoria persistente y guía contextual** de **Multir
 - **Django Admin (`/admin/core/configuracionsitio/`):** Administración nativa con restricciones singleton (no permite añadir más ni borrar).
 
 ### `users` (Usuarios, Salud y Auditoría)
-- **`Profile`:** Extensión del modelo `User` con ficha antropométrica (`peso_kg`, `altura_cm`, `fecha_nacimiento`, `foto`), meta semanal (`dias_objetivo_semana`), objetivo deportivo (`HIP`, `FUE`, `DEF`, `RES`, `SAL`), nivel, membresía comercial (`tipo_suscripcion`: `FREE`, `PRO`, `COACH`) y estado de verificación de correo (`email_verificado`).
+- **`Profile`:** Extensión del modelo `User` con ficha antropométrica (`genero`: `H`, `M`, `O`; `peso_kg`, `altura_cm`, `fecha_nacimiento`, `foto`), meta semanal (`dias_objetivo_semana`), objetivo deportivo (`HIP`, `FUE`, `DEF`, `RES`, `SAL`), nivel, membresía comercial (`tipo_suscripcion`: `FREE`, `PRO`, `COACH`) y estado de verificación de correo (`email_verificado`).
   - `@property categoria_imc`: Clasificación dinámica del IMC (*Bajo peso*, *Peso normal*, *Sobrepeso*, *Obesidad*).
+  - `@property icono_genero`: Ícono FontAwesome correspondiente al sexo / género (`fa-mars`, `fa-venus`, `fa-genderless`, `fa-venus-mars`).
 - **`LogActividad`:** Sistema de auditoría y captura de incidencias.
   - Campos: `usuario`, `nivel` (INFO, WARNING, ERROR, CRITICAL), `tipo` (LOGIN, LOGOUT, LOGIN_FAIL, REGISTRO, PERFIL_EDIT, PASSWORD_CHANGE, ERROR_500), `ruta`, `metodo`, `ip`, `user_agent`, `mensaje`, `traceback`, `creado_en`.
 - **`middleware.py` (`AuditAndErrorLoggingMiddleware`):** Captura en `process_exception` cualquier error 500 no controlado y registra la traza completa.
@@ -74,7 +75,7 @@ El entorno virtual se encuentra en `.venv`. Comandos ejecutables:
 # Aplicar migraciones pendientes
 .venv/bin/python manage.py migrate
 
-# Ejecutar la suite completa de pruebas unitarias (100% pasando, 62 tests)
+# Ejecutar la suite completa de pruebas unitarias (100% pasando, 64 tests)
 .venv/bin/python manage.py test core.tests users.tests dashboard.tests ejercicios.tests rutinas.tests
 
 # Sincronizar catálogo oficial de ejercicios predeterminados (+52 ejercicios)

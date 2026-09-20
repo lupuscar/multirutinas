@@ -20,7 +20,7 @@ class ProfileInline(admin.StackedInline):
     fk_name = 'user'
     fields = (
         ('tipo_suscripcion', 'email_verificado'),
-        ('peso', 'altura'),
+        ('genero', 'peso', 'altura'),
         ('nivel', 'objetivo'),
         'biografia',
         'fecha_fin_suscripcion'
@@ -113,8 +113,8 @@ class CustomUserAdmin(BaseUserAdmin):
 
 @admin.register(Profile)
 class ProfileAdmin(admin.ModelAdmin):
-    list_display = ('user', 'email_verificado', 'tipo_suscripcion', 'peso', 'altura', 'nivel', 'objetivo')
-    list_filter = ('email_verificado', 'tipo_suscripcion', 'nivel', 'objetivo')
+    list_display = ('user', 'genero', 'email_verificado', 'tipo_suscripcion', 'peso', 'altura', 'nivel', 'objetivo')
+    list_filter = ('genero', 'email_verificado', 'tipo_suscripcion', 'nivel', 'objetivo')
     search_fields = ('user__username', 'user__email', 'biografia')
 
 

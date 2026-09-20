@@ -341,3 +341,51 @@ class UsersAuthTests(TestCase):
         self.assertRedirects(res, reverse('users:perfil'))
         self.user.profile.refresh_from_db()
         self.assertFalse(bool(self.user.profile.foto_perfil))
+
+    def test_genero_icono_y_propiedades(self):
+        """Verifica que las opciones de género y sus iconos correspondientes se calculan adecuadamente"""
+        perfil = self.user.profile
+        
+        perfil.genero = 'H'
+        perfil.save()
+        self.assertEqual(perfil.icono_genero, 'fa-solid fa-mars')
+        self.assertEqual(perfil.get_genero_display(), 'Hombre')
+
+        perfil.genero = 'M'
+        perfil.save()
+        self.assertEqual(perfil.icono_genero, 'fa-solid fa-venus')
+        self.assertEqual(perfil.get_genero_display(), 'Mujer')
+
+        perfil.genero = 'O'
+        perfil.save()
+        self.assertEqual(perfil.icono_genero, 'fa-solid fa-genderless')
+        self.assertEqual(perfil.get_genero_display(), 'Otro / Prefiero no decir')
+
+    def test_genero_actualizar_desde_formulario_y_renderizado(self):
+        """Verifica la actualización del género vía POST en perfil y su presencia visual en el template"""
+        self.client.login(username='atleta1', password='Password123!')
+        
+        response = self.client.post(reverse('users:perfil'), {
+            'action': 'actualizar_perfil',
+            'first_name': 'Atleta',
+            'last_name': 'Fit',
+            'email': 'atleta1@fitapp.com',
+            'genero': 'M',
+            'peso': '62.5',
+            'altura': '168',
+            'nivel': 'IN',
+            'objetivo': 'DEF',
+            'dias_objetivo_semana': 4,
+        })
+        self.assertRedirects(response, reverse('users:perfil'))
+        
+        self.user.profile.refresh_from_db()
+        self.assertEqual(self.user.profile.genero, 'M')
+
+        # Comprobar renderizado en vista GET
+        res_get = self.client.get(reverse('users:perfil'))
+        self.assertEqual(res_get.status_code, 200)
+        self.assertContains(res_get, 'Mujer')
+        self.assertContains(res_get, 'fa-person-dress')
+        self.assertContains(res_get, 'fa-venus')
+

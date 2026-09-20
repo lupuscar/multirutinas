@@ -58,7 +58,13 @@
                          class="w-full h-full object-cover">
                 {% else %}
                     <div class="w-full h-full bg-gradient-to-br from-gray-100 to-gray-200 dark:from-gray-700 dark:to-gray-800 flex items-center justify-center text-gray-400">
-                        <i class="fa-solid fa-user text-4xl"></i>
+                        {% if perfil.genero == 'H' %}
+                            <i class="fa-solid fa-person text-4xl text-blue-500/80"></i>
+                        {% elif perfil.genero == 'M' %}
+                            <i class="fa-solid fa-person-dress text-4xl text-pink-500/80"></i>
+                        {% else %}
+                            <i class="fa-solid fa-user text-4xl"></i>
+                        {% endif %}
                     </div>
                 {% endif %}
 
@@ -117,6 +123,11 @@
             {% endif %}
 
             <div class="flex flex-wrap items-center justify-center sm:justify-start gap-2 pt-1">
+                {% if perfil.genero %}
+                <span class="px-2.5 py-1 rounded-lg {% if perfil.genero == 'H' %}bg-blue-50 dark:bg-blue-950/40 text-blue-600 dark:text-blue-400{% elif perfil.genero == 'M' %}bg-pink-50 dark:bg-pink-950/40 text-pink-600 dark:text-pink-400{% else %}bg-indigo-50 dark:bg-indigo-950/40 text-indigo-600 dark:text-indigo-400{% endif %} font-bold text-xs">
+                    <i class="{{ perfil.icono_genero }} mr-1 text-[10px]"></i> {{ perfil.get_genero_display }}
+                </span>
+                {% endif %}
                 <span class="px-2.5 py-1 rounded-lg bg-brand-light/10 text-brand-light font-bold text-xs">
                     <i class="fa-solid fa-bolt mr-1 text-[10px]"></i> Nivel: {{ perfil.get_nivel_display }}
                 </span>
@@ -165,7 +176,18 @@
                 <i class="fa-solid fa-heart-pulse text-brand-light mr-2"></i> Estado Físico y Corporal
             </h2>
 
-            <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+            <div class="grid grid-cols-2 sm:grid-cols-4 gap-4">
+                <!-- Sexo / Género -->
+                <div class="bg-gray-50 dark:bg-gray-900/60 p-4 rounded-2xl border border-gray-100 dark:border-gray-700/50 flex items-center justify-between">
+                    <div>
+                        <span class="text-xs font-bold text-gray-400 uppercase tracking-wider block">Sexo / Género</span>
+                        <span class="text-base sm:text-lg font-black text-gray-900 dark:text-white">{{ perfil.get_genero_display|default:"No indicado" }}</span>
+                    </div>
+                    <span class="w-10 h-10 rounded-xl {% if perfil.genero == 'H' %}bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400{% elif perfil.genero == 'M' %}bg-pink-50 dark:bg-pink-900/30 text-pink-600 dark:text-pink-400{% else %}bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400{% endif %} flex items-center justify-center text-lg">
+                        <i class="{{ perfil.icono_genero }}"></i>
+                    </span>
+                </div>
+
                 <!-- Peso -->
                 <div class="bg-gray-50 dark:bg-gray-900/60 p-4 rounded-2xl border border-gray-100 dark:border-gray-700/50 flex items-center justify-between">
                     <div>
@@ -294,6 +316,17 @@
 
                     <div class="grid grid-cols-2 gap-3">
                         <div>
+                            <label class="block text-xs font-bold text-gray-700 dark:text-gray-300 uppercase tracking-wider mb-1">Sexo / Género</label>
+                            {{ profile_form.genero }}
+                        </div>
+                        <div>
+                            <label class="block text-xs font-bold text-gray-700 dark:text-gray-300 uppercase tracking-wider mb-1">Fecha de Nacimiento</label>
+                            {{ profile_form.fecha_nacimiento }}
+                        </div>
+                    </div>
+
+                    <div class="grid grid-cols-2 gap-3">
+                        <div>
                             <label class="block text-xs font-bold text-gray-700 dark:text-gray-300 uppercase tracking-wider mb-1">Peso (kg)</label>
                             {{ profile_form.peso }}
                         </div>
@@ -301,11 +334,6 @@
                             <label class="block text-xs font-bold text-gray-700 dark:text-gray-300 uppercase tracking-wider mb-1">Altura (cm)</label>
                             {{ profile_form.altura }}
                         </div>
-                    </div>
-
-                    <div>
-                        <label class="block text-xs font-bold text-gray-700 dark:text-gray-300 uppercase tracking-wider mb-1">Fecha de Nacimiento</label>
-                        {{ profile_form.fecha_nacimiento }}
                     </div>
 
                     <div>

@@ -101,6 +101,7 @@ class ProfileForm(forms.ModelForm):
         fields = [
             'foto_perfil',
             'biografia',
+            'genero',
             'peso',
             'altura',
             'fecha_nacimiento',
@@ -115,6 +116,9 @@ class ProfileForm(forms.ModelForm):
             'biografia': forms.TextInput(attrs={
                 'class': 'w-full px-4 py-2 rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-white text-sm outline-none focus:ring-2 focus:ring-brand-light',
                 'placeholder': 'Ej: Entrenando con foco en salud y fuerza.'
+            }),
+            'genero': forms.Select(attrs={
+                'class': 'w-full px-4 py-2 rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-white text-sm outline-none focus:ring-2 focus:ring-brand-light'
             }),
             'peso': forms.NumberInput(attrs={
                 'class': 'w-full px-4 py-2 rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-white text-sm outline-none focus:ring-2 focus:ring-brand-light',
@@ -145,6 +149,7 @@ class ProfileForm(forms.ModelForm):
         labels = {
             'foto_perfil': 'Foto de perfil',
             'biografia': 'Lema o Biografía',
+            'genero': 'Sexo / Género',
             'peso': 'Peso corporal (kg)',
             'altura': 'Altura (cm)',
             'fecha_nacimiento': 'Fecha de Nacimiento',

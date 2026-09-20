@@ -61,6 +61,20 @@ class Profile(models.Model):
     )
     fecha_nacimiento = models.DateField(null=True, blank=True)
 
+    GENERO_CHOICES = [
+        ('H', 'Hombre'),
+        ('M', 'Mujer'),
+        ('O', 'Otro / Prefiero no decir'),
+    ]
+    genero = models.CharField(
+        max_length=1,
+        choices=GENERO_CHOICES,
+        null=True,
+        blank=True,
+        verbose_name="Sexo / Género",
+        help_text="Permite adaptar recomendaciones de salud, métricas y entrenamiento"
+    )
+
     # 4. OBJETIVOS Y NIVEL DEPORTIVO
     NIVEL_EXPERIENCIA = [
         ('PR', 'Principiante'),
@@ -118,6 +132,16 @@ class Profile(models.Model):
             return {'nombre': 'Sobrepeso', 'badge_class': 'bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300'}
         else:
             return {'nombre': 'Obesidad', 'badge_class': 'bg-rose-100 text-rose-700 dark:bg-rose-900/40 dark:text-rose-300'}
+
+    @property
+    def icono_genero(self):
+        if self.genero == 'H':
+            return 'fa-solid fa-mars'
+        elif self.genero == 'M':
+            return 'fa-solid fa-venus'
+        elif self.genero == 'O':
+            return 'fa-solid fa-genderless'
+        return 'fa-solid fa-venus-mars'
 
 
 # =====================================================================
