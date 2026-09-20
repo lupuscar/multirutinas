@@ -312,3 +312,42 @@ class PWATests(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertIn('Sin conexión a Internet', response.content.decode('utf-8'))
 
+    def test_viewport_cover_y_metadatos_pwa(self):
+        """Verifica que el viewport incluye viewport-fit=cover y metadatos nativos"""
+        response = self.client.get(reverse('login'))
+        self.assertEqual(response.status_code, 200)
+        html = response.content.decode('utf-8')
+        self.assertIn('viewport-fit=cover', html)
+        self.assertIn('name="apple-mobile-web-app-capable"', html)
+        self.assertIn('href="/manifest.json"', html)
+
+    def test_bottom_navigation_para_usuario_autenticado(self):
+        """Verifica que la barra de navegación inferior móvil se renderiza para usuarios autenticados"""
+        user = User.objects.create_user(username='atletapwa', email='atleta@pwa.com', password='Password123!', is_active=True)
+        self.client.login(username='atletapwa', password='Password123!')
+        response = self.client.get(reverse('dashboard:dashboard'))
+        self.assertEqual(response.status_code, 200)
+        html = response.content.decode('utf-8')
+        self.assertIn('App Bottom Nav', html)
+        self.assertIn(reverse('dashboard:dashboard'), html)
+        self.assertIn(reverse('rutinas:lista_rutinas'), html)
+        self.assertIn(reverse('ejercicios:ejercicios'), html)
+        self.assertIn(reverse('users:perfil'), html)
+
+    def test_ejecutar_rutina_oculta_bottom_nav_y_tiene_wake_lock(self):
+        """Verifica que la vista de Modo Gym oculta la barra inferior y dispone del botón Wake Lock"""
+        from rutinas.models import Rutina
+        user = User.objects.create_user(username='gymrat', email='gymrat@pwa.com', password='Password123!', is_active=True)
+        rutina = Rutina.objects.create(usuario=user, nombre='Rutina Test PWA', dias_semana='0,2')
+        self.client.login(username='gymrat', password='Password123!')
+        response = self.client.get(reverse('rutinas:iniciar_rutina', args=[rutina.id]))
+        self.assertEqual(response.status_code, 200)
+        html = response.content.decode('utf-8')
+        # La barra de navegación debe estar oculta en modo entrenamiento
+        self.assertNotIn('App Bottom Nav', html)
+        # El control de pantalla activa (Wake Lock) debe estar presente
+        self.assertIn('solicitarWakeLock', html)
+        self.assertIn('alternarWakeLock', html)
+        self.assertIn('Pantalla Activa', html)
+
+

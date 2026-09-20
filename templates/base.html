@@ -5,7 +5,7 @@
 
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <title>{% block title %}OPTIFIT | Entrenamientos y Rutinas{% endblock %}</title>
 
     <!-- PWA Web App Manifest & Metadatos Móviles -->
@@ -199,6 +199,25 @@
             .sidebar-open #mobile-overlay {
                 display: block !important;
             }
+        }
+
+        /* Safe Area Insets para dispositivos móviles (Notch, Dynamic Island, Barra de Inicio) */
+        .pb-safe {
+            padding-bottom: max(0.5rem, env(safe-area-inset-bottom, 0px));
+        }
+        .pt-safe {
+            padding-top: max(0.5rem, env(safe-area-inset-top, 0px));
+        }
+
+        /* Sensación de App Nativa: Desactivar tap highlight en navegadores móviles */
+        * {
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        /* Prevenir selección accidental de texto en controles y navegación */
+        nav, header, button {
+            -webkit-user-select: none;
+            user-select: none;
         }
     </style>
 </head>
@@ -515,7 +534,32 @@
                 </div>
             </header>
 
-            <div class="flex-1 overflow-y-auto p-4 md:p-6">
+            <!-- Detector de Conectividad en Tiempo Real (App Offline/Online Toast) -->
+            <div x-data="networkStatus()" x-cloak>
+                <div x-show="!online" 
+                     x-transition:enter="transition ease-out duration-300 transform"
+                     x-transition:enter-start="-translate-y-8 opacity-0"
+                     x-transition:enter-end="translate-y-0 opacity-100"
+                     x-transition:leave="transition ease-in duration-200 transform"
+                     x-transition:leave-start="translate-y-0 opacity-100"
+                     x-transition:leave-end="-translate-y-8 opacity-0"
+                     class="fixed top-3 inset-x-4 max-w-md mx-auto z-50 bg-amber-500 text-gray-950 px-4 py-2.5 rounded-2xl shadow-xl flex items-center justify-between text-xs font-bold border border-amber-400">
+                    <div class="flex items-center space-x-2.5">
+                        <i class="fa-solid fa-wifi text-sm line-through"></i>
+                        <span>Modo sin conexión — Puedes seguir entrenando</span>
+                    </div>
+                    <span class="text-[10px] bg-amber-600/30 px-2 py-0.5 rounded-full uppercase tracking-wider font-black">Offline</span>
+                </div>
+
+                <div x-show="reconnectedToast" 
+                     x-transition
+                     class="fixed top-3 inset-x-4 max-w-md mx-auto z-50 bg-emerald-600 text-white px-4 py-2.5 rounded-2xl shadow-xl flex items-center space-x-2 text-xs font-bold border border-emerald-500">
+                    <i class="fa-solid fa-wifi text-sm"></i>
+                    <span>¡Conexión a internet restablecida! Sincronizando datos...</span>
+                </div>
+            </div>
+
+            <div class="flex-1 overflow-y-auto p-4 md:p-6 pb-28 md:pb-6">
                 {% if messages %}
                 <div class="mb-6 space-y-2">
                     {% for message in messages %}
@@ -531,6 +575,101 @@
                 {% endblock %}
             </div>
         </main>
+
+        <!-- Banner Flotante Inteligente de Instalación Móvil (PWA Mobile Banner) -->
+        <div x-data="pwaMobileBanner()" x-cloak x-show="showBanner"
+             x-transition:enter="transition ease-out duration-300 transform"
+             x-transition:enter-start="translate-y-10 opacity-0"
+             x-transition:enter-end="translate-y-0 opacity-100"
+             x-transition:leave="transition ease-in duration-200 transform"
+             x-transition:leave-start="translate-y-0 opacity-100"
+             x-transition:leave-end="translate-y-10 opacity-0"
+             class="fixed bottom-20 inset-x-3 sm:left-auto sm:right-4 sm:max-w-sm z-40 md:hidden bg-gray-950/95 text-white p-3 rounded-2xl shadow-2xl border border-gray-800 backdrop-blur-md">
+            <div class="flex items-center space-x-3">
+                <img src="{% static 'img/pwa-icon-192.png' %}" alt="OPTIFIT" class="w-10 h-10 rounded-xl shadow shrink-0 object-cover">
+                <div class="flex-1 min-w-0">
+                    <h4 class="text-xs font-black text-white leading-tight">Instala OPTIFIT</h4>
+                    <p class="text-[11px] text-gray-400 truncate">Pantalla completa y acceso rápido offline</p>
+                </div>
+                <button @click="installApp()" 
+                        type="button"
+                        class="px-3 py-1.5 rounded-xl bg-brand-light text-white font-extrabold text-xs shrink-0 hover:bg-brand-dark transition-all active:scale-95 shadow-md shadow-brand-light/30">
+                    Instalar
+                </button>
+                <button @click="dismissBanner()" 
+                        type="button"
+                        aria-label="Cerrar aviso"
+                        class="w-6 h-6 rounded-full text-gray-400 hover:text-white flex items-center justify-center shrink-0">
+                    <i class="fa-solid fa-xmark text-xs"></i>
+                </button>
+            </div>
+        </div>
+
+        {% block bottom_navigation %}
+        {% if user.is_authenticated %}
+        <!-- Barra de Navegación Inferior Ergonómica para Móvil (App Bottom Nav) -->
+        <nav class="fixed bottom-0 inset-x-0 z-40 bg-white/95 dark:bg-gray-900/95 backdrop-blur-xl border-t border-gray-200 dark:border-gray-800 pb-safe md:hidden shadow-[0_-4px_20px_rgba(0,0,0,0.08)] dark:shadow-[0_-4px_20px_rgba(0,0,0,0.3)]">
+            <div class="grid grid-cols-5 h-16 items-center px-1 max-w-lg mx-auto">
+                <!-- 1. Dashboard -->
+                <a href="{% url 'dashboard:dashboard' %}" 
+                   class="flex flex-col items-center justify-center py-1 transition-all active:scale-90 {% if request.resolver_match.app_name == 'dashboard' %}text-brand-light font-black{% else %}text-gray-400 dark:text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 font-medium{% endif %}">
+                    <div class="relative flex items-center justify-center">
+                        <i class="fa-solid fa-chart-pie text-lg"></i>
+                        {% if request.resolver_match.app_name == 'dashboard' %}
+                        <span class="absolute -bottom-1 w-1 h-1 rounded-full bg-brand-light shadow-sm shadow-brand-light"></span>
+                        {% endif %}
+                    </div>
+                    <span class="text-[10px] mt-1 tracking-tight">Inicio</span>
+                </a>
+
+                <!-- 2. Rutinas -->
+                <a href="{% url 'rutinas:lista_rutinas' %}" 
+                   class="flex flex-col items-center justify-center py-1 transition-all active:scale-90 {% if request.resolver_match.app_name == 'rutinas' and not 'ejecutar' in request.path %}text-brand-light font-black{% else %}text-gray-400 dark:text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 font-medium{% endif %}">
+                    <div class="relative flex items-center justify-center">
+                        <i class="fa-solid fa-calendar-check text-lg"></i>
+                        {% if request.resolver_match.app_name == 'rutinas' and not 'ejecutar' in request.path %}
+                        <span class="absolute -bottom-1 w-1 h-1 rounded-full bg-brand-light shadow-sm shadow-brand-light"></span>
+                        {% endif %}
+                    </div>
+                    <span class="text-[10px] mt-1 tracking-tight">Rutinas</span>
+                </a>
+
+                <!-- 3. Botón Central Acción: Entrenar -->
+                <a href="{% url 'rutinas:lista_rutinas' %}" 
+                   class="flex flex-col items-center justify-center -mt-5 group focus:outline-none transition-transform active:scale-95">
+                    <div class="w-12 h-12 rounded-2xl bg-gradient-to-tr from-brand-dark to-brand-light text-white shadow-lg shadow-brand-light/40 flex items-center justify-center border-2 border-white dark:border-gray-900 group-hover:scale-105 transition-all">
+                        <i class="fa-solid fa-bolt text-lg"></i>
+                    </div>
+                    <span class="text-[10px] font-black text-brand-light mt-1 tracking-tight">Entrenar</span>
+                </a>
+
+                <!-- 4. Catálogo de Ejercicios -->
+                <a href="{% url 'ejercicios:ejercicios' %}" 
+                   class="flex flex-col items-center justify-center py-1 transition-all active:scale-90 {% if request.resolver_match.app_name == 'ejercicios' %}text-brand-light font-black{% else %}text-gray-400 dark:text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 font-medium{% endif %}">
+                    <div class="relative flex items-center justify-center">
+                        <i class="fa-solid fa-dumbbell text-lg"></i>
+                        {% if request.resolver_match.app_name == 'ejercicios' %}
+                        <span class="absolute -bottom-1 w-1 h-1 rounded-full bg-brand-light shadow-sm shadow-brand-light"></span>
+                        {% endif %}
+                    </div>
+                    <span class="text-[10px] mt-1 tracking-tight">Ejercicios</span>
+                </a>
+
+                <!-- 5. Perfil & Ajustes -->
+                <a href="{% url 'users:perfil' %}" 
+                   class="flex flex-col items-center justify-center py-1 transition-all active:scale-90 {% if request.resolver_match.app_name == 'users' %}text-brand-light font-black{% else %}text-gray-400 dark:text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 font-medium{% endif %}">
+                    <div class="relative flex items-center justify-center">
+                        <i class="fa-solid fa-user text-lg"></i>
+                        {% if request.resolver_match.app_name == 'users' %}
+                        <span class="absolute -bottom-1 w-1 h-1 rounded-full bg-brand-light shadow-sm shadow-brand-light"></span>
+                        {% endif %}
+                    </div>
+                    <span class="text-[10px] mt-1 tracking-tight">Perfil</span>
+                </a>
+            </div>
+        </nav>
+        {% endif %}
+        {% endblock %}
     </div>
 
     <!-- JavaScript ultra-liviano nativo para temas y sidebar -->
@@ -597,6 +736,7 @@
                     window.addEventListener('beforeinstallprompt', (e) => {
                         e.preventDefault();
                         this.deferredPrompt = e;
+                        window._pwaDeferredPrompt = e;
                         this.showInstallBtn = true;
                     });
 
@@ -604,24 +744,91 @@
                         this.showInstallBtn = true;
                     }
 
+                    window.addEventListener('open-ios-install-modal', () => {
+                        this.showIosModal = true;
+                    });
+
                     window.addEventListener('appinstalled', () => {
                         this.showInstallBtn = false;
                         this.deferredPrompt = null;
+                        window._pwaDeferredPrompt = null;
                     });
                 },
                 async installApp() {
-                    if (this.deferredPrompt) {
-                        this.deferredPrompt.prompt();
-                        const { outcome } = await this.deferredPrompt.userChoice;
+                    const promptEvent = this.deferredPrompt || window._pwaDeferredPrompt;
+                    if (promptEvent) {
+                        promptEvent.prompt();
+                        const { outcome } = await promptEvent.userChoice;
                         if (outcome === 'accepted') {
                             this.showInstallBtn = false;
                         }
                         this.deferredPrompt = null;
+                        window._pwaDeferredPrompt = null;
                     } else if (this.isIos) {
                         this.showIosModal = true;
                     } else {
                         alert('Para instalar OPTIFIT en tu dispositivo, abre el menú de tu navegador y pulsa en "Instalar aplicación" o "Añadir a pantalla de inicio".');
                     }
+                }
+            };
+        }
+
+        // Banner inferior flotante para visitantes desde navegador móvil
+        function pwaMobileBanner() {
+            return {
+                showBanner: false,
+                isStandalone: window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true,
+                isIos: /iphone|ipad|ipod/.test(window.navigator.userAgent.toLowerCase()),
+                init() {
+                    if (this.isStandalone) return;
+                    const dismissed = localStorage.getItem('pwa_prompt_dismissed');
+                    if (dismissed && (Date.now() - parseInt(dismissed)) < 7 * 24 * 60 * 60 * 1000) {
+                        return;
+                    }
+                    setTimeout(() => {
+                        if (!this.isStandalone && !localStorage.getItem('pwa_prompt_dismissed')) {
+                            this.showBanner = true;
+                        }
+                    }, 3500);
+                },
+                installApp() {
+                    if (window._pwaDeferredPrompt) {
+                        window._pwaDeferredPrompt.prompt();
+                        window._pwaDeferredPrompt.userChoice.then((res) => {
+                            if (res.outcome === 'accepted') {
+                                this.showBanner = false;
+                            }
+                            window._pwaDeferredPrompt = null;
+                        });
+                    } else if (this.isIos) {
+                        window.dispatchEvent(new CustomEvent('open-ios-install-modal'));
+                        this.showBanner = false;
+                    } else {
+                        alert('Para instalar OPTIFIT, abre el menú de tu navegador y pulsa en "Instalar aplicación" o "Añadir a pantalla de inicio".');
+                        this.showBanner = false;
+                    }
+                },
+                dismissBanner() {
+                    this.showBanner = false;
+                    localStorage.setItem('pwa_prompt_dismissed', Date.now().toString());
+                }
+            };
+        }
+
+        // Detector reactivo de conectividad a internet en vivo
+        function networkStatus() {
+            return {
+                online: navigator.onLine,
+                reconnectedToast: false,
+                init() {
+                    window.addEventListener('online', () => {
+                        this.online = true;
+                        this.reconnectedToast = true;
+                        setTimeout(() => { this.reconnectedToast = false; }, 3500);
+                    });
+                    window.addEventListener('offline', () => {
+                        this.online = false;
+                    });
                 }
             };
         }

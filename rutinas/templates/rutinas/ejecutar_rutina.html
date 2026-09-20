@@ -2,8 +2,10 @@
 
 {% block title %}Entrenando: {{ rutina.nombre }} | FitApp{% endblock %}
 
+{% block bottom_navigation %}{% endblock %}
+
 {% block content %}
-<div x-data="modoGym()" x-init="iniciarTemporizadorSesion()" class="max-w-2xl mx-auto pb-32">
+<div x-data="modoGym()" x-init="iniciarModoGym()" class="max-w-2xl mx-auto pb-32">
 
     <!-- ================================================================= -->
     <!-- BARRA SUPERIOR FIJA: PROGRESO Y CRONÓMETRO DE SESIÓN -->
@@ -28,12 +30,24 @@
                 </div>
             </div>
 
-            <!-- Botón Finalizar Sesión -->
-            <button type="button" @click="finalizarEntrenamiento()" 
-                    class="px-3.5 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs shadow-md shadow-emerald-600/20 flex items-center space-x-1.5 transition-transform active:scale-95">
-                <i class="fa-solid fa-flag-checkered"></i>
-                <span>Terminar</span>
-            </button>
+            <!-- Acciones Superiores: Wake Lock & Finalizar Sesión -->
+            <div class="flex items-center space-x-2">
+                <!-- Botón Mantener Pantalla Activa (Wake Lock) -->
+                <button type="button" @click="alternarWakeLock()" 
+                        :title="wakeLockActivo ? 'Pantalla siempre activa (activada)' : 'Toca para mantener pantalla encendida durante el entrenamiento'"
+                        class="px-2.5 py-1.5 rounded-xl text-xs font-bold border transition-all flex items-center space-x-1.5 active:scale-95"
+                        :class="wakeLockActivo ? 'bg-amber-500/10 border-amber-500/30 text-amber-500' : 'bg-gray-100 dark:bg-gray-800 border-gray-200 dark:border-gray-700 text-gray-400'">
+                    <i class="fa-solid fa-lightbulb text-xs" :class="wakeLockActivo ? 'animate-pulse text-amber-400' : ''"></i>
+                    <span class="hidden sm:inline" x-text="wakeLockActivo ? 'Pantalla Activa' : 'Mantener Pantalla'"></span>
+                </button>
+
+                <!-- Botón Finalizar Sesión -->
+                <button type="button" @click="finalizarEntrenamiento()" 
+                        class="px-3.5 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs shadow-md shadow-emerald-600/20 flex items-center space-x-1.5 transition-transform active:scale-95">
+                    <i class="fa-solid fa-flag-checkered"></i>
+                    <span>Terminar</span>
+                </button>
+            </div>
         </div>
 
         <!-- Barra de progreso general -->
@@ -253,11 +267,52 @@ function modoGym() {
         segundosSesion: 0,
         intervaloSesion: null,
 
+        // Screen Wake Lock API (Evitar que se apague la pantalla en el gym)
+        wakeLock: null,
+        wakeLockActivo: false,
+
         // Temporizador de descanso (Rest timer)
         descansoActivo: false,
         descansoRestante: 60,
         descansoTotal: 60,
         intervaloDescanso: null,
+
+        iniciarModoGym() {
+            this.iniciarTemporizadorSesion();
+            this.solicitarWakeLock();
+            document.addEventListener('visibilitychange', async () => {
+                if (this.wakeLockActivo && document.visibilityState === 'visible') {
+                    await this.solicitarWakeLock();
+                }
+            });
+        },
+
+        async solicitarWakeLock() {
+            if ('wakeLock' in navigator) {
+                try {
+                    this.wakeLock = await navigator.wakeLock.request('screen');
+                    this.wakeLockActivo = true;
+                    this.wakeLock.addEventListener('release', () => {
+                        this.wakeLockActivo = false;
+                    });
+                } catch (err) {
+                    console.log('Screen Wake Lock no disponible o denegado:', err);
+                    this.wakeLockActivo = false;
+                }
+            }
+        },
+
+        async alternarWakeLock() {
+            if (this.wakeLockActivo && this.wakeLock) {
+                try {
+                    await this.wakeLock.release();
+                    this.wakeLock = null;
+                    this.wakeLockActivo = false;
+                } catch (e) {}
+            } else {
+                await this.solicitarWakeLock();
+            }
+        },
 
         iniciarTemporizadorSesion() {
             this.intervaloSesion = setInterval(() => {
@@ -402,6 +457,11 @@ function modoGym() {
         async alternarSerieCompletada(item, serie) {
             serie.completado = !serie.completado;
 
+            // Feedback háptico táctil en móvil
+            if (serie.completado && 'vibrate' in navigator) {
+                navigator.vibrate(30);
+            }
+
             // Guardar automáticamente en base de datos vía AJAX
             await this.guardarSerie(item, serie);
 
@@ -474,6 +534,10 @@ function modoGym() {
 
             if (!confirm(`¿Deseas finalizar tu entrenamiento? Has completado ${completadas} de ${total} series.`)) {
                 return;
+            }
+
+            if (this.wakeLock) {
+                try { await this.wakeLock.release(); } catch (e) {}
             }
 
             try {

@@ -117,11 +117,14 @@ El entorno virtual se encuentra en `.venv`. Comandos ejecutables:
 - **Selectores de Apariencia:**
   - Pestaña táctil **🎨 Tema & Apariencia** en el perfil de usuario (`/usuario/perfil/?tab=apariencia`) con vista previa en vivo de componentes.
   - Dropdown interactivo de acceso rápido en la cabecera global (`templates/base.html`).
-- **Experiencia Móvil PWA & Instalación:**
+- **Experiencia Móvil PWA & Sensación Nativa:**
   - Web App Manifest completo (`templates/pwa/manifest.json`) con `display: "standalone"`, iconos optimizados (192x192, 512x512, 512x512 maskable, apple-touch-icon 180x180) y accesos directos (Dashboard, Rutinas, Ejercicios, Perfil).
-  - Manejador reactivo Alpine.js (`pwaInstaller`) que intercepta `beforeinstallprompt` y gestiona la instalación desde la barra lateral y el perfil de usuario.
-  - Soporte para iOS Safari mediante modal explicativo paso a paso ("Compartir" -> "Añadir a pantalla de inicio").
-  - Ocultamiento inteligente de llamadas a la acción cuando la app ya se ejecuta en modo standalone.
+  - **Barra de Navegación Inferior (Bottom Nav):** Componente táctil ergonómico exclusivo para móviles (`md:hidden`) con 5 accesos directos (Inicio, Rutinas, Entrenar central destacado, Ejercicios, Perfil) y respeto por el área segura (*Safe Area Insets* `env(safe-area-inset-bottom)`).
+  - **Pantalla Siempre Activa (Screen Wake Lock API):** Modo Gym (`ejecutar_rutina.html`) incorpora conmutador táctil *"💡 Pantalla Activa"* que previene el bloqueo/apagado de pantalla durante series y descansos, con reanudación automática tras `visibilitychange`.
+  - **Respuesta Háptica:** Micro-vibraciones táctiles (`navigator.vibrate`) en dispositivos compatibles al confirmar series y al finalizar el temporizador de descanso.
+  - **Banner Inteligente de Instalación:** Notificación inferior no invasiva (`pwaMobileBanner`) para navegadores móviles con persistencia en `localStorage` (7 días de gracia al descartar).
+  - **Detector de Conectividad en Vivo:** Notificación reactiva inmediata cuando se pierde o restablece la conexión a internet.
+  - Soporte de instalación universal para Android/Chrome/Edge y modal paso a paso para iOS Safari.
 - **Reactividad Ligera:** **Alpine.js** (`x-data`, `x-show`, `x-bind`, `x-cloak`) para evitar sobrecarga de frameworks SPA pesados.
 - **Gráficos:** **Chart.js** con tooltips estilizados y degradados transparentes.
 - **Audio:** `AudioContext` sintético del navegador (tonos sinusoidales puros a 440 Hz / 880 Hz) para avisos sonoros sin dependencias de archivos de audio externos.
