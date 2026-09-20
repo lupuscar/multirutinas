@@ -75,12 +75,16 @@ def crear_rutina_view(request):
                     reps = int(item.get('repeticiones_objetivo') or 10) if item.get('repeticiones_objetivo') else None
                     tiempo = int(item.get('tiempo_objetivo_segundos') or 0) if item.get('tiempo_objetivo_segundos') else None
 
+                    peso_raw = item.get('peso_objetivo')
+                    peso = float(peso_raw) if peso_raw not in (None, '', 'null') else None
+
                     RutinaEjercicio.objects.create(
                         rutina=rutina,
                         ejercicio_id=ejercicio_id,
                         orden=index,
                         series_objetivo=series,
                         repeticiones_objetivo=reps,
+                        peso_objetivo=peso,
                         tiempo_objetivo_segundos=tiempo
                     )
 
@@ -171,12 +175,16 @@ def editar_rutina_view(request, rutina_id):
                 # Reemplazamos los ejercicios con la nueva configuración
                 rutina.rutinaejercicio_set.all().delete()
                 for index, item in enumerate(data.get('ejercicios', []), start=1):
+                    peso_raw = item.get('peso_objetivo')
+                    peso = float(peso_raw) if peso_raw not in (None, '', 'null') else None
+
                     RutinaEjercicio.objects.create(
                         rutina=rutina,
                         ejercicio_id=item.get('ejercicio_id'),
                         orden=index,
                         series_objetivo=int(item.get('series_objetivo') or 3),
                         repeticiones_objetivo=int(item.get('repeticiones_objetivo') or 10) if item.get('repeticiones_objetivo') else None,
+                        peso_objetivo=peso,
                         tiempo_objetivo_segundos=int(item.get('tiempo_objetivo_segundos') or 0) if item.get('tiempo_objetivo_segundos') else None
                     )
 
@@ -215,6 +223,7 @@ def editar_rutina_view(request, rutina_id):
             'grupo_muscular': re.ejercicio.get_grupo_muscular_display(),
             'series_objetivo': re.series_objetivo or 3,
             'repeticiones_objetivo': re.repeticiones_objetivo or 10,
+            'peso_objetivo': str(re.peso_objetivo) if re.peso_objetivo is not None else '',
             'tiempo_objetivo_segundos': re.tiempo_objetivo_segundos or 45,
         }
         for re in rutina.rutinaejercicio_set.select_related('ejercicio').order_by('orden')
@@ -352,19 +361,23 @@ def iniciar_rutina_view(request, rutina_id):
         for num_s in range(1, num_series + 1):
             serie_prev = next((s for s in historial if s.get('numero_serie') == num_s), None) if historial else None
 
+            peso_objetivo_str = str(item.peso_objetivo) if item.peso_objetivo is not None else ''
+            
             if serie_prev:
                 reps = serie_prev.get('repeticiones') or item.repeticiones_objetivo or 10
-                peso = serie_prev.get('peso_kg') or ''
+                peso = serie_prev.get('peso_kg') or peso_objetivo_str
                 tiempo = serie_prev.get('tiempo_segundos') or item.tiempo_objetivo_segundos or 45
             else:
                 reps = item.repeticiones_objetivo or 10
-                peso = ''
+                peso = peso_objetivo_str
                 tiempo = item.tiempo_objetivo_segundos or 45
 
             series_sugeridas.append({
                 'numero_serie': num_s,
                 'repeticiones': reps,
                 'peso_kg': peso,
+                'peso_anterior': serie_prev.get('peso_kg') if serie_prev else '',
+                'reps_anteriores': serie_prev.get('repeticiones') if serie_prev else None,
                 'tiempo_segundos': tiempo,
                 'completado': False
             })

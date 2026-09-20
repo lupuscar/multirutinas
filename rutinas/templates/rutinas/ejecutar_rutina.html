@@ -75,10 +75,27 @@
                         <div class="p-3 rounded-2xl border transition-all duration-200"
                              :class="serie.completado ? 'bg-emerald-50/70 dark:bg-emerald-950/20 border-emerald-300 dark:border-emerald-800/60' : 'bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700'">
                             
+                            <!-- Barra superior contextual: Historial previo / Replicación -->
+                            <div class="flex items-center justify-between text-[11px] mb-2 px-1 pb-1 border-b border-gray-100 dark:border-gray-700/50"
+                                 x-show="(serie.peso_anterior || serie.reps_anteriores) && item.modalidad !== 'TIEMPO'">
+                                <button type="button" @click="aplicarValoresPrevios(item, serie)" 
+                                        class="text-[10px] text-brand-light font-bold hover:underline flex items-center space-x-1"
+                                        title="Toca para cargar los datos de tu última sesión">
+                                    <i class="fa-solid fa-clock-rotate-left text-[9px]"></i>
+                                    <span>Anterior: <strong x-text="serie.peso_anterior ? serie.peso_anterior + ' kg' : 'Corporal'"></strong> <span x-show="serie.reps_anteriores" x-text="'× ' + serie.reps_anteriores + ' reps'"></span></span>
+                                </button>
+                                <button type="button" @click="replicarSerie(item, serie)" 
+                                        class="text-[10px] text-gray-400 hover:text-brand-light font-semibold flex items-center space-x-1"
+                                        title="Copiar este peso y repeticiones a las series siguientes">
+                                    <i class="fa-solid fa-copy text-[9px]"></i>
+                                    <span>Copiar a siguientes</span>
+                                </button>
+                            </div>
+
                             <div class="flex items-center justify-between gap-2">
                                 
                                 <!-- Número de Serie -->
-                                <div class="w-8 text-center">
+                                <div class="w-8 text-center shrink-0">
                                     <span class="font-black text-sm" 
                                           :class="serie.completado ? 'text-emerald-600 dark:text-emerald-400' : 'text-gray-400'"
                                           x-text="'S' + serie.numero_serie"></span>
@@ -90,21 +107,26 @@
                                         
                                         <!-- Peso (kg) con botones rápidos táctiles -->
                                         <div class="flex items-center bg-gray-50 dark:bg-gray-900/60 rounded-xl p-1 border border-gray-200/80 dark:border-gray-700/60">
-                                            <button type="button" @click="ajustarValor(serie, 'peso_kg', -2.5)" 
+                                            <button type="button" @click="ajustarValor(item, serie, 'peso_kg', -5)" 
+                                                    class="w-6 h-8 rounded-lg text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 font-bold text-[10px] flex items-center justify-center active:scale-95" title="-5 kg">-5</button>
+                                            <button type="button" @click="ajustarValor(item, serie, 'peso_kg', -1)" 
                                                     class="w-7 h-8 rounded-lg bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 font-bold text-xs shadow-xs hover:bg-gray-100 flex items-center justify-center active:scale-95">-</button>
                                             <div class="flex-1 text-center px-1">
                                                 <input type="number" step="0.5" x-model="serie.peso_kg" placeholder="0" 
+                                                       @input="autopropagarSiAplica(item, serie)"
                                                        @change="guardarSerie(item, serie)"
                                                        class="w-full text-center font-black text-sm text-gray-900 dark:text-white bg-transparent outline-none">
                                                 <span class="block text-[9px] text-gray-400 uppercase font-bold -mt-1">kg</span>
                                             </div>
-                                            <button type="button" @click="ajustarValor(serie, 'peso_kg', 2.5)" 
+                                            <button type="button" @click="ajustarValor(item, serie, 'peso_kg', 1)" 
                                                     class="w-7 h-8 rounded-lg bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 font-bold text-xs shadow-xs hover:bg-gray-100 flex items-center justify-center active:scale-95">+</button>
+                                            <button type="button" @click="ajustarValor(item, serie, 'peso_kg', 5)" 
+                                                    class="w-6 h-8 rounded-lg text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 font-bold text-[10px] flex items-center justify-center active:scale-95" title="+5 kg">+5</button>
                                         </div>
 
                                         <!-- Repeticiones con botones rápidos táctiles -->
                                         <div class="flex items-center bg-gray-50 dark:bg-gray-900/60 rounded-xl p-1 border border-gray-200/80 dark:border-gray-700/60">
-                                            <button type="button" @click="ajustarValor(serie, 'repeticiones', -1)" 
+                                            <button type="button" @click="ajustarValor(item, serie, 'repeticiones', -1)" 
                                                     class="w-7 h-8 rounded-lg bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 font-bold text-xs shadow-xs hover:bg-gray-100 flex items-center justify-center active:scale-95">-</button>
                                             <div class="flex-1 text-center px-1">
                                                 <input type="number" x-model.number="serie.repeticiones" placeholder="10" 
@@ -112,7 +134,7 @@
                                                        class="w-full text-center font-black text-sm text-gray-900 dark:text-white bg-transparent outline-none">
                                                 <span class="block text-[9px] text-gray-400 uppercase font-bold -mt-1">reps</span>
                                             </div>
-                                            <button type="button" @click="ajustarValor(serie, 'repeticiones', 1)" 
+                                            <button type="button" @click="ajustarValor(item, serie, 'repeticiones', 1)" 
                                                     class="w-7 h-8 rounded-lg bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 font-bold text-xs shadow-xs hover:bg-gray-100 flex items-center justify-center active:scale-95">+</button>
                                         </div>
 
@@ -307,15 +329,59 @@ function modoGym() {
             this.guardarSerie(item, serie);
         },
 
-        ajustarValor(serie, campo, delta) {
+        ajustarValor(item, serie, campo, delta) {
             let val = parseFloat(serie[campo]) || 0;
             val = Math.max(0, val + delta);
-            // Redondear a 2 decimales si es peso
+            // Redondear a 1 decimal si es peso
             if (campo === 'peso_kg') {
                 serie[campo] = Math.round(val * 10) / 10;
+                this.autopropagarSiAplica(item, serie);
             } else {
                 serie[campo] = Math.round(val);
             }
+            if (item) {
+                this.guardarSerie(item, serie);
+            }
+        },
+
+        autopropagarSiAplica(item, serie) {
+            if (!item || !item.series_sugeridas) return;
+            const index = item.series_sugeridas.indexOf(serie);
+            if (index === -1) return;
+
+            const nuevoPeso = serie.peso_kg;
+            for (let i = index + 1; i < item.series_sugeridas.length; i++) {
+                const sig = item.series_sugeridas[i];
+                if (!sig.completado && (!sig.peso_kg || sig.peso_kg === '0' || sig.peso_kg === 0)) {
+                    sig.peso_kg = nuevoPeso;
+                }
+            }
+        },
+
+        replicarSerie(item, serie) {
+            if (!item || !item.series_sugeridas) return;
+            const index = item.series_sugeridas.indexOf(serie);
+            if (index === -1) return;
+
+            for (let i = index + 1; i < item.series_sugeridas.length; i++) {
+                const sig = item.series_sugeridas[i];
+                if (!sig.completado) {
+                    sig.peso_kg = serie.peso_kg;
+                    sig.repeticiones = serie.repeticiones;
+                    this.guardarSerie(item, sig);
+                }
+            }
+        },
+
+        aplicarValoresPrevios(item, serie) {
+            if (serie.peso_anterior !== undefined && serie.peso_anterior !== '') {
+                serie.peso_kg = serie.peso_anterior;
+            }
+            if (serie.reps_anteriores !== undefined && serie.reps_anteriores !== null) {
+                serie.repeticiones = serie.reps_anteriores;
+            }
+            this.autopropagarSiAplica(item, serie);
+            this.guardarSerie(item, serie);
         },
 
         agregarSerieExtra(item) {

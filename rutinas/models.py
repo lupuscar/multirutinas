@@ -96,6 +96,14 @@ class RutinaEjercicio(models.Model):
     orden = models.PositiveIntegerField(default=1, help_text="Orden en el que se realiza el ejercicio")
     series_objetivo = models.PositiveIntegerField(default=3, blank=True, null=True)
     repeticiones_objetivo = models.PositiveIntegerField(default=10, blank=True, null=True)
+    peso_objetivo = models.DecimalField(
+        max_digits=5, 
+        decimal_places=2, 
+        null=True, 
+        blank=True, 
+        verbose_name="Peso objetivo (kg)", 
+        help_text="Carga en kg planificada para este ejercicio (dejar en blanco para peso corporal o libre)"
+    )
     tiempo_objetivo_segundos = models.PositiveIntegerField(blank=True, null=True, help_text="Tiempo objetivo en segundos (ej. 45 para plancha)")
 
 

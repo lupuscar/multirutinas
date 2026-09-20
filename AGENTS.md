@@ -52,9 +52,9 @@ Este documento sirve como **memoria persistente y guía contextual** de **Multir
   - `lista_dias_numeros`: Propiedad que devuelve lista de enteros `[1, 4]`.
   - `badges_dias`: Propiedad estructurada con `num`, `corto` y `completo` para badges en UI.
   - `toca_hoy`: Determina si hoy (`timezone.now().date().weekday()`) toca entrenar esta rutina.
-- **`RutinaEjercicio`:** Tabla intermedia ordenable con `series_objetivo`, `repeticiones_objetivo` o `tiempo_objetivo_segundos`.
-- **Modo Gym (`ejecutar_rutina.html`):** Interfaz en vivo con llamadas a `guardar_serie_ajax`, timers de descanso y audio synth.
-- **Formulario Reactivo (`form_rutina.html`):** Alpine.js controla la selección interactiva de los 7 días de la semana.
+- **`RutinaEjercicio`:** Tabla intermedia ordenable con `series_objetivo`, `repeticiones_objetivo`, `peso_objetivo` (kg opcional) o `tiempo_objetivo_segundos`.
+- **Modo Gym (`ejecutar_rutina.html`):** Interfaz en vivo con llamadas a `guardar_serie_ajax`, autopropagación inteligente de pesos a series siguientes, carga de valores de la última sesión con 1 toque, steppers ágiles (+/- 5kg), timers de descanso y audio synth.
+- **Formulario Reactivo (`form_rutina.html`):** Alpine.js controla la selección interactiva de los 7 días de la semana y la configuración de 3 columnas (Series x Reps @ Peso kg) con steppers y chips rápidos.
 
 ### `dashboard` (Centro de Mando Analítico)
 - **Rachas y Calendario:** Algoritmo que calcula semanas continuas entrenando (`racha_semanas`) y desglose Lunes-Domingo de la semana en curso.
@@ -75,7 +75,7 @@ El entorno virtual se encuentra en `.venv`. Comandos ejecutables:
 # Aplicar migraciones pendientes
 .venv/bin/python manage.py migrate
 
-# Ejecutar la suite completa de pruebas unitarias (100% pasando, 64 tests)
+# Ejecutar la suite completa de pruebas unitarias (100% pasando, 67 tests)
 .venv/bin/python manage.py test core.tests users.tests dashboard.tests ejercicios.tests rutinas.tests
 
 # Sincronizar catálogo oficial de ejercicios predeterminados (+52 ejercicios)

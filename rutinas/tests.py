@@ -262,3 +262,72 @@ class RutinaAppTests(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, '¡Toca hoy!')
 
+    def test_crear_rutina_con_peso_objetivo(self):
+        """Verifica que al crear una rutina se guarde el peso objetivo planificado"""
+        payload = {
+            'nombre': 'Rutina Con Cargas',
+            'descripcion': 'Fuerza hipertrofia',
+            'ejercicios': [
+                {
+                    'ejercicio_id': self.ejercicio_peso.id,
+                    'series_objetivo': 4,
+                    'repeticiones_objetivo': 8,
+                    'peso_objetivo': 65.5
+                }
+            ]
+        }
+        response = self.client.post(
+            reverse('rutinas:crear_rutina'),
+            data=json.dumps(payload),
+            content_type='application/json'
+        )
+        self.assertEqual(response.status_code, 200)
+        rutina_creada = Rutina.objects.filter(nombre='Rutina Con Cargas').first()
+        self.assertIsNotNone(rutina_creada)
+        re = rutina_creada.rutinaejercicio_set.first()
+        self.assertEqual(float(re.peso_objetivo), 65.5)
+
+    def test_editar_rutina_actualiza_peso_objetivo(self):
+        """Verifica que al editar una rutina se persista la modificación del peso objetivo"""
+        payload = {
+            'nombre': 'Torso Actualizado',
+            'descripcion': 'Incremento de cargas',
+            'ejercicios': [
+                {
+                    'ejercicio_id': self.ejercicio_peso.id,
+                    'series_objetivo': 3,
+                    'repeticiones_objetivo': 10,
+                    'peso_objetivo': 70.0
+                }
+            ]
+        }
+        response = self.client.post(
+            reverse('rutinas:editar_rutina', args=[self.rutina.id]),
+            data=json.dumps(payload),
+            content_type='application/json'
+        )
+        self.assertEqual(response.status_code, 200)
+        self.rutina.refresh_from_db()
+        re = self.rutina.rutinaejercicio_set.filter(ejercicio=self.ejercicio_peso).first()
+        self.assertEqual(float(re.peso_objetivo), 70.0)
+
+    def test_iniciar_rutina_precarga_peso_objetivo_e_historial(self):
+        """Verifica que el Modo Gym inicialice las series con el peso objetivo o datos históricos"""
+        # Configuramos peso objetivo en la rutina
+        re_peso = self.rutina.rutinaejercicio_set.get(ejercicio=self.ejercicio_peso)
+        re_peso.peso_objetivo = 55.0
+        re_peso.save()
+
+        # Caso A: Sin historial previo -> Las series deben sugerir 55.0 kg
+        res = self.client.get(reverse('rutinas:iniciar_rutina', args=[self.rutina.id]))
+        self.assertEqual(res.status_code, 200)
+        self.assertContains(res, '55.0')
+
+        # Caso B: Con historial previo de 60 kg -> Debe sugerir 60 kg y ofrecer peso anterior
+        reg = RegistroEjercicio.objects.create(usuario=self.user, ejercicio=self.ejercicio_peso)
+        Serie.objects.create(registro=reg, numero_serie=1, repeticiones=8, peso_kg=60.0)
+
+        res_con_historial = self.client.get(reverse('rutinas:iniciar_rutina', args=[self.rutina.id]))
+        self.assertEqual(res_con_historial.status_code, 200)
+        self.assertContains(res_con_historial, '60.0')
+
