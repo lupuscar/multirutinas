@@ -1,6 +1,7 @@
 {% extends 'base.html' %}
+{% load static %}
 
-{% block title %}Iniciar Sesión | FitApp{% endblock %}
+{% block title %}Iniciar Sesión | OPTIFIT{% endblock %}
 
 {% block content %}
 <div class="max-w-md mx-auto my-8 sm:my-14">
@@ -9,9 +10,8 @@
         class="bg-white dark:bg-gray-800 p-8 rounded-3xl shadow-sm border border-gray-100 dark:border-gray-700/80 transition-colors duration-300">
 
         <div class="text-center mb-6">
-            <div
-                class="w-14 h-14 rounded-2xl bg-brand-light/10 text-brand-light flex items-center justify-center mx-auto mb-3 text-2xl font-bold">
-                <i class="fa-solid fa-dumbbell"></i>
+            <div class="p-3 bg-gray-950 rounded-2xl inline-block mb-4 shadow-md border border-gray-800">
+                <img src="{% static 'img/logo.png' %}" alt="OPTIFIT" class="h-10 w-auto object-contain">
             </div>
             <h1 class="text-2xl font-black text-gray-900 dark:text-white">Bienvenido</h1>
             <p class="text-xs sm:text-sm text-gray-500 dark:text-gray-400 mt-1">Inicia sesión para registrar tu

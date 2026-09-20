@@ -1,6 +1,7 @@
 {% extends 'base.html' %}
+{% load static %}
 
-{% block title %}Mi Dashboard y Progreso | FitApp{% endblock %}
+{% block title %}Mi Dashboard y Progreso | OPTIFIT{% endblock %}
 
 {% block content %}
 <!-- Chart.js CDN -->
@@ -517,7 +518,7 @@
             
             <div class="flex items-center justify-between">
                 <h3 class="text-lg font-black text-gray-900 dark:text-white flex items-center">
-                    <i class="fa-solid fa-award text-brand-light mr-2"></i> Tu Tarjeta de Logros FitApp
+                    <i class="fa-solid fa-award text-brand-light mr-2"></i> Tu Tarjeta de Logros OPTIFIT
                 </h3>
                 <button type="button" @click="modalCompartir = false" class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200">
                     <i class="fa-solid fa-xmark text-lg"></i>
@@ -525,13 +526,11 @@
             </div>
 
             <!-- Tarjeta visual descargable / compartible -->
-            <div id="tarjetaLogros" class="p-6 rounded-3xl bg-gradient-to-br from-indigo-950 via-slate-900 to-indigo-900 text-white shadow-xl space-y-4 border border-indigo-500/20">
+            <div id="tarjetaLogros" class="p-6 rounded-3xl bg-gradient-to-br from-gray-950 via-slate-900 to-gray-950 text-white shadow-xl space-y-4 border border-gray-700/60">
                 <div class="flex items-center justify-between">
-                    <div class="flex items-center space-x-2">
-                        <span class="w-8 h-8 rounded-xl bg-brand-light flex items-center justify-center text-white font-black text-sm">
-                            <i class="fa-solid fa-dumbbell"></i>
-                        </span>
-                        <span class="font-black text-base tracking-wider">FIT<span class="text-brand-light">APP</span></span>
+                    <div class="flex items-center space-x-2.5">
+                        <img src="{% static 'img/logo_icon.png' %}" alt="OPTIFIT" class="w-8 h-8 object-contain">
+                        <span class="font-black text-base tracking-wider text-white">OPTI<span class="text-brand-light">FIT</span></span>
                     </div>
                     <span class="text-[11px] px-2.5 py-0.5 rounded-full bg-white/10 text-amber-300 font-bold">
                         🔥 {{ racha_semanas }} sem. racha
@@ -540,7 +539,7 @@
 
                 <div>
                     <h4 class="text-xl font-black">{{ user.get_full_name|default:user.username }}</h4>
-                    <p class="text-xs text-indigo-200">Atleta en FitApp • {{ dias_entrenados_mes }} días entrenados este mes</p>
+                    <p class="text-xs text-gray-400">Atleta en OPTIFIT • {{ dias_entrenados_mes }} días entrenados este mes</p>
                 </div>
 
                 <div class="grid grid-cols-3 gap-2 pt-2 border-t border-white/10 text-center">

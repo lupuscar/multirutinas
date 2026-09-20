@@ -102,10 +102,18 @@ El entorno virtual se encuentra en `.venv`. Comandos ejecutables:
 
 ---
 
-## 🎨 4. Convenciones de Frontend y Estilo
+## 🎨 4. Convenciones de Frontend, Branding y Estilo
 
-- **Diseño:** Tailwind CSS + Bootstrap / AdminLTE modificado con tema oscuro premium (`brand-dark: #0f172a`, `brand-light: #6366f1`, acentos esmeralda y ámbar).
-- **Reactividad Ligera:** Se utiliza **Alpine.js** (`x-data`, `x-show`, `x-bind`, `x-cloak`) para evitar sobrecarga de frameworks pesados.
+- **Branding Oficial:** **OPTIFIT** (*"Equipamiento para tu mejor versión"*). Recursos en `static/img/logo.png` (logo completo horizontal) y `static/img/logo_icon.png` (emblema de runner para sidebar colapsado y avatares).
+- **Modo Oscuro por Defecto:** La plataforma abre en modo oscuro de forma predeterminada mediante comprobación condicional en `<html>` (`class="{% if request.COOKIES.theme != 'light' %}dark{% endif %}"`) y script anti-parpadeo (*Zero-FOUC*) en `<head>`.
+- **Sistema Multitema Dinámico (6 Paletas Deportivas):**
+  - Controlado por el atributo `[data-theme="..."]` en la raíz `<html>` y variables CSS en `tailwind.config` (`var(--brand-light)` y `var(--brand-dark)`).
+  - Paletas disponibles: `lime` (OptiFit Lime Oficial `#84cc16`, por defecto), `cyan` (Cyber Cyan `#06b6d4`), `indigo` (Indigo Power `#6366f1`), `emerald` (Emerald Energy `#10b981`), `amber` (Volcano Amber `#f59e0b`), `crimson` (Crimson Fury `#f43f5e`).
+  - Sincronización instantánea mediante eventos personalizados JS (`theme-palette-changed`, `theme-mode-changed`) y persistencia dual en `localStorage` + `cookies`.
+- **Selectores de Apariencia:**
+  - Pestaña táctil **🎨 Tema & Apariencia** en el perfil de usuario (`/usuario/perfil/?tab=apariencia`) con vista previa en vivo de componentes.
+  - Dropdown interactivo de acceso rápido en la cabecera global (`templates/base.html`).
+- **Reactividad Ligera:** **Alpine.js** (`x-data`, `x-show`, `x-bind`, `x-cloak`) para evitar sobrecarga de frameworks SPA pesados.
 - **Gráficos:** **Chart.js** con tooltips estilizados y degradados transparentes.
 - **Audio:** `AudioContext` sintético del navegador (tonos sinusoidales puros a 440 Hz / 880 Hz) para avisos sonoros sin dependencias de archivos de audio externos.
 
