@@ -60,6 +60,32 @@ class Ejercicio(models.Model):
     @property
     def icono(self):
         """Devuelve el icono FontAwesome más representativo para este tipo de ejercicio"""
+        nombre_lower = (self.nombre or '').lower()
+
+        # Detección contextual por palabras clave
+        if any(w in nombre_lower for w in ['bici', 'ciclismo', 'spinning']):
+            return 'fa-solid fa-person-biking'
+        if any(w in nombre_lower for w in ['cinta', 'correr', 'running', 'senderismo', 'caminata', 'hiking']):
+            return 'fa-solid fa-person-running'
+        if any(w in nombre_lower for w in ['pádel', 'padel', 'tenis']):
+            return 'fa-solid fa-table-tennis-paddle-ball'
+        if any(w in nombre_lower for w in ['fútbol', 'futbol']):
+            return 'fa-solid fa-futbol'
+        if any(w in nombre_lower for w in ['baloncesto', 'basket']):
+            return 'fa-solid fa-basketball'
+        if any(w in nombre_lower for w in ['danza', 'baile']):
+            return 'fa-solid fa-person-dancing'
+        if any(w in nombre_lower for w in ['yoga', 'movilidad', 'estiramiento', 'flexibilidad']):
+            return 'fa-solid fa-spa'
+        if any(w in nombre_lower for w in ['nadar', 'natación', 'swimming']):
+            return 'fa-solid fa-person-swimming'
+        if any(w in nombre_lower for w in ['comba', 'cuerda']):
+            return 'fa-solid fa-bolt'
+        if any(w in nombre_lower for w in ['escaladora', 'escalera', 'stairmaster']):
+            return 'fa-solid fa-stairs'
+        if any(w in nombre_lower for w in ['remo ergómetro', 'remo indoor']):
+            return 'fa-solid fa-water'
+
         iconos = {
             'DEP': 'fa-solid fa-table-tennis-paddle-ball',
             'DAN': 'fa-solid fa-person-dancing',
@@ -67,7 +93,7 @@ class Ejercicio(models.Model):
             'CAR': 'fa-solid fa-heart-pulse',
             'FLL': 'fa-solid fa-spa',
             'CAL': 'fa-solid fa-person-walking',
-            'MAQ': 'fa-solid fa-dumbbell',
+            'MAQ': 'fa-solid fa-gears',
             'LIB': 'fa-solid fa-dumbbell',
         }
         return iconos.get(self.tipo, 'fa-solid fa-stopwatch' if self.modalidad == 'TIEMPO' else 'fa-solid fa-dumbbell')

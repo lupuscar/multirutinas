@@ -6,9 +6,11 @@ from django.views.decorators.http import require_POST
 from django.contrib.auth.decorators import login_required
 from django.db import models, transaction
 from django.contrib import messages
+from django.utils import timezone
 
 from .models import Rutina, RutinaEjercicio
 from ejercicios.models import Ejercicio, RegistroEjercicio, Serie
+from core.models import ConfiguracionSitio
 
 
 # =====================================================================
@@ -267,6 +269,10 @@ def crear_ejercicio_rapido_ajax(request):
     del móvil y agregarlo inmediatamente a su rutina.
     """
     try:
+        config = ConfiguracionSitio.get_config()
+        if not config.usuarios_pueden_crear_ejercicios and not (request.user.is_staff or request.user.is_superuser):
+            return JsonResponse({'status': 'error', 'message': 'La creación de ejercicios personalizados está desactivada por el administrador.'}, status=403)
+
         data = json.loads(request.body)
         nombre = data.get('nombre', '').strip()
         modalidad = data.get('modalidad', 'REPS_PESO')
@@ -398,7 +404,7 @@ def guardar_serie_ajax(request):
         ejercicio_obj = get_object_or_404(Ejercicio, id=ejercicio_id)
 
         # Buscamos o creamos el registro general de la sesión de hoy
-        hoy = date.today()
+        hoy = timezone.now().date()
         registro, _ = RegistroEjercicio.objects.get_or_create(
             usuario=request.user,
             ejercicio=ejercicio_obj,

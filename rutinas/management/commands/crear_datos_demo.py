@@ -3,6 +3,7 @@ from decimal import Decimal
 from django.core.management.base import BaseCommand
 from django.contrib.auth import get_user_model
 from django.utils import timezone
+from django.db import models
 
 from ejercicios.models import Ejercicio, RegistroEjercicio, Serie
 from rutinas.models import Rutina, RutinaEjercicio
@@ -44,29 +45,35 @@ class Command(BaseCommand):
 
         # 1. Asegurar catálogo de Ejercicios
         ejercicios_def = [
-            {'nombre': 'Chest Press', 'grupo': 'PEC', 'tipo': 'MAQ', 'mod': 'REPS_PESO'},
-            {'nombre': 'Pec Fly', 'grupo': 'PEC', 'tipo': 'MAQ', 'mod': 'REPS_PESO'},
-            {'nombre': 'Leg Press', 'grupo': 'PIE', 'tipo': 'MAQ', 'mod': 'REPS_PESO'},
-            {'nombre': 'Leg Extensions', 'grupo': 'PIE', 'tipo': 'MAQ', 'mod': 'REPS_PESO'},
-            {'nombre': 'Biceps Curl', 'grupo': 'BRA', 'tipo': 'LIB', 'mod': 'REPS_PESO'},
-            {'nombre': 'Triceps', 'grupo': 'BRA', 'tipo': 'LIB', 'mod': 'REPS_PESO'},
-            {'nombre': 'Jalón al Pecho', 'grupo': 'ESP', 'tipo': 'MAQ', 'mod': 'REPS_PESO'},
-            {'nombre': 'Remo con Mancuerna', 'grupo': 'ESP', 'tipo': 'LIB', 'mod': 'REPS_PESO'},
-            {'nombre': 'Plancha Abdominal', 'grupo': 'COR', 'tipo': 'CAL', 'mod': 'TIEMPO'},
+            {'nombre': 'Press de Pecho en Máquina (Chest Press)', 'alias': 'Chest Press', 'grupo': 'PEC', 'tipo': 'MAQ', 'mod': 'REPS_PESO'},
+            {'nombre': 'Contractora de Pecho / Pec Deck (Aperturas)', 'alias': 'Pec Fly', 'grupo': 'PEC', 'tipo': 'MAQ', 'mod': 'REPS_PESO'},
+            {'nombre': 'Prensa de Piernas (Leg Press)', 'alias': 'Leg Press', 'grupo': 'PIE', 'tipo': 'MAQ', 'mod': 'REPS_PESO'},
+            {'nombre': 'Extensión de Cuádriceps (Leg Extension)', 'alias': 'Leg Extensions', 'grupo': 'PIE', 'tipo': 'MAQ', 'mod': 'REPS_PESO'},
+            {'nombre': 'Curl de Bíceps en Polea / Máquina Scott', 'alias': 'Biceps Curl', 'grupo': 'BRA', 'tipo': 'MAQ', 'mod': 'REPS_PESO'},
+            {'nombre': 'Extensión de Tríceps en Polea (Triceps Pushdown)', 'alias': 'Triceps', 'grupo': 'BRA', 'tipo': 'MAQ', 'mod': 'REPS_PESO'},
+            {'nombre': 'Jalón al Pecho en Polea (Lat Pulldown)', 'alias': 'Jalón al Pecho', 'grupo': 'ESP', 'tipo': 'MAQ', 'mod': 'REPS_PESO'},
+            {'nombre': 'Remo con Mancuerna a una Mano', 'alias': 'Remo con Mancuerna', 'grupo': 'ESP', 'tipo': 'LIB', 'mod': 'REPS_PESO'},
+            {'nombre': 'Plancha Abdominal Isométrica (Plank)', 'alias': 'Plancha Abdominal', 'grupo': 'COR', 'tipo': 'CAL', 'mod': 'TIEMPO'},
         ]
 
         ejercicios_dict = {}
         for ed in ejercicios_def:
-            ej, _ = Ejercicio.objects.get_or_create(
-                nombre=ed['nombre'],
-                defaults={
-                    'grupo_muscular': ed['grupo'],
-                    'tipo': ed['tipo'],
-                    'modalidad': ed['mod'],
-                    'definicion': f"Técnica enfocada para el trabajo de {ed['nombre']}.",
-                }
-            )
+            ej = Ejercicio.objects.filter(creado_por=None).filter(
+                models.Q(nombre=ed['nombre']) | models.Q(nombre=ed['alias'])
+            ).first()
+
+            if not ej:
+                ej, _ = Ejercicio.objects.get_or_create(
+                    nombre=ed['nombre'],
+                    defaults={
+                        'grupo_muscular': ed['grupo'],
+                        'tipo': ed['tipo'],
+                        'modalidad': ed['mod'],
+                        'definicion': f"Técnica enfocada para el trabajo de {ed['nombre']}.",
+                    }
+                )
             ejercicios_dict[ed['nombre']] = ej
+            ejercicios_dict[ed['alias']] = ej
 
         hoy = timezone.now().date()
 

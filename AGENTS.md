@@ -74,8 +74,14 @@ El entorno virtual se encuentra en `.venv`. Comandos ejecutables:
 # Aplicar migraciones pendientes
 .venv/bin/python manage.py migrate
 
-# Ejecutar la suite completa de pruebas unitarias (100% pasando, 59 tests)
+# Ejecutar la suite completa de pruebas unitarias (100% pasando, 62 tests)
 .venv/bin/python manage.py test core.tests users.tests dashboard.tests ejercicios.tests rutinas.tests
+
+# Sincronizar catálogo oficial de ejercicios predeterminados (+52 ejercicios)
+.venv/bin/python manage.py poblar_catalogo
+
+# Ejecutar auditoría integral de URLs, plantillas y base de datos
+.venv/bin/python manage.py auditar_sistema
 
 # Generar datos de prueba para el Dashboard (todas las cuentas o una específica)
 .venv/bin/python manage.py crear_datos_demo

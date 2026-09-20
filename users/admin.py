@@ -1,5 +1,6 @@
 from django.contrib import admin
 from django.utils.html import format_html
+from django.utils.safestring import mark_safe
 from django.urls import reverse
 from django.contrib.auth import get_user_model
 from django.contrib.auth.admin import UserAdmin as BaseUserAdmin
@@ -199,7 +200,7 @@ class LogActividadAdmin(admin.ModelAdmin):
         if obj.usuario:
             url = reverse('admin:auth_user_change', args=[obj.usuario.id])
             return format_html('<a href="{}" style="font-weight:600; color:#4f46e5;">{}</a>', url, obj.usuario.username)
-        return format_html('<span style="color:#9ca3af; font-style:italic;">Anónimo</span>')
+        return mark_safe('<span style="color:#9ca3af; font-style:italic;">Anónimo</span>')
 
     @admin.display(description="Método", ordering='metodo')
     def metodo_badge(self, obj):
@@ -224,4 +225,4 @@ class LogActividadAdmin(admin.ModelAdmin):
                 '<pre style="background:#111827; color:#f87171; padding:15px; border-radius:10px; font-size:11px; overflow-x:auto; font-family:monospace; line-height:1.4;">{}</pre>',
                 obj.traceback
             )
-        return format_html('<span style="color:#9ca3af;">Sin excepciones registradas.</span>')
+        return mark_safe('<span style="color:#9ca3af;">Sin excepciones registradas.</span>')

@@ -205,3 +205,47 @@ class EjerciciosAppTests(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, '1h 30m')
 
+    def test_catalogo_predeterminado_incluye_maquinas_calistenia_cinta_y_bici(self):
+        """Verifica que el catálogo predeterminado contiene las máquinas, calistenia, cinta y bici más comunes"""
+        self.client.login(username='carlos', password='password123')
+        response = self.client.get(reverse('ejercicios:ejercicios'))
+        self.assertEqual(response.status_code, 200)
+
+        ejercicios_esperados = [
+            'Prensa de Piernas (Leg Press)',
+            'Extensión de Cuádriceps (Leg Extension)',
+            'Dominadas Pronas (Pull-ups)',
+            'Fondos en Paralelas (Dips)',
+            'Correr en Cinta (Treadmill Running)',
+            'Correr al Aire Libre (Outdoor Running)',
+            'Bicicleta Estática / Ciclo Indoor (Spinning)',
+            'Ciclismo al Aire Libre',
+            'Press de Banca Plano con Barra',
+        ]
+        for ej_nombre in ejercicios_esperados:
+            ej = Ejercicio.objects.filter(nombre=ej_nombre, creado_por=None).first()
+            self.assertIsNotNone(ej, f"El ejercicio predeterminado '{ej_nombre}' no existe en el catálogo oficial.")
+
+    def test_iconos_inteligentes_asignados(self):
+        """Verifica que los iconos de FontAwesome se asignan contextualmente según la actividad"""
+        ej_cinta = Ejercicio.objects.filter(nombre='Correr en Cinta (Treadmill Running)').first()
+        if ej_cinta:
+            self.assertEqual(ej_cinta.icono, 'fa-solid fa-person-running')
+
+        ej_bici = Ejercicio.objects.filter(nombre='Bicicleta Estática / Ciclo Indoor (Spinning)').first()
+        if ej_bici:
+            self.assertEqual(ej_bici.icono, 'fa-solid fa-person-biking')
+
+        ej_prensa = Ejercicio.objects.filter(nombre='Prensa de Piernas (Leg Press)').first()
+        if ej_prensa:
+            self.assertEqual(ej_prensa.icono, 'fa-solid fa-gears')
+
+    def test_comando_poblar_catalogo(self):
+        """Verifica la ejecución del comando de gestión poblar_catalogo"""
+        from django.core.management import call_command
+        import io
+        out = io.StringIO()
+        call_command('poblar_catalogo', stdout=out)
+        self.assertIn("Catálogo oficial sincronizado con éxito", out.getvalue())
+
+

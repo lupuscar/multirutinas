@@ -100,7 +100,7 @@ class Profile(models.Model):
 
     @property
     def imc(self):
-        if self.peso and self.altura:
+        if self.peso and self.altura and self.altura > 0:
             altura_m = self.altura / 100
             return round(float(self.peso) / (altura_m ** 2), 2)
         return None
@@ -154,7 +154,7 @@ class LogActividad(models.Model):
         verbose_name="Usuario"
     )
     nivel = models.CharField(max_length=10, choices=NIVELES, default='INFO', verbose_name="Nivel")
-    tipo = models.CharField(max_length=20, choices=TIPOS, default='INFO', verbose_name="Tipo de Evento")
+    tipo = models.CharField(max_length=20, choices=TIPOS, default='OTRO', verbose_name="Tipo de Evento")
     ruta = models.CharField(max_length=255, blank=True, default='', verbose_name="Ruta / URL")
     metodo = models.CharField(max_length=10, blank=True, default='GET', verbose_name="Método HTTP")
     ip = models.GenericIPAddressField(null=True, blank=True, verbose_name="Dirección IP")
