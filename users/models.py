@@ -177,6 +177,7 @@ class LogActividad(models.Model):
         ('RUTINA_CREATE', 'Creación de rutina'),
         ('SERIE_LOG', 'Registro de serie en Modo Gym'),
         ('ERROR_500', 'Excepción 500 en servidor'),
+        ('RESET_DATOS', 'Restablecimiento de datos a cero'),
         ('OTRO', 'Otro evento'),
     ]
 

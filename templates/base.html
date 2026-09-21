@@ -65,6 +65,9 @@
     <!-- Alpine.js -->
     <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
 
+    <!-- Motor de Modo Offline y Sincronización Local OPTIFIT -->
+    <script src="{% static 'js/offline-sync.js' %}"></script>
+
     <style>
         [x-cloak] {
             display: none !important;
@@ -576,6 +579,49 @@
             </div>
         </main>
 
+        <!-- Indicador Flotante de Conectividad y Sincronización Offline -->
+        <div x-data="offlineSyncManager()" x-cloak class="fixed top-4 inset-x-4 z-50 pointer-events-none flex flex-col items-center space-y-2">
+            <!-- 1. Banner de Pérdida de Conexión -->
+            <div x-show="!online"
+                 x-transition:enter="transition ease-out duration-300 transform"
+                 x-transition:enter-start="-translate-y-4 opacity-0"
+                 x-transition:enter-end="translate-y-0 opacity-100"
+                 x-transition:leave="transition ease-in duration-200 transform"
+                 x-transition:leave-start="translate-y-0 opacity-100"
+                 x-transition:leave-end="-translate-y-4 opacity-0"
+                 class="pointer-events-auto bg-amber-500 text-gray-950 px-4 py-2 rounded-2xl shadow-xl text-xs font-black flex items-center space-x-2 border border-amber-400">
+                <i class="fa-solid fa-cloud-arrow-down text-sm"></i>
+                <span>Modo Sin Conexión activo • Entrenamientos guardados localmente</span>
+                <span x-show="pendingCount > 0" class="ml-1 px-2 py-0.5 bg-gray-950 text-amber-400 rounded-lg font-mono text-[11px]" x-text="pendingCount + ' por sincronizar'"></span>
+            </div>
+
+            <!-- 2. Toast de Sincronización en Proceso -->
+            <div x-show="syncingToast"
+                 x-transition:enter="transition ease-out duration-300 transform"
+                 x-transition:enter-start="-translate-y-4 opacity-0"
+                 x-transition:enter-end="translate-y-0 opacity-100"
+                 x-transition:leave="transition ease-in duration-200 transform"
+                 x-transition:leave-start="translate-y-0 opacity-100"
+                 x-transition:leave-end="-translate-y-4 opacity-0"
+                 class="pointer-events-auto bg-blue-600 text-white px-4 py-2 rounded-2xl shadow-xl text-xs font-bold flex items-center space-x-2 border border-blue-500">
+                <i class="fa-solid fa-rotate fa-spin text-sm"></i>
+                <span>Sincronizando entrenamientos con el servidor...</span>
+            </div>
+
+            <!-- 3. Toast de Éxito al Sincronizar -->
+            <div x-show="syncedToast"
+                 x-transition:enter="transition ease-out duration-300 transform"
+                 x-transition:enter-start="-translate-y-4 opacity-0"
+                 x-transition:enter-end="translate-y-0 opacity-100"
+                 x-transition:leave="transition ease-in duration-200 transform"
+                 x-transition:leave-start="translate-y-0 opacity-100"
+                 x-transition:leave-end="-translate-y-4 opacity-0"
+                 class="pointer-events-auto bg-emerald-600 text-white px-4 py-2.5 rounded-2xl shadow-xl text-xs font-bold flex items-center space-x-2 border border-emerald-500">
+                <i class="fa-solid fa-circle-check text-sm"></i>
+                <span x-text="'¡Sincronización completada! ' + (syncedCount > 0 ? syncedCount + ' series guardadas correctamente.' : 'Tus datos están al día.')"></span>
+            </div>
+        </div>
+
         <!-- Banner Flotante Inteligente de Instalación Móvil (PWA Mobile Banner) -->
         <div x-data="pwaMobileBanner()" x-cloak x-show="showBanner"
              x-transition:enter="transition ease-out duration-300 transform"
@@ -815,20 +861,48 @@
             };
         }
 
-        // Detector reactivo de conectividad a internet en vivo
-        function networkStatus() {
+        // Gestor reactivo de conectividad y sincronización offline
+        function offlineSyncManager() {
             return {
                 online: navigator.onLine,
                 reconnectedToast: false,
+                syncingToast: false,
+                syncedToast: false,
+                syncedCount: 0,
+                pendingCount: (window.OptiFitOffline ? window.OptiFitOffline.getPendingCount() : 0),
                 init() {
                     window.addEventListener('online', () => {
                         this.online = true;
                         this.reconnectedToast = true;
                         setTimeout(() => { this.reconnectedToast = false; }, 3500);
+                        if (window.OptiFitOffline && window.OptiFitOffline.getPendingCount() > 0) {
+                            window.OptiFitOffline.syncAll();
+                        }
                     });
                     window.addEventListener('offline', () => {
                         this.online = false;
                     });
+                    window.addEventListener('optifit-queue-updated', (e) => {
+                        this.pendingCount = e.detail ? e.detail.count : (window.OptiFitOffline ? window.OptiFitOffline.getPendingCount() : 0);
+                    });
+                    window.addEventListener('optifit-sync-started', () => {
+                        this.syncingToast = true;
+                    });
+                    window.addEventListener('optifit-sync-completed', (e) => {
+                        this.syncingToast = false;
+                        this.syncedToast = true;
+                        this.syncedCount = e.detail ? e.detail.count : 0;
+                        this.pendingCount = 0;
+                        setTimeout(() => { this.syncedToast = false; }, 4000);
+                    });
+                    window.addEventListener('optifit-sync-failed', () => {
+                        this.syncingToast = false;
+                    });
+                },
+                manualSync() {
+                    if (window.OptiFitOffline) {
+                        window.OptiFitOffline.syncAll();
+                    }
                 }
             };
         }

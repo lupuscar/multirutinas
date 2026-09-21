@@ -2,13 +2,14 @@ from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth import login, update_session_auth_hash, get_user_model
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
+from django.urls import reverse
 from django.db.models import Count
 from django.utils.http import urlsafe_base64_decode
 from django.utils.encoding import force_str
 
 from .models import Profile
 from .tokens import email_verification_token
-from .utils import registrar_log, enviar_correo_bienvenida, enviar_correo_activacion
+from .utils import registrar_log, enviar_correo_bienvenida, enviar_correo_activacion, resetear_datos_usuario
 from .forms import (
     RegistroUsuarioForm,
     UserUpdateForm,
@@ -16,7 +17,7 @@ from .forms import (
     CambioPasswordTailwindForm
 )
 from rutinas.models import Rutina
-from ejercicios.models import RegistroEjercicio, Serie
+from ejercicios.models import RegistroEjercicio, Serie, Ejercicio
 from core.models import ConfiguracionSitio
 
 User = get_user_model()
@@ -284,10 +285,32 @@ def perfil_view(request):
                 messages.warning(request, 'No se ha seleccionado ninguna imagen.')
                 return redirect('users:perfil')
 
+        elif action == 'resetear_datos':
+            confirmacion = request.POST.get('confirmacion', '').strip().upper()
+            pestaña_activa = 'seguridad'
+
+            if confirmacion != 'RESETEAR':
+                messages.error(
+                    request,
+                    "Para restablecer tus datos debes escribir exactamente la palabra 'RESETEAR' para confirmar."
+                )
+                return redirect(f"{reverse('users:perfil')}?tab=seguridad")
+
+            res = resetear_datos_usuario(usuario, ejecutado_por=usuario, request=request)
+            messages.success(
+                request,
+                f"✅ Se han restablecido tus datos a 0 correctamente. "
+                f"Se eliminaron {res['rutinas']} rutinas, {res['registros']} sesiones "
+                f"({res['series']} series) y {res['ejercicios_personalizados']} ejercicios personalizados. "
+                f"Tus datos de perfil y cuenta se mantienen intactos."
+            )
+            return redirect(f"{reverse('users:perfil')}?tab=seguridad")
+
     # Resumen de actividad deportiva
     total_rutinas = Rutina.objects.filter(usuario=usuario).count()
     total_dias_entrenados = RegistroEjercicio.objects.filter(usuario=usuario).values('fecha').distinct().count()
     total_series_hechas = Serie.objects.filter(registro__usuario=usuario).count()
+    total_ejercicios_personalizados = Ejercicio.objects.filter(creado_por=usuario).count()
     ultimo_registro = RegistroEjercicio.objects.filter(usuario=usuario).order_by('-fecha').first()
 
     context = {
@@ -299,6 +322,7 @@ def perfil_view(request):
         'total_rutinas': total_rutinas,
         'total_dias_entrenados': total_dias_entrenados,
         'total_series_hechas': total_series_hechas,
+        'total_ejercicios_personalizados': total_ejercicios_personalizados,
         'ultimo_registro': ultimo_registro,
     }
     return render(request, 'users/perfil.html', context)

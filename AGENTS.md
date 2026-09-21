@@ -35,12 +35,13 @@ Este documento sirve como **memoria persistente y guía contextual** de **Multir
   - `@property categoria_imc`: Clasificación dinámica del IMC (*Bajo peso*, *Peso normal*, *Sobrepeso*, *Obesidad*).
   - `@property icono_genero`: Ícono FontAwesome correspondiente al sexo / género (`fa-mars`, `fa-venus`, `fa-genderless`, `fa-venus-mars`).
 - **`LogActividad`:** Sistema de auditoría y captura de incidencias.
-  - Campos: `usuario`, `nivel` (INFO, WARNING, ERROR, CRITICAL), `tipo` (LOGIN, LOGOUT, LOGIN_FAIL, REGISTRO, PERFIL_EDIT, PASSWORD_CHANGE, ERROR_500), `ruta`, `metodo`, `ip`, `user_agent`, `mensaje`, `traceback`, `creado_en`.
+  - Campos: `usuario`, `nivel` (INFO, WARNING, ERROR, CRITICAL), `tipo` (LOGIN, LOGOUT, LOGIN_FAIL, REGISTRO, PERFIL_EDIT, PASSWORD_CHANGE, ERROR_500, RESET_DATOS), `ruta`, `metodo`, `ip`, `user_agent`, `mensaje`, `traceback`, `creado_en`.
 - **`middleware.py` (`AuditAndErrorLoggingMiddleware`):** Captura en `process_exception` cualquier error 500 no controlado y registra la traza completa.
 - **`signals.py`:** Crea automáticamente el `Profile` al registrarse un usuario y registra eventos de autenticación.
 - **`backends.py` (`EmailOrUsernameModelBackend`):** Permite autenticación insensible a mayúsculas tanto por correo electrónico como por nombre de usuario tradicional.
 - **`tokens.py` (`EmailVerificationTokenGenerator`):** Genera tokens seguros de un solo uso vinculados al estado `is_active` y al email.
-- **`utils.py`:** Funciones `get_client_ip(request)`, `registrar_log(...)` (tolerante a fallos), `enviar_correo_activacion(user, request)` y `enviar_correo_bienvenida(user, request)`.
+- **`utils.py`:** Funciones `get_client_ip(request)`, `registrar_log(...)` (tolerante a fallos), `enviar_correo_activacion(user, request)`, `enviar_correo_bienvenida(user, request)` y `resetear_datos_usuario(user, ejecutado_por, request)` (limpia a 0 rutinas, series y ejercicios conservando el perfil).
+- **Restablecimiento de Usuario a Cero:** Zona de Peligro en perfil (`/usuario/perfil/?tab=seguridad`) con modal de confirmación y palabra clave `RESETEAR`, así como acciones y vista individual en Django Admin (`/admin/auth/user/` y `/admin/users/profile/`).
 
 ### `ejercicios` (Catálogo y Tipos de Actividad)
 - **`Ejercicio`:**
@@ -64,6 +65,7 @@ Este documento sirve como **memoria persistente y guía contextual** de **Multir
   - `toca_hoy`: Determina si hoy (`timezone.now().date().weekday()`) toca entrenar esta rutina.
 - **`RutinaEjercicio`:** Tabla intermedia ordenable con `series_objetivo`, `repeticiones_objetivo`, `peso_objetivo` (kg opcional), `tiempo_objetivo_segundos` o `distancia_objetivo_km`.
 - **Modo Gym (`ejecutar_rutina.html`):** Interfaz en vivo con llamadas a `guardar_serie_ajax`, autopropagación inteligente de pesos a series siguientes, soporte de distancia en km con ritmo, modo minutos adaptativo para cardio/deportes ($\ge 5\text{ min}$), carga de valores de la última sesión con 1 toque, steppers ágiles (+/- 5kg), timers de descanso y audio synth.
+  - **Modo Offline & Sincronización en Segundo Plano (Offline-First):** Si se pierde la conexión o no hay cobertura en el gimnasio, las series completadas se encolan de inmediato en `localStorage` (`optifit_offline_series_queue`) marcándose visualmente con un distintivo ámbar (`cloud-arrow-down`). Al reconectarse a internet (o periódicamente cada 30s), se disparan eventos personalizados JS y se envían de forma atómica en un único lote al endpoint `/rutinas/serie/sincronizar-lote/` (`sincronizar_series_lote_ajax`), sin riesgo de perder repeticiones o cargas.
 - **Formulario Reactivo (`form_rutina.html`):** Alpine.js controla la selección interactiva de los 7 días de la semana y la configuración dinámica por modalidad (Series x Reps @ Peso kg, o Tiempo en min/seg, o Distancia en km) con steppers y chips rápidos.
 - **Recomendador Automático e Inteligente de Rutinas (`rutinas/recomendador.py`, `/rutinas/recomendador/`):**
   - Motor algorítmico deportivo que genera planes semanales estructurados cruzando: meta de días (2 a 6 días: *Full Body A/B*, *Push/Pull/Legs*, *Torso/Pierna*, *PPL x2*), objetivo (`HIP`, `DEF`, `FUE`, `SAL`, `RES`), nivel (`PR`, `IN`, `AV`), edad ($\ge 50$ años prioriza protección articular con máquinas/poleas y $+15\text{s}$ descanso) y género (en mujeres prioriza glúteos `GLU`, cadena posterior y core).
@@ -97,7 +99,7 @@ El entorno virtual se encuentra en `.venv`. Comandos ejecutables:
 # Aplicar migraciones pendientes
 .venv/bin/python manage.py migrate
 
-# Ejecutar la suite completa de pruebas unitarias (100% pasando, 95 tests)
+# Ejecutar la suite completa de pruebas unitarias (100% pasando, 104 tests)
 .venv/bin/python manage.py test core.tests users.tests dashboard.tests ejercicios.tests rutinas.tests
 
 # Sincronizar catálogo oficial de ejercicios predeterminados (+52 ejercicios)

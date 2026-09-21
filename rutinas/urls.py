@@ -17,5 +17,6 @@ urlpatterns = [
     # Endpoints AJAX para experiencia interactiva y en directo
     path('crear-ejercicio-ajax/', views.crear_ejercicio_rapido_ajax, name='crear_ejercicio_rapido_ajax'),
     path('guardar-serie-ajax/', views.guardar_serie_ajax, name='guardar_serie_ajax'),
+    path('serie/sincronizar-lote/', views.sincronizar_series_lote_ajax, name='sincronizar_series_lote_ajax'),
     path('finalizar-entrenamiento-ajax/', views.finalizar_entrenamiento_ajax, name='finalizar_entrenamiento_ajax'),
 ]

@@ -1,4 +1,4 @@
-const CACHE_NAME = 'optifit-pwa-v1';
+const CACHE_NAME = 'optifit-pwa-v2';
 const STATIC_ASSETS = [
   '/static/img/logo.png',
   '/static/img/logo_icon.png',
@@ -6,7 +6,9 @@ const STATIC_ASSETS = [
   '/static/img/pwa-icon-512.png',
   '/static/img/apple-touch-icon.png',
   '/static/img/favicon-32.png',
+  '/static/js/offline-sync.js',
   '/offline/',
+  '/rutinas/',
   'https://cdn.tailwindcss.com',
   'https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css',
   'https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js'

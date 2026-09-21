@@ -642,3 +642,124 @@ class RutinaAppTests(TestCase):
         self.assertIsNotNone(serie)
         self.assertEqual(serie.tiempo_segundos, 1500)  # 25 * 60 = 1500 segundos
 
+    # =========================================================================
+    # PRUEBAS DE MODO OFFLINE Y SINCRONIZACIÓN POR LOTE
+    # =========================================================================
+    def test_sincronizar_series_lote_ajax_exitoso(self):
+        """Verifica que sincronizar_series_lote_ajax guarde en un solo lote series de fuerza y tiempo/distancia"""
+        payload = {
+            'series': [
+                {
+                    'ejercicio_id': self.ejercicio_peso.id,
+                    'numero_serie': 1,
+                    'repeticiones': 12,
+                    'peso': 75.0,
+                    'rutina_nombre': 'Rutina Offline Test'
+                },
+                {
+                    'ejercicio_id': self.ejercicio_peso.id,
+                    'numero_serie': 2,
+                    'repeticiones': 10,
+                    'peso': 80.0,
+                    'rutina_nombre': 'Rutina Offline Test'
+                },
+                {
+                    'ejercicio_id': self.ejercicio_tiempo.id,
+                    'numero_serie': 1,
+                    'tiempo_minutos': 20,
+                    'distancia_km': 3.5,
+                    'rutina_nombre': 'Rutina Offline Test'
+                }
+            ]
+        }
+
+        response = self.client.post(
+            reverse('rutinas:sincronizar_series_lote_ajax'),
+            data=json.dumps(payload),
+            content_type='application/json'
+        )
+        self.assertEqual(response.status_code, 200)
+        data = response.json()
+        self.assertEqual(data['status'], 'success')
+        self.assertEqual(data['guardadas'], 3)
+        self.assertEqual(data['total'], 3)
+
+        # Comprobar registros y series creados
+        reg_peso = RegistroEjercicio.objects.filter(usuario=self.user, ejercicio=self.ejercicio_peso).first()
+        self.assertIsNotNone(reg_peso)
+        self.assertEqual(reg_peso.series_detalle.count(), 2)
+        s1 = reg_peso.series_detalle.get(numero_serie=1)
+        self.assertEqual(s1.repeticiones, 12)
+        self.assertEqual(float(s1.peso_kg), 75.0)
+
+        reg_tiempo = RegistroEjercicio.objects.filter(usuario=self.user, ejercicio=self.ejercicio_tiempo).first()
+        self.assertIsNotNone(reg_tiempo)
+        s_t1 = reg_tiempo.series_detalle.get(numero_serie=1)
+        self.assertEqual(s_t1.tiempo_segundos, 1200)  # 20 min * 60
+        self.assertEqual(float(s_t1.distancia_km), 3.5)
+
+    def test_sincronizar_series_lote_ajax_actualiza_existente(self):
+        """Verifica la idempotencia al sincronizar una serie que ya había sido creada"""
+        # Primera sincronización
+        payload_1 = {
+            'series': [
+                {
+                    'ejercicio_id': self.ejercicio_peso.id,
+                    'numero_serie': 1,
+                    'repeticiones': 8,
+                    'peso': 60.0
+                }
+            ]
+        }
+        res1 = self.client.post(
+            reverse('rutinas:sincronizar_series_lote_ajax'),
+            data=json.dumps(payload_1),
+            content_type='application/json'
+        )
+        self.assertEqual(res1.status_code, 200)
+
+        # Segunda sincronización con peso corregido en la misma serie
+        payload_2 = {
+            'series': [
+                {
+                    'ejercicio_id': self.ejercicio_peso.id,
+                    'numero_serie': 1,
+                    'repeticiones': 10,
+                    'peso': 65.0
+                }
+            ]
+        }
+        res2 = self.client.post(
+            reverse('rutinas:sincronizar_series_lote_ajax'),
+            data=json.dumps(payload_2),
+            content_type='application/json'
+        )
+        self.assertEqual(res2.status_code, 200)
+
+        reg = RegistroEjercicio.objects.get(usuario=self.user, ejercicio=self.ejercicio_peso)
+        self.assertEqual(reg.series_detalle.count(), 1)
+        serie = reg.series_detalle.first()
+        self.assertEqual(serie.repeticiones, 10)
+        self.assertEqual(float(serie.peso_kg), 65.0)
+
+    def test_sincronizar_series_lote_ajax_vacio_o_invalido(self):
+        """Verifica que una lista vacía o con datos faltantes responda de forma segura sin excepciones 500"""
+        # Lista vacía
+        res_vacio = self.client.post(
+            reverse('rutinas:sincronizar_series_lote_ajax'),
+            data=json.dumps({'series': []}),
+            content_type='application/json'
+        )
+        self.assertEqual(res_vacio.status_code, 200)
+        self.assertEqual(res_vacio.json()['guardadas'], 0)
+
+        # Ejercicio inexistente y datos corruptos ignorados de forma resiliente
+        res_invalido = self.client.post(
+            reverse('rutinas:sincronizar_series_lote_ajax'),
+            data=json.dumps({'series': [{'ejercicio_id': 99999, 'numero_serie': 1}]}),
+            content_type='application/json'
+        )
+        self.assertEqual(res_invalido.status_code, 200)
+        self.assertEqual(res_invalido.json()['guardadas'], 0)
+
+

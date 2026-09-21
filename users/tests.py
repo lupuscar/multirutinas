@@ -4,8 +4,11 @@ from django.urls import reverse
 from django.core import mail
 from django.utils.http import urlsafe_base64_encode
 from django.utils.encoding import force_bytes
-from users.models import Profile
+from users.models import Profile, LogActividad
 from users.tokens import email_verification_token
+from users.utils import resetear_datos_usuario
+from rutinas.models import Rutina, RutinaEjercicio
+from ejercicios.models import RegistroEjercicio, Serie, Ejercicio
 
 User = get_user_model()
 
@@ -411,4 +414,203 @@ class UsersAuthTests(TestCase):
         perfil.fecha_nacimiento = date(manana.year - 30, manana.month, manana.day)
         perfil.save()
         self.assertEqual(perfil.edad, 29)
+
+
+class UsersResetDatosTests(TestCase):
+    def setUp(self):
+        self.client = Client()
+        self.user = User.objects.create_user(
+            username='atleta_demo',
+            email='demo@fitapp.com',
+            password='Password123!',
+            first_name='Demo'
+        )
+        self.user.profile.peso = 75.5
+        self.user.profile.altura = 180
+        self.user.profile.genero = 'H'
+        self.user.profile.nivel = 'IN'
+        self.user.profile.objetivo = 'FUE'
+        self.user.profile.email_verificado = True
+        self.user.profile.save()
+
+        # Ejercicio estándar (no creado por el usuario)
+        self.ej_estandar = Ejercicio.objects.create(
+            nombre='Press de Banca Oficial',
+            grupo_muscular='PEC',
+            tipo='LIB',
+            modalidad='REPS_PESO'
+        )
+
+        # Ejercicio personalizado creado por el usuario
+        self.ej_personalizado = Ejercicio.objects.create(
+            nombre='Mi Ejercicio Casero',
+            grupo_muscular='BRA',
+            tipo='LIB',
+            modalidad='REPS_PESO',
+            creado_por=self.user
+        )
+
+        # Rutina del usuario
+        self.rutina = Rutina.objects.create(
+            usuario=self.user,
+            nombre='Rutina Pecho y Tríceps',
+            dias_semana='0,3'
+        )
+        RutinaEjercicio.objects.create(
+            rutina=self.rutina,
+            ejercicio=self.ej_estandar,
+            series_objetivo=4,
+            repeticiones_objetivo=10,
+            peso_objetivo=80
+        )
+
+        # Sesión y serie del usuario
+        self.registro = RegistroEjercicio.objects.create(
+            usuario=self.user,
+            ejercicio=self.ej_estandar,
+            etiqueta='Fuerza'
+        )
+        self.serie = Serie.objects.create(
+            registro=self.registro,
+            numero_serie=1,
+            repeticiones=10,
+            peso_kg=80
+        )
+
+    def test_resetear_datos_usuario_elimina_rutinas_y_registros_conservando_perfil(self):
+        """La función utilitaria elimina todo el historial deportivo y conserva el perfil."""
+        res = resetear_datos_usuario(self.user)
+        self.assertEqual(res['rutinas'], 1)
+        self.assertEqual(res['registros'], 1)
+        self.assertEqual(res['series'], 1)
+        self.assertEqual(res['ejercicios_personalizados'], 1)
+
+        # Verificar que el usuario y perfil siguen existiendo intactos
+        self.user.refresh_from_db()
+        self.user.profile.refresh_from_db()
+        self.assertEqual(self.user.username, 'atleta_demo')
+        self.assertEqual(float(self.user.profile.peso), 75.5)
+        self.assertEqual(self.user.profile.altura, 180)
+        self.assertEqual(self.user.profile.objetivo, 'FUE')
+
+        # Verificar que rutinas, registros y ejercicios personalizados se borraron
+        self.assertEqual(Rutina.objects.filter(usuario=self.user).count(), 0)
+        self.assertEqual(RegistroEjercicio.objects.filter(usuario=self.user).count(), 0)
+        self.assertEqual(Serie.objects.filter(registro__usuario=self.user).count(), 0)
+        self.assertEqual(Ejercicio.objects.filter(creado_por=self.user).count(), 0)
+
+        # Verificar que el ejercicio estándar oficial sigue existiendo
+        self.assertTrue(Ejercicio.objects.filter(pk=self.ej_estandar.pk).exists())
+
+        # Verificar log de auditoría RESET_DATOS
+        log = LogActividad.objects.filter(usuario=self.user, tipo='RESET_DATOS').first()
+        self.assertIsNotNone(log)
+        self.assertEqual(log.nivel, 'WARNING')
+        self.assertIn('restableció', log.mensaje)
+
+    def test_perfil_view_resetear_datos_requiere_confirmacion_exacta(self):
+        """Si no se escribe RESETEAR, la vista no elimina datos y muestra error."""
+        self.client.login(username='atleta_demo', password='Password123!')
+        response = self.client.post(reverse('users:perfil'), {
+            'action': 'resetear_datos',
+            'confirmacion': 'NO_ES_RESETEAR'
+        })
+        self.assertRedirects(response, f"{reverse('users:perfil')}?tab=seguridad")
+
+        # Nada se debió eliminar
+        self.assertEqual(Rutina.objects.filter(usuario=self.user).count(), 1)
+        self.assertEqual(RegistroEjercicio.objects.filter(usuario=self.user).count(), 1)
+
+    def test_perfil_view_resetear_datos_exitoso(self):
+        """Al confirmar con RESETEAR, la vista ejecuta el reseteo y muestra mensaje de éxito."""
+        self.client.login(username='atleta_demo', password='Password123!')
+        response = self.client.post(reverse('users:perfil'), {
+            'action': 'resetear_datos',
+            'confirmacion': 'RESETEAR'
+        }, follow=True)
+        self.assertEqual(response.status_code, 200)
+
+        # Datos eliminados
+        self.assertEqual(Rutina.objects.filter(usuario=self.user).count(), 0)
+        self.assertEqual(RegistroEjercicio.objects.filter(usuario=self.user).count(), 0)
+        self.assertEqual(Ejercicio.objects.filter(creado_por=self.user).count(), 0)
+
+        # Perfil intacto
+        self.user.profile.refresh_from_db()
+        self.assertEqual(float(self.user.profile.peso), 75.5)
+
+    def test_admin_accion_resetear_datos_usuario(self):
+        """Un superusuario puede restablecer los datos de usuarios seleccionados desde el admin."""
+        User.objects.create_superuser(
+            username='admin_fit',
+            email='admin@fitapp.com',
+            password='Password123!'
+        )
+        self.client.login(username='admin_fit', password='Password123!')
+
+        # 1. Petición inicial muestra pantalla de confirmación
+        url_changelist = reverse('admin:auth_user_changelist')
+        res_confirm = self.client.post(url_changelist, {
+            'action': 'resetear_datos_usuario_accion',
+            '_selected_action': [self.user.pk]
+        })
+        self.assertEqual(res_confirm.status_code, 200)
+        self.assertContains(res_confirm, '¿Confirmar restablecimiento de datos a cero?')
+        self.assertContains(res_confirm, self.user.username)
+
+        # 2. Petición con apply=1 confirma y borra
+        res_apply = self.client.post(url_changelist, {
+            'action': 'resetear_datos_usuario_accion',
+            '_selected_action': [self.user.pk],
+            'apply': '1'
+        }, follow=True)
+        self.assertEqual(res_apply.status_code, 200)
+
+        self.assertEqual(Rutina.objects.filter(usuario=self.user).count(), 0)
+        self.assertEqual(RegistroEjercicio.objects.filter(usuario=self.user).count(), 0)
+
+    def test_admin_vista_individual_resetear_datos(self):
+        """Un superusuario puede restablecer los datos desde la vista individual en admin."""
+        User.objects.create_superuser(
+            username='admin_fit2',
+            email='admin2@fitapp.com',
+            password='Password123!'
+        )
+        self.client.login(username='admin_fit2', password='Password123!')
+
+        url_individual = reverse('admin:auth_user_resetear_datos', args=[self.user.pk])
+        res_get = self.client.get(url_individual)
+        self.assertEqual(res_get.status_code, 200)
+        self.assertContains(res_get, self.user.username)
+
+        res_post = self.client.post(url_individual, {'apply': '1'})
+        self.assertRedirects(res_post, reverse('admin:auth_user_change', args=[self.user.pk]))
+        self.assertEqual(Rutina.objects.filter(usuario=self.user).count(), 0)
+
+    def test_admin_accion_resetear_datos_profile(self):
+        """Un superusuario puede restablecer datos seleccionando perfiles en el admin."""
+        User.objects.create_superuser(
+            username='admin_fit3',
+            email='admin3@fitapp.com',
+            password='Password123!'
+        )
+        self.client.login(username='admin_fit3', password='Password123!')
+
+        url_profile_list = reverse('admin:users_profile_changelist')
+        res_confirm = self.client.post(url_profile_list, {
+            'action': 'resetear_datos_profile_accion',
+            '_selected_action': [self.user.profile.pk]
+        })
+        self.assertEqual(res_confirm.status_code, 200)
+        self.assertContains(res_confirm, self.user.username)
+
+        res_apply = self.client.post(url_profile_list, {
+            'action': 'resetear_datos_profile_accion',
+            '_selected_action': [self.user.profile.pk],
+            'apply': '1'
+        }, follow=True)
+        self.assertEqual(res_apply.status_code, 200)
+        self.assertEqual(Rutina.objects.filter(usuario=self.user).count(), 0)
+
+
 

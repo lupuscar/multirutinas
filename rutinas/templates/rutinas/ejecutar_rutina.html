@@ -26,6 +26,11 @@
                         </span>
                         <span>•</span>
                         <span x-text="seriesCompletadasTotales + '/' + totalSeriesTotales + ' series'"></span>
+                        <!-- Indicador de Modo Offline en directo -->
+                        <span x-show="!online" x-cloak class="inline-flex items-center text-amber-500 font-bold px-1.5 py-0.5 rounded-md bg-amber-500/10 text-[10px] border border-amber-500/20">
+                            <i class="fa-solid fa-cloud-arrow-down mr-1"></i> Offline
+                            <span x-show="pendingOfflineCount > 0" class="ml-1 font-mono" x-text="'(' + pendingOfflineCount + ')'"></span>
+                        </span>
                     </div>
                 </div>
             </div>
@@ -260,8 +265,14 @@
                                 <!-- BOTÓN COMPLETAR SERIE (1-TAP TOUCH) -->
                                 <button type="button" @click="alternarSerieCompletada(item, serie)" 
                                         :class="serie.completado ? 'bg-emerald-500 text-white shadow-md shadow-emerald-500/30' : 'bg-gray-100 dark:bg-gray-700 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200'"
-                                        class="w-12 h-11 rounded-xl flex items-center justify-center transition-all duration-200 active:scale-90 font-bold">
+                                        class="w-12 h-11 rounded-xl flex items-center justify-center transition-all duration-200 active:scale-90 font-bold relative">
                                     <i class="fa-solid fa-check text-base"></i>
+                                    <!-- Badge si está guardada localmente offline -->
+                                    <span x-show="serie.completado && serie.guardado_offline" x-cloak
+                                          title="Guardada en tu dispositivo (se sincronizará al tener cobertura)"
+                                          class="absolute -top-1 -right-1 w-4 h-4 rounded-full bg-amber-400 text-gray-950 flex items-center justify-center text-[8px] shadow-sm font-black border border-white dark:border-gray-900">
+                                        <i class="fa-solid fa-cloud-arrow-down"></i>
+                                    </span>
                                 </button>
 
                             </div>
@@ -347,6 +358,10 @@ function modoGym() {
         descansoTotal: 60,
         intervaloDescanso: null,
 
+        // Modo Offline
+        online: navigator.onLine,
+        pendingOfflineCount: (window.OptiFitOffline ? window.OptiFitOffline.getPendingCount() : 0),
+
         iniciarModoGym() {
             // Inicializar minutos y segundos para ejercicios por tiempo
             if (this.ejercicios && Array.isArray(this.ejercicios)) {
@@ -374,6 +389,35 @@ function modoGym() {
                     }
                 });
             }
+
+            // Listeners de conectividad y sincronización offline
+            window.addEventListener('online', () => {
+                this.online = true;
+                if (window.OptiFitOffline) {
+                    window.OptiFitOffline.syncAll(this.csrfToken);
+                }
+            });
+            window.addEventListener('offline', () => {
+                this.online = false;
+            });
+            window.addEventListener('optifit-queue-updated', (e) => {
+                this.pendingOfflineCount = e.detail ? e.detail.count : (window.OptiFitOffline ? window.OptiFitOffline.getPendingCount() : 0);
+            });
+            window.addEventListener('optifit-sync-completed', () => {
+                this.pendingOfflineCount = 0;
+                if (this.ejercicios) {
+                    this.ejercicios.forEach(item => {
+                        if (item.series_sugeridas) {
+                            item.series_sugeridas.forEach(s => {
+                                if (s.guardado_offline) {
+                                    s.guardado_offline = false;
+                                    s.guardado_servidor = true;
+                                }
+                            });
+                        }
+                    });
+                }
+            });
 
             this.iniciarTemporizadorSesion();
             this.solicitarWakeLock();
@@ -645,41 +689,69 @@ function modoGym() {
         },
 
         async guardarSerie(item, serie) {
-            try {
-                let seg = parseInt(serie.tiempo_segundos) || 0;
-                if (serie.unidad_tiempo === 'min' && serie.tiempo_minutos !== undefined && serie.tiempo_minutos !== null && serie.tiempo_minutos !== '') {
-                    let m = parseFloat(serie.tiempo_minutos);
-                    if (!isNaN(m) && m > 0) {
-                        seg = Math.round(m * 60);
-                        serie.tiempo_segundos = seg;
-                    }
+            let seg = parseInt(serie.tiempo_segundos) || 0;
+            if (serie.unidad_tiempo === 'min' && serie.tiempo_minutos !== undefined && serie.tiempo_minutos !== null && serie.tiempo_minutos !== '') {
+                let m = parseFloat(serie.tiempo_minutos);
+                if (!isNaN(m) && m > 0) {
+                    seg = Math.round(m * 60);
+                    serie.tiempo_segundos = seg;
                 }
+            }
 
-                const payload = {
-                    ejercicio_id: item.ejercicio_id,
-                    numero_serie: serie.numero_serie,
-                    repeticiones: serie.repeticiones,
-                    peso: serie.peso_kg,
-                    tiempo_segundos: seg,
-                    tiempo_minutos: serie.tiempo_minutos,
-                    distancia_km: serie.distancia_km,
-                    rutina_nombre: this.rutinaNombre
-                };
+            const payload = {
+                ejercicio_id: item.ejercicio_id,
+                numero_serie: serie.numero_serie,
+                repeticiones: serie.repeticiones,
+                peso: serie.peso_kg,
+                tiempo_segundos: seg,
+                tiempo_minutos: serie.tiempo_minutos,
+                distancia_km: serie.distancia_km,
+                rutina_nombre: this.rutinaNombre,
+                fecha: new Date().toISOString().slice(0, 10)
+            };
 
+            // 1. Si no hay conexión o se detecta offline, guardar en la cola local directamente
+            if (!navigator.onLine) {
+                if (window.OptiFitOffline) {
+                    window.OptiFitOffline.enqueueSerie(payload);
+                    serie.guardado_offline = true;
+                    serie.guardado_servidor = false;
+                    this.pendingOfflineCount = window.OptiFitOffline.getPendingCount();
+                }
+                return;
+            }
+
+            // 2. Si estamos online, intentar enviar al servidor
+            try {
                 const response = await fetch("{% url 'rutinas:guardar_serie_ajax' %}", {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
-                        'X-CSRFToken': this.csrfToken
+                        'X-CSRFToken': this.csrfToken,
+                        'X-Requested-With': 'XMLHttpRequest'
                     },
                     body: JSON.stringify(payload)
                 });
+
+                if (!response.ok) {
+                    throw new Error('HTTP ' + response.status);
+                }
+
                 const res = await response.json();
-                if (res.status !== 'success') {
-                    console.error("Error al guardar serie:", res.message);
+                if (res.status === 'success') {
+                    serie.guardado_offline = false;
+                    serie.guardado_servidor = true;
+                } else {
+                    throw new Error(res.message || 'Error en respuesta del servidor');
                 }
             } catch (err) {
-                console.error("Error de conexión al guardar serie:", err);
+                console.warn("Fallo de conexión al guardar serie. Guardando en cola local:", err);
+                if (window.OptiFitOffline) {
+                    window.OptiFitOffline.enqueueSerie(payload);
+                    serie.guardado_offline = true;
+                    serie.guardado_servidor = false;
+                    this.pendingOfflineCount = window.OptiFitOffline.getPendingCount();
+                }
             }
         },
 
@@ -724,21 +796,35 @@ function modoGym() {
                 try { await this.wakeLock.release(); } catch (e) {}
             }
 
+            // Si hay series guardadas offline pendientes y tenemos conexión, sincronizar antes de salir
+            if (window.OptiFitOffline && window.OptiFitOffline.getPendingCount() > 0) {
+                if (navigator.onLine) {
+                    await window.OptiFitOffline.syncAll(this.csrfToken, "{% url 'rutinas:sincronizar_series_lote_ajax' %}");
+                } else {
+                    alert(`¡Entrenamiento finalizado! Tus ${window.OptiFitOffline.getPendingCount()} series están guardadas en tu dispositivo y se sincronizarán en cuanto recuperes la cobertura.`);
+                }
+            }
+
             try {
-                const response = await fetch("{% url 'rutinas:finalizar_entrenamiento_ajax' %}", {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'X-CSRFToken': this.csrfToken
+                if (navigator.onLine) {
+                    const response = await fetch("{% url 'rutinas:finalizar_entrenamiento_ajax' %}", {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'X-CSRFToken': this.csrfToken
+                        }
+                    });
+                    const res = await response.json();
+                    if (res.status === 'success') {
+                        window.location.href = res.redirect_url || "{% url 'dashboard:dashboard' %}";
+                        return;
                     }
-                });
-                const res = await response.json();
-                if (res.status === 'success') {
-                    window.location.href = res.redirect_url || "{% url 'dashboard:dashboard' %}";
                 }
             } catch (err) {
-                window.location.href = "{% url 'dashboard:dashboard' %}";
+                console.warn("Finalizando entrenamiento offline:", err);
             }
+
+            window.location.href = "{% url 'dashboard:dashboard' %}";
         }
     }
 }

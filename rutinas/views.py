@@ -527,6 +527,119 @@ def finalizar_entrenamiento_ajax(request):
     return JsonResponse({'status': 'success', 'redirect_url': '/dashboard/'})
 
 
+@login_required
+@require_POST
+def sincronizar_series_lote_ajax(request):
+    """
+    Sincroniza en un único lote atómico todas las series acumuladas localmente
+    durante el entrenamiento sin conexión (Offline-First).
+    """
+    try:
+        data = json.loads(request.body)
+        series_pendientes = data.get('series', []) if isinstance(data, dict) else (data if isinstance(data, list) else [])
+
+        if not series_pendientes:
+            return JsonResponse({
+                'status': 'success',
+                'synced_count': 0,
+                'guardadas': 0,
+                'total': 0,
+                'message': 'No hay series para sincronizar'
+            })
+
+        hoy = timezone.now().date()
+        synced_count = 0
+
+        with transaction.atomic():
+            for item in series_pendientes:
+                ejercicio_id = item.get('ejercicio_id')
+                if not ejercicio_id:
+                    continue
+
+                try:
+                    ejercicio_obj = Ejercicio.objects.get(id=ejercicio_id)
+                except Ejercicio.DoesNotExist:
+                    continue
+
+                serie_num = int(item.get('numero_serie', 1))
+                repeticiones = item.get('repeticiones')
+                peso = item.get('peso')
+                tiempo_segundos = item.get('tiempo_segundos')
+                tiempo_minutos = item.get('tiempo_minutos')
+                distancia_km = item.get('distancia_km')
+                rutina_nombre = item.get('rutina_nombre', 'Entrenamiento')
+
+                fecha_str = item.get('fecha')
+                fecha_sesion = hoy
+                if fecha_str:
+                    try:
+                        import datetime
+                        fecha_sesion = datetime.date.fromisoformat(str(fecha_str)[:10])
+                    except Exception:
+                        fecha_sesion = hoy
+
+                registro, _ = RegistroEjercicio.objects.get_or_create(
+                    usuario=request.user,
+                    ejercicio=ejercicio_obj,
+                    fecha=fecha_sesion,
+                    defaults={'etiqueta': f"Sesión: {rutina_nombre}"}
+                )
+
+                reps_val = int(repeticiones) if repeticiones is not None and str(repeticiones).strip() != '' else None
+                peso_val = float(peso) if peso is not None and str(peso).strip() != '' else None
+
+                tiempo_val = None
+                if tiempo_minutos is not None and str(tiempo_minutos).strip() != '':
+                    try:
+                        tiempo_val = int(round(float(str(tiempo_minutos).replace(',', '.').strip()) * 60))
+                    except (ValueError, TypeError):
+                        tiempo_val = None
+                elif tiempo_segundos is not None and str(tiempo_segundos).strip() != '':
+                    try:
+                        tiempo_val = int(tiempo_segundos)
+                    except (ValueError, TypeError):
+                        tiempo_val = None
+
+                distancia_val = None
+                if distancia_km is not None and str(distancia_km).strip() != '':
+                    try:
+                        distancia_val = round(float(str(distancia_km).replace(',', '.').strip()), 2)
+                    except (ValueError, TypeError):
+                        distancia_val = None
+
+                serie, creada = Serie.objects.get_or_create(
+                    registro=registro,
+                    numero_serie=serie_num,
+                    defaults={
+                        'repeticiones': reps_val,
+                        'peso_kg': peso_val,
+                        'tiempo_segundos': tiempo_val,
+                        'distancia_km': distancia_val,
+                    }
+                )
+
+                if not creada:
+                    serie.repeticiones = reps_val
+                    serie.peso_kg = peso_val
+                    serie.tiempo_segundos = tiempo_val
+                    serie.distancia_km = distancia_val
+                    serie.save()
+
+                synced_count += 1
+
+        return JsonResponse({
+            'status': 'success',
+            'synced_count': synced_count,
+            'guardadas': synced_count,
+            'total': len(series_pendientes),
+            'message': f"¡{synced_count} series sincronizadas correctamente!"
+        })
+
+    except Exception as e:
+        return JsonResponse({'status': 'error', 'message': str(e)}, status=400)
+
+
+
 # =====================================================================
 # RECOMENDADOR AUTOMÁTICO E INTELIGENTE DE RUTINAS
 # =====================================================================

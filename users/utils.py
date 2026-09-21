@@ -189,3 +189,79 @@ def enviar_correo_activacion(user, request=None):
         return False
 
 
+def resetear_datos_usuario(user, ejecutado_por=None, request=None):
+    """
+    Elimina todos los datos de rutinas, sesiones, series y ejercicios personalizados
+    de un usuario, dejándolo a 0.
+    Conserva estrictamente los datos de perfil (Profile) y credenciales de cuenta (User).
+    Registra el evento en LogActividad.
+
+    Retorna un diccionario con el recuento de los datos eliminados:
+    {
+        'rutinas': int,
+        'registros': int,
+        'series': int,
+        'ejercicios_personalizados': int,
+    }
+    """
+    from django.db import transaction
+    from rutinas.models import Rutina
+    from ejercicios.models import RegistroEjercicio, Serie, Ejercicio
+
+    with transaction.atomic():
+        # 1. Contar elementos antes de eliminar para auditoría y retorno
+        rutinas_qs = Rutina.objects.filter(usuario=user)
+        rutinas_count = rutinas_qs.count()
+
+        registros_qs = RegistroEjercicio.objects.filter(usuario=user)
+        registros_count = registros_qs.count()
+
+        series_count = Serie.objects.filter(registro__usuario=user).count()
+
+        ejercicios_personalizados_qs = Ejercicio.objects.filter(creado_por=user)
+        ejercicios_personalizados_count = ejercicios_personalizados_qs.count()
+
+        # 2. Eliminar rutinas (cascada a RutinaEjercicio)
+        rutinas_qs.delete()
+
+        # 3. Eliminar sesiones y series registradas
+        registros_qs.delete()
+
+        # 4. Eliminar ejercicios personalizados creados por este usuario (los oficiales se conservan)
+        ejercicios_personalizados_qs.delete()
+
+        # 5. Limpiar logs de actividad deportiva del usuario (conservando eventos de cuenta como login/logout)
+        LogActividad.objects.filter(usuario=user, tipo__in=['RUTINA_CREATE', 'SERIE_LOG']).delete()
+
+        # 6. Registrar evento de reseteo en auditoría
+        ejecutor = ejecutado_por or user
+        if ejecutor != user:
+            mensaje = (
+                f"Restablecimiento de datos a cero ejecutado por el administrador '{ejecutor.username}' "
+                f"para el usuario '{user.username}'. Se eliminaron: {rutinas_count} rutinas, "
+                f"{registros_count} sesiones ({series_count} series) y {ejercicios_personalizados_count} ejercicios personalizados."
+            )
+        else:
+            mensaje = (
+                f"El usuario '{user.username}' restableció todos sus datos deportivos a cero desde su perfil. "
+                f"Se eliminaron: {rutinas_count} rutinas, {registros_count} sesiones ({series_count} series) "
+                f"y {ejercicios_personalizados_count} ejercicios personalizados."
+            )
+
+        registrar_log(
+            request=request,
+            usuario=user,
+            nivel='WARNING',
+            tipo='RESET_DATOS',
+            mensaje=mensaje
+        )
+
+        return {
+            'rutinas': rutinas_count,
+            'registros': registros_count,
+            'series': series_count,
+            'ejercicios_personalizados': ejercicios_personalizados_count,
+        }
+
+
+

@@ -1,11 +1,14 @@
 from django.contrib import admin
+from django.shortcuts import render, redirect, get_object_or_404
 from django.utils.html import format_html
 from django.utils.safestring import mark_safe
-from django.urls import reverse
+from django.urls import path, reverse
 from django.contrib.auth import get_user_model
 from django.contrib.auth.admin import UserAdmin as BaseUserAdmin
 from .models import Profile, LogActividad
-from .utils import registrar_log, enviar_correo_activacion
+from .utils import registrar_log, enviar_correo_activacion, resetear_datos_usuario
+from rutinas.models import Rutina
+from ejercicios.models import RegistroEjercicio, Ejercicio
 
 User = get_user_model()
 
@@ -46,7 +49,124 @@ class CustomUserAdmin(BaseUserAdmin):
         'is_superuser',
         'date_joined',
     )
-    actions = ['bloquear_usuarios', 'desbloquear_usuarios', 'reenviar_activacion_accion']
+    actions = ['bloquear_usuarios', 'desbloquear_usuarios', 'reenviar_activacion_accion', 'resetear_datos_usuario_accion']
+    readonly_fields = ('resetear_datos_link',)
+
+    def get_fieldsets(self, request, obj=None):
+        fieldsets = super().get_fieldsets(request, obj)
+        if obj:
+            tiene_mantenimiento = any(fs[0] == 'Zona de Peligro (Mantenimiento)' for fs in fieldsets)
+            if not tiene_mantenimiento:
+                fieldsets = fieldsets + (
+                    ('Zona de Peligro (Mantenimiento)', {
+                        'fields': ('resetear_datos_link',),
+                        'description': 'Permite restablecer a cero todas las rutinas, registros y ejercicios de este usuario conservando intacto su perfil y credenciales.',
+                    }),
+                )
+        return fieldsets
+
+    def get_urls(self):
+        urls = super().get_urls()
+        custom_urls = [
+            path(
+                '<id>/resetear-datos/',
+                self.admin_site.admin_view(self.admin_resetear_datos_usuario_view),
+                name='auth_user_resetear_datos',
+            ),
+        ]
+        return custom_urls + urls
+
+    @admin.display(description="Restablecer Datos")
+    def resetear_datos_link(self, obj):
+        if not obj or not obj.pk:
+            return "-"
+        url = reverse('admin:auth_user_resetear_datos', args=[obj.pk])
+        rutinas_count = Rutina.objects.filter(usuario=obj).count()
+        registros_count = RegistroEjercicio.objects.filter(usuario=obj).count()
+        ejercicios_count = Ejercicio.objects.filter(creado_por=obj).count()
+        return format_html(
+            '<div style="padding: 6px 0;">'
+            '<p style="margin: 0 0 8px 0; color: #6b7280; font-size: 12px;">'
+            'Datos actuales: <strong>{}</strong> rutinas, <strong>{}</strong> sesiones y <strong>{}</strong> ejercicios creados.'
+            '</p>'
+            '<a class="button" href="{}" style="background-color: #dc2626; color: #ffffff !important; font-weight: bold; padding: 6px 14px; border-radius: 6px; text-decoration: none; display: inline-block;">'
+            '🗑️ Restablecer datos de este usuario a 0'
+            '</a>'
+            '</div>',
+            rutinas_count, registros_count, ejercicios_count, url
+        )
+
+    def admin_resetear_datos_usuario_view(self, request, id):
+        user = get_object_or_404(User, pk=id)
+        if request.method == 'POST' and request.POST.get('apply') == '1':
+            res = resetear_datos_usuario(user, ejecutado_por=request.user, request=request)
+            self.message_user(
+                request,
+                f"✅ Se han restablecido los datos a 0 para {user.username}. "
+                f"Eliminadas {res['rutinas']} rutinas, {res['registros']} sesiones ({res['series']} series) "
+                f"y {res['ejercicios_personalizados']} ejercicios personalizados. Su perfil se mantiene intacto."
+            )
+            return redirect('admin:auth_user_change', id)
+
+        users_data = [{
+            'user': user,
+            'rutinas': Rutina.objects.filter(usuario=user).count(),
+            'registros': RegistroEjercicio.objects.filter(usuario=user).count(),
+            'ejercicios': Ejercicio.objects.filter(creado_por=user).count(),
+        }]
+
+        context = {
+            **self.admin_site.each_context(request),
+            'title': f'Restablecer datos a 0: {user.username}',
+            'users_to_reset': [user],
+            'users_data': users_data,
+            'cancel_url': reverse('admin:auth_user_change', args=[id]),
+        }
+        return render(request, 'admin/confirm_reset_users.html', context)
+
+    @admin.action(description="🗑️ Restablecer datos a 0 (conservar solo perfil)")
+    def resetear_datos_usuario_accion(self, request, queryset):
+        if request.POST.get('apply') == '1':
+            count_usuarios = 0
+            total_rutinas = 0
+            total_registros = 0
+            total_series = 0
+            total_ejercicios = 0
+            for u in queryset:
+                res = resetear_datos_usuario(u, ejecutado_por=request.user, request=request)
+                count_usuarios += 1
+                total_rutinas += res['rutinas']
+                total_registros += res['registros']
+                total_series += res['series']
+                total_ejercicios += res['ejercicios_personalizados']
+
+            self.message_user(
+                request,
+                f"✅ Se han restablecido los datos a 0 para {count_usuarios} usuario(s). "
+                f"Eliminadas {total_rutinas} rutinas, {total_registros} sesiones ({total_series} series) "
+                f"y {total_ejercicios} ejercicios personalizados. Sus perfiles se mantienen intactos."
+            )
+            return None
+
+        # Pantalla intermedia de confirmación
+        users_data = []
+        for u in queryset:
+            users_data.append({
+                'user': u,
+                'rutinas': Rutina.objects.filter(usuario=u).count(),
+                'registros': RegistroEjercicio.objects.filter(usuario=u).count(),
+                'ejercicios': Ejercicio.objects.filter(creado_por=u).count(),
+            })
+
+        context = {
+            **self.admin_site.each_context(request),
+            'title': '¿Confirmar restablecimiento de datos a cero?',
+            'users_to_reset': queryset,
+            'users_data': users_data,
+            'action_name': 'resetear_datos_usuario_accion',
+            'cancel_url': reverse('admin:auth_user_changelist'),
+        }
+        return render(request, 'admin/confirm_reset_users.html', context)
 
     @admin.display(description="Estado de Cuenta")
     def estado_cuenta_badge(self, obj):
@@ -116,6 +236,52 @@ class ProfileAdmin(admin.ModelAdmin):
     list_display = ('user', 'genero', 'email_verificado', 'tipo_suscripcion', 'peso', 'altura', 'nivel', 'objetivo')
     list_filter = ('genero', 'email_verificado', 'tipo_suscripcion', 'nivel', 'objetivo')
     search_fields = ('user__username', 'user__email', 'biografia')
+    actions = ['resetear_datos_profile_accion']
+
+    @admin.action(description="🗑️ Restablecer datos a 0 para usuarios de los perfiles seleccionados")
+    def resetear_datos_profile_accion(self, request, queryset):
+        users = [p.user for p in queryset if p.user]
+        if request.POST.get('apply') == '1':
+            count_usuarios = 0
+            total_rutinas = 0
+            total_registros = 0
+            total_series = 0
+            total_ejercicios = 0
+            for u in users:
+                res = resetear_datos_usuario(u, ejecutado_por=request.user, request=request)
+                count_usuarios += 1
+                total_rutinas += res['rutinas']
+                total_registros += res['registros']
+                total_series += res['series']
+                total_ejercicios += res['ejercicios_personalizados']
+
+            self.message_user(
+                request,
+                f"✅ Se han restablecido los datos a 0 para {count_usuarios} usuario(s). "
+                f"Eliminadas {total_rutinas} rutinas, {total_registros} sesiones ({total_series} series) "
+                f"y {total_ejercicios} ejercicios personalizados. Sus perfiles se mantienen intactos."
+            )
+            return None
+
+        users_data = []
+        for u in users:
+            users_data.append({
+                'user': u,
+                'rutinas': Rutina.objects.filter(usuario=u).count(),
+                'registros': RegistroEjercicio.objects.filter(usuario=u).count(),
+                'ejercicios': Ejercicio.objects.filter(creado_por=u).count(),
+            })
+
+        context = {
+            **self.admin_site.each_context(request),
+            'title': '¿Confirmar restablecimiento de datos a cero?',
+            'users_to_reset': users,
+            'users_data': users_data,
+            'action_name': 'resetear_datos_profile_accion',
+            'cancel_url': reverse('admin:users_profile_changelist'),
+        }
+        return render(request, 'admin/confirm_reset_users.html', context)
+
 
 
 @admin.register(LogActividad)

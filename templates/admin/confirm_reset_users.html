@@ -1,0 +1,80 @@
+{% extends "admin/base_site.html" %}
+{% load i18n l10n %}
+
+{% block breadcrumbs %}
+<div class="breadcrumbs">
+<a href="{% url 'admin:index' %}">{% translate 'Home' %}</a>
+&rsaquo; <a href="{% url 'admin:app_list' app_label='auth' %}">Autenticación y usuarios</a>
+&rsaquo; <a href="{% url 'admin:auth_user_changelist' %}">Usuarios</a>
+&rsaquo; Restablecer datos a 0
+</div>
+{% endblock %}
+
+{% block content %}
+<div style="max-width: 900px; margin: 20px 0;">
+    <div style="background-color: #fee2e2; border: 2px solid #ef4444; border-radius: 10px; padding: 18px 24px; margin-bottom: 24px;">
+        <h2 style="color: #991b1b; margin: 0 0 10px 0; font-size: 18px;">
+            ⚠️ ¡Atención! Restablecimiento irreversible de datos deportivos
+        </h2>
+        <p style="color: #7f1d1d; font-size: 13px; line-height: 1.5; margin: 0;">
+            Estás a punto de <strong>eliminar permanentemente todo el historial deportivo</strong> (rutinas, sesiones de entrenamiento, series y ejercicios personalizados) de los siguientes usuarios.
+        </p>
+        <p style="color: #065f46; font-size: 12px; font-weight: bold; margin: 10px 0 0 0;">
+            ✓ Los perfiles de usuario, contraseñas, emails, datos físicos (peso, altura, objetivo) y suscripciones se CONSERVARÁN intactos.
+        </p>
+    </div>
+
+    <form method="post" action="">
+        {% csrf_token %}
+        {% if action_name %}
+            <input type="hidden" name="action" value="{{ action_name }}">
+        {% endif %}
+        <input type="hidden" name="apply" value="1">
+
+        {% for u in users_to_reset %}
+            <input type="hidden" name="_selected_action" value="{{ u.pk }}">
+        {% endfor %}
+
+        <h3 style="margin-bottom: 12px; font-size: 15px; color: #111827;">Usuarios que serán restablecidos a cero ({{ users_to_reset|length }}):</h3>
+
+        <div style="border: 1px solid #e5e7eb; border-radius: 8px; overflow: hidden; margin-bottom: 24px; box-shadow: 0 1px 3px rgba(0,0,0,0.05);">
+            <table style="width: 100%; border-collapse: collapse; text-align: left; font-size: 13px;">
+                <thead>
+                    <tr style="background-color: #f9fafb; border-bottom: 1px solid #e5e7eb;">
+                        <th style="padding: 10px 14px; font-weight: 700; color: #374151;">Usuario</th>
+                        <th style="padding: 10px 14px; font-weight: 700; color: #374151;">Email</th>
+                        <th style="padding: 10px 14px; font-weight: 700; color: #374151; text-align: center;">Rutinas</th>
+                        <th style="padding: 10px 14px; font-weight: 700; color: #374151; text-align: center;">Sesiones</th>
+                        <th style="padding: 10px 14px; font-weight: 700; color: #374151; text-align: center;">Ejercicios creados</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for item in users_data %}
+                    <tr style="border-bottom: 1px solid #f3f4f6;">
+                        <td style="padding: 10px 14px; font-weight: 600; color: #111827;">{{ item.user.username }}</td>
+                        <td style="padding: 10px 14px; color: #4b5563;">{{ item.user.email }}</td>
+                        <td style="padding: 10px 14px; text-align: center; font-weight: 700; color: #b91c1c;">{{ item.rutinas }}</td>
+                        <td style="padding: 10px 14px; text-align: center; font-weight: 700; color: #b91c1c;">{{ item.registros }}</td>
+                        <td style="padding: 10px 14px; text-align: center; font-weight: 700; color: #b91c1c;">{{ item.ejercicios }}</td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="5" style="padding: 14px; text-align: center; color: #9ca3af;">No hay usuarios seleccionados.</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+
+        <div style="display: flex; gap: 12px; align-items: center;">
+            <input type="submit" value="Sí, estoy seguro, restablecer datos a 0" 
+                   style="background-color: #dc2626; color: white; font-weight: bold; border: none; padding: 10px 20px; border-radius: 6px; cursor: pointer; font-size: 13px; box-shadow: 0 2px 4px rgba(220,38,38,0.3);">
+            
+            <a href="{% if cancel_url %}{{ cancel_url }}{% else %}{% url 'admin:auth_user_changelist' %}{% endif %}" 
+               style="background-color: #f3f4f6; color: #374151; font-weight: 600; text-decoration: none; padding: 10px 20px; border-radius: 6px; border: 1px solid #d1d5db; font-size: 13px;">
+                No, cancelar y volver
+            </a>
+        </div>
+    </form>
+</div>
+{% endblock %}

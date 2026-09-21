@@ -8,6 +8,8 @@
     tab: new URLSearchParams(window.location.search).get('tab') || '{{ pestaña_activa|default:'ver' }}', 
     modalPlanes: false,
     modalFoto: false,
+    modalResetear: false,
+    textoConfirmacion: '',
     fotoPreview: null,
     subiendo: false,
     currentPalette: localStorage.getItem('theme_palette') || document.documentElement.getAttribute('data-theme') || 'lime',
@@ -447,6 +449,58 @@
 
                 <button type="button" @click="modalPlanes = true" class="px-4 py-2 rounded-xl bg-brand-light/10 text-brand-light hover:bg-brand-light/20 font-bold text-xs transition-colors">
                     Ver Opciones
+                </button>
+            </div>
+        </div>
+
+        <!-- Zona de Peligro: Restablecer cuenta a cero -->
+        <div class="bg-white dark:bg-gray-800 rounded-3xl p-6 sm:p-8 shadow-sm border border-rose-200 dark:border-rose-900/40 space-y-4">
+            <div class="flex items-center space-x-3">
+                <span class="w-10 h-10 rounded-2xl bg-rose-500/10 text-rose-500 flex items-center justify-center text-lg shrink-0">
+                    <i class="fa-solid fa-triangle-exclamation"></i>
+                </span>
+                <div>
+                    <h2 class="text-base font-bold text-rose-600 dark:text-rose-400">
+                        Zona de Peligro: Restablecer Datos a 0
+                    </h2>
+                    <p class="text-xs text-gray-500 dark:text-gray-400">
+                        Elimina todo tu historial deportivo para comenzar de nuevo. Tu cuenta y datos de perfil se conservarán intactos.
+                    </p>
+                </div>
+            </div>
+
+            <!-- Resumen de elementos que se borrarán -->
+            <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 p-4 rounded-2xl bg-rose-50/50 dark:bg-rose-950/20 border border-rose-100 dark:border-rose-900/30 text-center">
+                <div class="p-2">
+                    <span class="text-lg font-black text-gray-900 dark:text-white block">{{ total_rutinas }}</span>
+                    <span class="text-[11px] font-semibold text-gray-500 dark:text-gray-400">Rutinas</span>
+                </div>
+                <div class="p-2">
+                    <span class="text-lg font-black text-gray-900 dark:text-white block">{{ total_dias_entrenados }}</span>
+                    <span class="text-[11px] font-semibold text-gray-500 dark:text-gray-400">Días entrenados</span>
+                </div>
+                <div class="p-2">
+                    <span class="text-lg font-black text-gray-900 dark:text-white block">{{ total_series_hechas }}</span>
+                    <span class="text-[11px] font-semibold text-gray-500 dark:text-gray-400">Series registradas</span>
+                </div>
+                <div class="p-2">
+                    <span class="text-lg font-black text-gray-900 dark:text-white block">{{ total_ejercicios_personalizados }}</span>
+                    <span class="text-[11px] font-semibold text-gray-500 dark:text-gray-400">Ejercicios creados</span>
+                </div>
+            </div>
+
+            <div class="p-3.5 rounded-xl bg-amber-50 dark:bg-amber-950/30 border border-amber-200/60 dark:border-amber-900/40 text-xs text-amber-800 dark:text-amber-300 flex items-start space-x-2.5">
+                <i class="fa-solid fa-shield-check text-base text-amber-600 dark:text-amber-400 shrink-0 mt-0.5"></i>
+                <div>
+                    <span class="font-bold">Lo que se conservará:</span> Tu nombre, correo, contraseña, ficha física (peso, altura, objetivo deportivo, nivel, edad), foto de perfil y tu tipo de suscripción.
+                </div>
+            </div>
+
+            <div class="pt-2 flex justify-end">
+                <button type="button" @click="modalResetear = true; textoConfirmacion = ''"
+                        class="px-5 py-3 rounded-xl bg-rose-600 hover:bg-rose-700 text-white font-bold text-xs shadow-md shadow-rose-600/20 transition-all flex items-center space-x-2">
+                    <i class="fa-solid fa-trash-can"></i>
+                    <span>Restablecer mis datos a cero</span>
                 </button>
             </div>
         </div>
@@ -1010,6 +1064,77 @@
                     </div>
                 </div>
 
+            </form>
+
+        </div>
+    </div>
+
+    <!-- ================================================================= -->
+    <!-- MODAL DE CONFIRMACIÓN: RESTABLECER DATOS A 0 -->
+    <!-- ================================================================= -->
+    <div x-show="modalResetear" x-cloak class="fixed inset-0 z-50 overflow-hidden flex items-center justify-center p-4">
+        <div class="fixed inset-0 bg-black/70 backdrop-blur-sm" @click="modalResetear = false"></div>
+
+        <div class="relative w-full max-w-lg bg-white dark:bg-gray-800 rounded-3xl shadow-2xl p-6 sm:p-8 z-10 space-y-6 border border-rose-200 dark:border-rose-900/50">
+            
+            <div class="flex items-center justify-between">
+                <div class="flex items-center space-x-3">
+                    <span class="w-10 h-10 rounded-2xl bg-rose-500/10 text-rose-500 flex items-center justify-center text-xl shrink-0">
+                        <i class="fa-solid fa-triangle-exclamation"></i>
+                    </span>
+                    <div>
+                        <h3 class="text-lg sm:text-xl font-black text-gray-900 dark:text-white">¿Restablecer datos a 0?</h3>
+                        <span class="text-xs font-bold text-rose-600 dark:text-rose-400 uppercase tracking-wider">Acción destructiva e irreversible</span>
+                    </div>
+                </div>
+                <button type="button" @click="modalResetear = false" class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 text-lg">
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
+            </div>
+
+            <div class="space-y-3 text-xs sm:text-sm text-gray-600 dark:text-gray-300">
+                <p>
+                    Se borrarán <strong>permanentemente</strong> todas tus rutinas, sesiones realizadas, series registradas, marcas de fuerza y récords personales (PRs).
+                </p>
+                <div class="p-3 rounded-xl bg-gray-50 dark:bg-gray-900/60 text-xs text-gray-500 dark:text-gray-400 space-y-1.5">
+                    <div class="flex items-center text-emerald-600 dark:text-emerald-400 font-bold">
+                        <i class="fa-solid fa-check mr-2"></i> Tu cuenta, contraseña y perfil físico se mantendrán intactos.
+                    </div>
+                    <div class="flex items-center text-rose-600 dark:text-rose-400 font-bold">
+                        <i class="fa-solid fa-xmark mr-2"></i> Tu historial deportivo y rutinas volverán a cero.
+                    </div>
+                </div>
+            </div>
+
+            <form method="POST" action="{% url 'users:perfil' %}" class="space-y-4">
+                {% csrf_token %}
+                <input type="hidden" name="action" value="resetear_datos">
+
+                <div>
+                    <label class="block text-xs font-bold text-gray-700 dark:text-gray-300 uppercase tracking-wider mb-2">
+                        Para confirmar, escribe <span class="text-rose-600 dark:text-rose-400 select-all font-mono font-black">RESETEAR</span> abajo:
+                    </label>
+                    <input type="text" 
+                           name="confirmacion" 
+                           x-model="textoConfirmacion"
+                           placeholder="Escribe RESETEAR"
+                           autocomplete="off"
+                           class="w-full px-4 py-3 rounded-xl border-2 border-gray-200 dark:border-gray-700 focus:border-rose-500 dark:focus:border-rose-500 focus:ring-0 bg-white dark:bg-gray-900 text-gray-900 dark:text-white font-mono font-bold text-sm tracking-wider text-center">
+                </div>
+
+                <div class="flex flex-col sm:flex-row gap-3 pt-2">
+                    <button type="button" @click="modalResetear = false"
+                            class="w-full sm:w-1/2 py-3 px-4 rounded-xl border border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-300 font-bold text-xs hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">
+                        Cancelar
+                    </button>
+                    <button type="submit" 
+                            :disabled="textoConfirmacion.trim().toUpperCase() !== 'RESETEAR'"
+                            :class="textoConfirmacion.trim().toUpperCase() === 'RESETEAR' ? 'bg-rose-600 hover:bg-rose-700 cursor-pointer shadow-lg shadow-rose-600/30 text-white' : 'bg-gray-200 dark:bg-gray-700 text-gray-400 dark:text-gray-500 cursor-not-allowed'"
+                            class="w-full sm:w-1/2 py-3 px-4 rounded-xl font-bold text-xs transition-all flex items-center justify-center space-x-2">
+                        <i class="fa-solid fa-trash-can"></i>
+                        <span>Confirmar y Borrar</span>
+                    </button>
+                </div>
             </form>
 
         </div>
