@@ -235,7 +235,7 @@
 
         <!-- Barra Lateral (Sidebar) -->
         <aside id="sidebar"
-            class="fixed md:static inset-y-0 left-0 z-30 bg-white dark:bg-gray-800 w-64 shadow-lg transition-all duration-300 flex flex-col justify-between border-r border-gray-200 dark:border-gray-700/80">
+            class="fixed md:static inset-y-0 left-0 z-50 md:z-30 bg-white dark:bg-gray-800 w-64 shadow-lg transition-all duration-300 flex flex-col justify-between border-r border-gray-200 dark:border-gray-700/80 overflow-y-auto">
 
             <div>
                 <!-- Logo / Título con fondo oscuro de contraste atlético -->
@@ -371,7 +371,7 @@
             </div>
 
             <!-- Logout -->
-            <div class="p-2 border-t border-gray-200 dark:border-gray-700/80">
+            <div class="p-2 pb-safe md:pb-2 border-t border-gray-200 dark:border-gray-700/80 shrink-0">
                 <form method="post" action="{% url 'logout' %}">
                     {% csrf_token %}
                     <button type="submit"
