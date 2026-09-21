@@ -389,3 +389,26 @@ class UsersAuthTests(TestCase):
         self.assertContains(res_get, 'fa-person-dress')
         self.assertContains(res_get, 'fa-venus')
 
+    def test_edad_calculada_en_profile(self):
+        """Verifica que la propiedad edad calcule los años cumplidos de forma precisa"""
+        from datetime import date, timedelta
+        from django.utils import timezone
+        hoy = timezone.now().date()
+        perfil = self.user.profile
+
+        # Sin fecha de nacimiento
+        perfil.fecha_nacimiento = None
+        perfil.save()
+        self.assertIsNone(perfil.edad)
+
+        # Exactamente 25 años
+        perfil.fecha_nacimiento = date(hoy.year - 25, hoy.month, hoy.day)
+        perfil.save()
+        self.assertEqual(perfil.edad, 25)
+
+        # Aún no ha cumplido años este año
+        manana = hoy + timedelta(days=1)
+        perfil.fecha_nacimiento = date(manana.year - 30, manana.month, manana.day)
+        perfil.save()
+        self.assertEqual(perfil.edad, 29)
+

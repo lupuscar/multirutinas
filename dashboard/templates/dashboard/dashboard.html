@@ -156,10 +156,10 @@
                 </div>
                 {% else %}
                 <h3 class="text-lg font-black text-white leading-tight">
-                    Crea tu primera rutina
+                    Genera tu Plan Recomendado
                 </h3>
                 <p class="text-xs text-indigo-200 mt-1">
-                    Diseña tu rutina a medida para recibir sugerencias inteligentes cada día.
+                    Crea tu plan semanal personalizado en 1 clic según tu objetivo, edad y nivel deportivo.
                 </p>
                 {% endif %}
             </div>
@@ -172,10 +172,10 @@
                     <span>Iniciar Entrenamiento</span>
                 </a>
                 {% else %}
-                <a href="{% url 'rutinas:crear_rutina' %}" 
-                   class="w-full py-3 px-4 rounded-xl bg-white text-brand-dark hover:bg-indigo-50 font-black text-xs sm:text-sm text-center shadow-lg shadow-black/20 flex items-center justify-center space-x-2 transition-all hover:scale-[1.02] active:scale-95">
-                    <i class="fa-solid fa-plus text-xs"></i>
-                    <span>Crear Rutina Ahora</span>
+                <a href="{% url 'rutinas:recomendador_rutinas' %}" 
+                   class="w-full py-3 px-4 rounded-xl bg-white text-indigo-950 hover:bg-indigo-50 font-black text-xs sm:text-sm text-center shadow-lg shadow-black/20 flex items-center justify-center space-x-2 transition-all hover:scale-[1.02] active:scale-95">
+                    <i class="fa-solid fa-wand-magic-sparkles text-xs text-indigo-600"></i>
+                    <span>Generar Plan Automático</span>
                 </a>
                 {% endif %}
             </div>

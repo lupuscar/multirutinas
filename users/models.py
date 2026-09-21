@@ -134,6 +134,17 @@ class Profile(models.Model):
             return {'nombre': 'Obesidad', 'badge_class': 'bg-rose-100 text-rose-700 dark:bg-rose-900/40 dark:text-rose-300'}
 
     @property
+    def edad(self):
+        """Calcula la edad en años cumplidos a partir de la fecha de nacimiento"""
+        if self.fecha_nacimiento:
+            from django.utils import timezone
+            hoy = timezone.now().date()
+            return hoy.year - self.fecha_nacimiento.year - (
+                (hoy.month, hoy.day) < (self.fecha_nacimiento.month, self.fecha_nacimiento.day)
+            )
+        return None
+
+    @property
     def icono_genero(self):
         if self.genero == 'H':
             return 'fa-solid fa-mars'

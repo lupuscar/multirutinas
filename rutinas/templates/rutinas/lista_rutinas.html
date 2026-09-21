@@ -16,10 +16,18 @@
             </p>
         </div>
         
-        <!-- Botón Nueva Rutina (destacado y táctil) -->
-        <a href="{% url 'rutinas:crear_rutina' %}" class="inline-flex items-center justify-center px-5 py-3 bg-brand-light hover:bg-brand-dark text-white font-bold text-sm rounded-xl shadow-lg shadow-brand-light/30 transition-all hover:scale-105 active:scale-95">
-            <i class="fa-solid fa-plus mr-2 text-base"></i> Nueva Rutina
-        </a>
+        <!-- Botones de Acción -->
+        <div class="flex flex-wrap items-center gap-2.5">
+            <a href="{% url 'rutinas:recomendador_rutinas' %}" 
+               class="inline-flex items-center justify-center px-4 py-3 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white font-black text-xs sm:text-sm rounded-xl shadow-lg shadow-indigo-600/20 transition-all hover:scale-105 active:scale-95">
+                <i class="fa-solid fa-wand-magic-sparkles mr-2 text-base"></i>
+                <span>Recomendador Automático</span>
+            </a>
+            <a href="{% url 'rutinas:crear_rutina' %}" 
+               class="inline-flex items-center justify-center px-4 py-3 bg-brand-light hover:bg-brand-dark text-white font-bold text-xs sm:text-sm rounded-xl shadow-lg shadow-brand-light/30 transition-all hover:scale-105 active:scale-95">
+                <i class="fa-solid fa-plus mr-2 text-base"></i> Nueva Rutina
+            </a>
+        </div>
     </div>
 
     <!-- Cuadrícula (Grid) Responsiva de Rutinas -->
@@ -123,16 +131,21 @@
         {% empty %}
         <!-- Estado Vacío -->
         <div class="col-span-full py-16 px-4 text-center bg-white dark:bg-gray-800 rounded-3xl border-2 border-dashed border-gray-200 dark:border-gray-700">
-            <div class="w-16 h-16 rounded-2xl bg-brand-light/10 text-brand-light flex items-center justify-center mx-auto mb-4">
-                <i class="fa-solid fa-dumbbell text-2xl"></i>
+            <div class="w-16 h-16 rounded-2xl bg-gradient-to-tr from-brand-light to-indigo-600 text-white flex items-center justify-center mx-auto mb-4 shadow-lg shadow-brand-light/30">
+                <i class="fa-solid fa-wand-magic-sparkles text-2xl"></i>
             </div>
             <h3 class="text-xl font-bold text-gray-800 dark:text-white">Aún no tienes ninguna rutina</h3>
-            <p class="text-sm text-gray-500 dark:text-gray-400 mt-2 max-w-sm mx-auto">
-                Crea tu primera rutina con tus ejercicios favoritos para empezar a registrar tus series y pesos fácilmente desde el móvil.
+            <p class="text-sm text-gray-500 dark:text-gray-400 mt-2 max-w-md mx-auto">
+                ¿No sabes por dónde empezar? Deja que el <strong>Recomendador Automático</strong> cree tu plan semanal personalizado en 1 clic según tu objetivo, nivel y edad.
             </p>
-            <a href="{% url 'rutinas:crear_rutina' %}" class="mt-6 inline-flex items-center px-6 py-3 bg-brand-light hover:bg-brand-dark text-white font-bold text-sm rounded-xl shadow-lg shadow-brand-light/30 transition-all">
-                <i class="fa-solid fa-plus mr-2"></i> Crear mi primera rutina
-            </a>
+            <div class="mt-6 flex flex-wrap items-center justify-center gap-3">
+                <a href="{% url 'rutinas:recomendador_rutinas' %}" class="inline-flex items-center px-6 py-3.5 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white font-black text-sm rounded-xl shadow-lg shadow-indigo-600/30 transition-all hover:scale-105 active:scale-95">
+                    <i class="fa-solid fa-wand-magic-sparkles mr-2 text-base"></i> Generar Plan Recomendado
+                </a>
+                <a href="{% url 'rutinas:crear_rutina' %}" class="inline-flex items-center px-5 py-3.5 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 text-gray-800 dark:text-white font-bold text-sm rounded-xl transition-all">
+                    <i class="fa-solid fa-pen mr-2"></i> Crear Manualmente
+                </a>
+            </div>
         </div>
         {% endfor %}
 

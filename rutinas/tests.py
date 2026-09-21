@@ -331,3 +331,98 @@ class RutinaAppTests(TestCase):
         self.assertEqual(res_con_historial.status_code, 200)
         self.assertContains(res_con_historial, '60.0')
 
+    # =========================================================================
+    # PRUEBAS DEL RECOMENDADOR AUTOMÁTICO DE RUTINAS
+    # =========================================================================
+    def test_generar_plan_recomendado_diferentes_dias(self):
+        """Verifica que el generador produzca la cantidad exacta de rutinas según la meta semanal (2 a 6 días)"""
+        from rutinas.recomendador import generar_plan_recomendado
+
+        for dias in [2, 3, 4, 5, 6]:
+            plan = generar_plan_recomendado(self.user, {'dias_semana': dias})
+            self.assertEqual(len(plan['rutinas']), dias)
+            self.assertEqual(plan['dias_semana'], dias)
+            for r in plan['rutinas']:
+                self.assertTrue(len(r['ejercicios']) >= 3)
+                self.assertTrue(bool(r['dias_semana']))
+
+    def test_generar_plan_adaptacion_objetivos_y_niveles(self):
+        """Verifica que los objetivos modifiquen repeticiones y descansos adecuadamente"""
+        from rutinas.recomendador import generar_plan_recomendado
+
+        # Fuerza (FUE) debe tener descansos >= 120s y repeticiones bajas (4-8)
+        plan_fuerza = generar_plan_recomendado(self.user, {'objetivo': 'FUE', 'nivel': 'AV'})
+        self.assertGreaterEqual(plan_fuerza['descanso_promedio_seg'], 120)
+        primer_ej = plan_fuerza['rutinas'][0]['ejercicios'][0]
+        self.assertLessEqual(primer_ej['repeticiones_objetivo'], 6)
+
+        # Definición (DEF) debe tener descansos <= 60s y repeticiones altas (>= 12)
+        plan_def = generar_plan_recomendado(self.user, {'objetivo': 'DEF', 'nivel': 'PR'})
+        self.assertLessEqual(plan_def['descanso_promedio_seg'], 60)
+        primer_ej_def = plan_def['rutinas'][0]['ejercicios'][0]
+        self.assertGreaterEqual(primer_ej_def['repeticiones_objetivo'], 12)
+
+    def test_generar_plan_adaptacion_edad_y_genero(self):
+        """Verifica que la edad >= 50 aumente el descanso y que el género sea reflejado en el plan"""
+        from rutinas.recomendador import generar_plan_recomendado
+
+        # Adulto mayor >= 50
+        plan_senior = generar_plan_recomendado(self.user, {'edad': 55, 'genero': 'M', 'objetivo': 'HIP'})
+        self.assertEqual(plan_senior['descanso_promedio_seg'], 75 + 15)
+        self.assertTrue(any('estabilidad articular' in n.lower() or 'soporte lumbar' in n.lower() for n in plan_senior['notas_adaptacion']))
+
+        # Mujer: nota específica de tren inferior
+        self.assertTrue(any('glúteos' in n.lower() for n in plan_senior['notas_adaptacion']))
+
+    def test_vista_recomendador_rutinas_get_y_post_ajax(self):
+        """Verifica que la vista GET renderice la plantilla y que POST/AJAX devuelva JSON con el plan"""
+        # GET estándar
+        res_get = self.client.get(reverse('rutinas:recomendador_rutinas'))
+        self.assertEqual(res_get.status_code, 200)
+        self.assertTemplateUsed(res_get, 'rutinas/recomendador.html')
+        self.assertContains(res_get, 'Recomendador de Rutinas')
+
+        # POST AJAX
+        payload = {
+            'dias_semana': 3,
+            'objetivo': 'HIP',
+            'nivel': 'IN',
+            'genero': 'H',
+            'edad': 30
+        }
+        res_post = self.client.post(
+            reverse('rutinas:recomendador_rutinas'),
+            data=json.dumps(payload),
+            content_type='application/json',
+            HTTP_X_REQUESTED_WITH='XMLHttpRequest'
+        )
+        self.assertEqual(res_post.status_code, 200)
+        data = res_post.json()
+        self.assertEqual(data['status'], 'success')
+        self.assertEqual(len(data['plan']['rutinas']), 3)
+
+    def test_guardar_plan_recomendado_ajax_en_base_de_datos(self):
+        """Verifica que guardar_plan_recomendado_ajax persista las rutinas y ejercicios en la BD"""
+        from rutinas.recomendador import generar_plan_recomendado
+
+        plan = generar_plan_recomendado(self.user, {'dias_semana': 3})
+        payload = {'rutinas': plan['rutinas']}
+
+        response = self.client.post(
+            reverse('rutinas:guardar_plan_recomendado_ajax'),
+            data=json.dumps(payload),
+            content_type='application/json'
+        )
+        self.assertEqual(response.status_code, 200)
+        res_data = response.json()
+        self.assertEqual(res_data['status'], 'success')
+        self.assertEqual(len(res_data['rutinas_creadas']), 3)
+
+        # Verificar que se crearon en la BD vinculadas al usuario
+        rutinas_creadas = Rutina.objects.filter(usuario=self.user, nombre__in=res_data['rutinas_creadas'])
+        self.assertEqual(rutinas_creadas.count(), 3)
+        for r in rutinas_creadas:
+            self.assertGreater(r.ejercicios.count(), 0)
+            self.assertTrue(bool(r.dias_semana))
+
+

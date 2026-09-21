@@ -10,6 +10,10 @@ urlpatterns = [
     path('eliminar/<int:rutina_id>/', views.eliminar_rutina_view, name='eliminar_rutina'),
     path('iniciar/<int:rutina_id>/', views.iniciar_rutina_view, name='iniciar_rutina'),
     
+    # Asistente y Recomendador Automático de Rutinas
+    path('recomendador/', views.recomendador_rutinas_view, name='recomendador_rutinas'),
+    path('recomendador/guardar/', views.guardar_plan_recomendado_ajax, name='guardar_plan_recomendado_ajax'),
+    
     # Endpoints AJAX para experiencia interactiva y en directo
     path('crear-ejercicio-ajax/', views.crear_ejercicio_rapido_ajax, name='crear_ejercicio_rapido_ajax'),
     path('guardar-serie-ajax/', views.guardar_serie_ajax, name='guardar_serie_ajax'),

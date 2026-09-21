@@ -9,7 +9,9 @@ from django.contrib import messages
 from django.utils import timezone
 
 from .models import Rutina, RutinaEjercicio
+from .recomendador import generar_plan_recomendado
 from ejercicios.models import Ejercicio, RegistroEjercicio, Serie
+from users.models import Profile
 from core.models import ConfiguracionSitio
 
 
@@ -465,3 +467,129 @@ def finalizar_entrenamiento_ajax(request):
     """
     messages.success(request, "¡Entrenamiento completado y registrado con éxito! Gran trabajo hoy 💪")
     return JsonResponse({'status': 'success', 'redirect_url': '/dashboard/'})
+
+
+# =====================================================================
+# RECOMENDADOR AUTOMÁTICO E INTELIGENTE DE RUTINAS
+# =====================================================================
+@login_required
+def recomendador_rutinas_view(request):
+    """
+    Asistente interactivo de recomendación de rutinas personalizadas.
+    Calcula y previsualiza un plan de entrenamiento adaptado al perfil (edad, género, nivel,
+    objetivo principal y meta semanal), permitiendo ajustarlo en tiempo real.
+    """
+    perfil = getattr(request.user, 'profile', None)
+
+    # Si es petición AJAX o POST para recalcular el plan al vuelo
+    if request.method == 'POST' or request.headers.get('x-requested-with') == 'XMLHttpRequest' or request.GET.get('ajax') == '1':
+        prefs = {}
+        if request.body and request.content_type == 'application/json':
+            try:
+                prefs = json.loads(request.body)
+            except Exception:
+                prefs = {}
+        else:
+            for k in ['dias_semana', 'objetivo', 'nivel', 'edad', 'genero', 'equipamiento', 'duracion']:
+                val = request.POST.get(k) or request.GET.get(k)
+                if val is not None and val != '':
+                    prefs[k] = val
+
+        plan = generar_plan_recomendado(request.user, prefs)
+        return JsonResponse({'status': 'success', 'plan': plan})
+
+    # Carga inicial de la página con los valores del perfil del usuario
+    plan_inicial = generar_plan_recomendado(request.user)
+
+    context = {
+        'plan_inicial': plan_inicial,
+        'plan_json': json.dumps(plan_inicial),
+        'perfil': perfil,
+        'objetivos_choices': Profile.OBJETIVOS_FITNESS if perfil else [
+            ('HIP', 'Hipertrofia / Ganar Músculo'),
+            ('DEF', 'Definición / Perder Grasa'),
+            ('FUE', 'Fuerza / Rendimiento'),
+            ('SAL', 'Salud y Condición Física'),
+            ('RES', 'Resistencia y Cardio'),
+        ],
+        'niveles_choices': Profile.NIVEL_EXPERIENCIA if perfil else [
+            ('PR', 'Principiante'),
+            ('IN', 'Intermedio'),
+            ('AV', 'Avanzado'),
+        ],
+        'genero_choices': Profile.GENERO_CHOICES if perfil else [
+            ('H', 'Hombre'),
+            ('M', 'Mujer'),
+            ('O', 'Otro / Prefiero no decir'),
+        ],
+    }
+    return render(request, 'rutinas/recomendador.html', context)
+
+
+@login_required
+@require_POST
+def guardar_plan_recomendado_ajax(request):
+    """
+    Guarda atómicamente el plan recomendado completo (o una rutina individual del plan)
+    en las tablas Rutina y RutinaEjercicio del usuario.
+    """
+    try:
+        if request.content_type == 'application/json':
+            data = json.loads(request.body)
+        else:
+            data = json.loads(request.POST.get('data', '{}'))
+
+        rutinas_data = data.get('rutinas', [])
+        if not rutinas_data and 'rutina' in data:
+            rutinas_data = [data['rutina']]
+
+        if not rutinas_data:
+            return JsonResponse({'status': 'error', 'message': 'No se enviaron rutinas para guardar.'}, status=400)
+
+        rutinas_creadas = []
+        with transaction.atomic():
+            for r_item in rutinas_data:
+                nombre = r_item.get('nombre', 'Rutina Recomendada').strip()
+                descripcion = r_item.get('descripcion', '').strip()
+                dias_semana = str(r_item.get('dias_semana', '')).strip()
+
+                rutina = Rutina.objects.create(
+                    usuario=request.user,
+                    nombre=nombre,
+                    descripcion=descripcion,
+                    dias_semana=dias_semana
+                )
+
+                ejercicios = r_item.get('ejercicios', [])
+                for index, ej_item in enumerate(ejercicios, start=1):
+                    ej_id = ej_item.get('ejercicio_id')
+                    series = int(ej_item.get('series_objetivo') or 3)
+                    reps = int(ej_item.get('repeticiones_objetivo')) if ej_item.get('repeticiones_objetivo') else None
+                    tiempo = int(ej_item.get('tiempo_objetivo_segundos')) if ej_item.get('tiempo_objetivo_segundos') else None
+                    peso = float(ej_item['peso_objetivo']) if ej_item.get('peso_objetivo') else None
+
+                    RutinaEjercicio.objects.create(
+                        rutina=rutina,
+                        ejercicio_id=ej_id,
+                        orden=index,
+                        series_objetivo=series,
+                        repeticiones_objetivo=reps,
+                        peso_objetivo=peso,
+                        tiempo_objetivo_segundos=tiempo
+                    )
+
+                rutinas_creadas.append(rutina.nombre)
+
+        plural = "s" if len(rutinas_creadas) > 1 else ""
+        mensaje = f"¡Se han guardado {len(rutinas_creadas)} rutina{plural} en tus entrenamientos! Listas para usar en el gimnasio."
+        messages.success(request, mensaje)
+
+        return JsonResponse({
+            'status': 'success',
+            'message': mensaje,
+            'rutinas_creadas': rutinas_creadas,
+            'redirect_url': '/rutinas/'
+        })
+
+    except Exception as e:
+        return JsonResponse({'status': 'error', 'message': str(e)}, status=400)
