@@ -414,7 +414,7 @@ def iniciar_rutina_view(request, rutina_id):
                 'unidad_tiempo': unidad_tiempo,
                 'distancia_km': distancia,
                 'distancia_anterior': serie_prev.get('distancia_km') if serie_prev else '',
-                'completado': False
+                'completado': serie_prev.get('es_de_hoy', False) if serie_prev else False
             })
 
         rutina_preparada.append({
@@ -487,6 +487,17 @@ def guardar_serie_ajax(request):
                 distancia_val = round(float(str(distancia_km).replace(',', '.').strip()), 2)
             except (ValueError, TypeError):
                 distancia_val = None
+
+        completado = datos.get('completado', True)
+
+        if not completado:
+            # Si el usuario desmarca la serie, la eliminamos de la base de datos
+            Serie.objects.filter(registro=registro, numero_serie=serie_num).delete()
+            return JsonResponse({
+                'status': 'success',
+                'message': f"Serie {serie_num} eliminada",
+                'serie_id': None
+            })
 
         # Guardamos o actualizamos la serie
         serie, creada = Serie.objects.get_or_create(
@@ -606,6 +617,12 @@ def sincronizar_series_lote_ajax(request):
                         distancia_val = round(float(str(distancia_km).replace(',', '.').strip()), 2)
                     except (ValueError, TypeError):
                         distancia_val = None
+
+                completado = item.get('completado', True)
+                if not completado:
+                    Serie.objects.filter(registro=registro, numero_serie=serie_num).delete()
+                    synced_count += 1
+                    continue
 
                 serie, creada = Serie.objects.get_or_create(
                     registro=registro,

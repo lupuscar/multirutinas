@@ -707,7 +707,8 @@ function modoGym() {
                 tiempo_minutos: serie.tiempo_minutos,
                 distancia_km: serie.distancia_km,
                 rutina_nombre: this.rutinaNombre,
-                fecha: new Date().toISOString().slice(0, 10)
+                fecha: new Date().toISOString().slice(0, 10),
+                completado: serie.completado
             };
 
             // 1. Si no hay conexión o se detecta offline, guardar en la cola local directamente
