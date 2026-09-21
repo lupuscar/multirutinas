@@ -1511,12 +1511,12 @@ def generar_plan_recomendado(usuario: User, preferencias: Optional[Dict[str, Any
     genero = preferencias.get('genero') or (getattr(perfil, 'genero', 'H') or 'H')
 
     edad = None
-    if 'edad' in preferencias and preferencias['edad'] not in (None, ''):
+    if preferencias.get('edad'):
         try:
-            edad = int(preferencias['edad'])
+            edad = int(preferencias.get('edad'))
         except (ValueError, TypeError):
             pass
-    if edad is None and perfil and perfil.edad is not None:
+    if edad is None and perfil and perfil.edad:
         edad = perfil.edad
     if edad is None:
         edad = 28  # Fallback estándar
