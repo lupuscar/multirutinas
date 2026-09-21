@@ -3,6 +3,7 @@ FROM python:3.12-slim
 # Evita que Python escriba archivos .pyc en disco y fuerza la salida sin búfer para logs en tiempo real
 ENV PYTHONDONTWRITEBYTECODE=1
 ENV PYTHONUNBUFFERED=1
+ENV TZ=Europe/Madrid
 
 WORKDIR /app
 
@@ -10,6 +11,7 @@ WORKDIR /app
 RUN apt-get update && apt-get install -y --no-install-recommends \
     curl \
     libpq5 \
+    tzdata \
     && rm -rf /var/lib/apt/lists/*
 
 # Instalar dependencias de Python

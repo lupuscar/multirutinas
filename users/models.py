@@ -138,9 +138,16 @@ class Profile(models.Model):
         """Calcula la edad en años cumplidos a partir de la fecha de nacimiento"""
         if self.fecha_nacimiento:
             from django.utils import timezone
-            hoy = timezone.now().date()
-            return hoy.year - self.fecha_nacimiento.year - (
-                (hoy.month, hoy.day) < (self.fecha_nacimiento.month, self.fecha_nacimiento.day)
+            from datetime import date, datetime
+            fn = self.fecha_nacimiento
+            if isinstance(fn, str):
+                try:
+                    fn = datetime.strptime(fn, '%Y-%m-%d').date()
+                except ValueError:
+                    return None
+            hoy = timezone.localdate()
+            return hoy.year - fn.year - (
+                (hoy.month, hoy.day) < (fn.month, fn.day)
             )
         return None
 
