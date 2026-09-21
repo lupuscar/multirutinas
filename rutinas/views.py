@@ -339,6 +339,7 @@ def obtener_datos_ultimo_entrenamiento(usuario, ejercicio_id):
                 'repeticiones': serie.repeticiones,
                 'peso_kg': str(peso_crudo) if serie.peso_kg is not None else '',
                 'tiempo_segundos': serie.tiempo_segundos or '',
+                'distancia_km': str(serie.distancia_km) if serie.distancia_km is not None else '',
             })
     return datos_iniciales
 
@@ -348,7 +349,7 @@ def iniciar_rutina_view(request, rutina_id):
     """
     Prepara la sesión en 'Modo Gym' para móvil:
     Carga los ejercicios de la rutina y las sugerencias basadas en el historial
-    o las metas objetivo de la rutina (reps, peso o tiempo).
+    o las metas objetivo de la rutina (reps, peso, tiempo o distancia).
     """
     rutina = get_object_or_404(Rutina, id=rutina_id, usuario=request.user)
     ejercicios_rutina = RutinaEjercicio.objects.filter(rutina=rutina).select_related('ejercicio').order_by('orden')
@@ -360,6 +361,17 @@ def iniciar_rutina_view(request, rutina_id):
         num_series = item.series_objetivo or 3
         series_sugeridas = []
 
+        distancia_obj_str = str(item.distancia_objetivo_km) if getattr(item, 'distancia_objetivo_km', None) is not None else ''
+
+        # Detectar si es ejercicio continuo (correr, bici, elíptica, deportes, etc.)
+        nombre_lower = (item.ejercicio.nombre or '').lower()
+        es_cardio_continuo = item.ejercicio.es_distancia or item.ejercicio.tipo in ['DEP', 'DAN', 'OUT'] or any(k in nombre_lower for k in [
+            'correr', 'cinta', 'running', 'bici', 'ciclismo', 'spinning', 'elíptica', 'eliptica',
+            'senderismo', 'caminata', 'hiking', 'remo', 'nadar', 'natación', 'pádel', 'padel',
+            'fútbol', 'futbol', 'baloncesto'
+        ])
+        tiempo_base = item.tiempo_objetivo_segundos or (1200 if es_cardio_continuo else 45)
+
         for num_s in range(1, num_series + 1):
             serie_prev = next((s for s in historial if s.get('numero_serie') == num_s), None) if historial else None
 
@@ -368,11 +380,28 @@ def iniciar_rutina_view(request, rutina_id):
             if serie_prev:
                 reps = serie_prev.get('repeticiones') or item.repeticiones_objetivo or 10
                 peso = serie_prev.get('peso_kg') or peso_objetivo_str
-                tiempo = serie_prev.get('tiempo_segundos') or item.tiempo_objetivo_segundos or 45
+                tiempo = serie_prev.get('tiempo_segundos') or tiempo_base
+                distancia = serie_prev.get('distancia_km') or distancia_obj_str
             else:
                 reps = item.repeticiones_objetivo or 10
                 peso = peso_objetivo_str
-                tiempo = item.tiempo_objetivo_segundos or 45
+                tiempo = tiempo_base
+                distancia = distancia_obj_str
+
+            try:
+                tiempo_seg = int(tiempo)
+            except (ValueError, TypeError):
+                tiempo_seg = 1200 if es_cardio_continuo else 45
+
+            # Si el tiempo es >= 5 minutos (300 segundos) o cardio prolongado, se presenta en minutos
+            if tiempo_seg >= 300 or es_cardio_continuo:
+                m_calc = round(tiempo_seg / 60.0, 1)
+                tiempo_min = int(m_calc) if m_calc.is_integer() else m_calc
+                unidad_tiempo = 'min'
+            else:
+                m_calc = round(tiempo_seg / 60.0, 1)
+                tiempo_min = int(m_calc) if m_calc.is_integer() else m_calc
+                unidad_tiempo = 'seg'
 
             series_sugeridas.append({
                 'numero_serie': num_s,
@@ -380,7 +409,11 @@ def iniciar_rutina_view(request, rutina_id):
                 'peso_kg': peso,
                 'peso_anterior': serie_prev.get('peso_kg') if serie_prev else '',
                 'reps_anteriores': serie_prev.get('repeticiones') if serie_prev else None,
-                'tiempo_segundos': tiempo,
+                'tiempo_segundos': tiempo_seg,
+                'tiempo_minutos': tiempo_min,
+                'unidad_tiempo': unidad_tiempo,
+                'distancia_km': distancia,
+                'distancia_anterior': serie_prev.get('distancia_km') if serie_prev else '',
                 'completado': False
             })
 
@@ -389,6 +422,8 @@ def iniciar_rutina_view(request, rutina_id):
             'ejercicio_nombre': item.ejercicio.nombre,
             'modalidad': item.ejercicio.modalidad,
             'grupo_muscular': item.ejercicio.get_grupo_muscular_display(),
+            'es_distancia': item.ejercicio.es_distancia,
+            'tipo': item.ejercicio.tipo,
             'series_sugeridas': series_sugeridas
         })
 
@@ -405,7 +440,7 @@ def iniciar_rutina_view(request, rutina_id):
 def guardar_serie_ajax(request):
     """
     Guarda o actualiza una serie específica mediante AJAX de manera instantánea.
-    Soporta repeticiones, peso y tiempo en segundos.
+    Soporta repeticiones, peso, tiempo en segundos/minutos y distancia en km.
     """
     try:
         datos = json.loads(request.body)
@@ -414,6 +449,8 @@ def guardar_serie_ajax(request):
         repeticiones = datos.get('repeticiones')
         peso = datos.get('peso')
         tiempo_segundos = datos.get('tiempo_segundos')
+        tiempo_minutos = datos.get('tiempo_minutos')
+        distancia_km = datos.get('distancia_km')
         rutina_nombre = datos.get('rutina_nombre', 'Entrenamiento')
 
         ejercicio_obj = get_object_or_404(Ejercicio, id=ejercicio_id)
@@ -430,7 +467,26 @@ def guardar_serie_ajax(request):
         # Valores limpios
         reps_val = int(repeticiones) if repeticiones is not None and str(repeticiones).strip() != '' else None
         peso_val = float(peso) if peso is not None and str(peso).strip() != '' else None
-        tiempo_val = int(tiempo_segundos) if tiempo_segundos is not None and str(tiempo_segundos).strip() != '' else None
+        
+        # Conversión de tiempo (prioriza minutos si se enviaron, o segundos)
+        tiempo_val = None
+        if tiempo_minutos is not None and str(tiempo_minutos).strip() != '':
+            try:
+                tiempo_val = int(round(float(str(tiempo_minutos).replace(',', '.').strip()) * 60))
+            except (ValueError, TypeError):
+                tiempo_val = None
+        elif tiempo_segundos is not None and str(tiempo_segundos).strip() != '':
+            try:
+                tiempo_val = int(tiempo_segundos)
+            except (ValueError, TypeError):
+                tiempo_val = None
+        
+        distancia_val = None
+        if distancia_km is not None and str(distancia_km).strip() != '':
+            try:
+                distancia_val = round(float(str(distancia_km).replace(',', '.').strip()), 2)
+            except (ValueError, TypeError):
+                distancia_val = None
 
         # Guardamos o actualizamos la serie
         serie, creada = Serie.objects.get_or_create(
@@ -440,6 +496,7 @@ def guardar_serie_ajax(request):
                 'repeticiones': reps_val,
                 'peso_kg': peso_val,
                 'tiempo_segundos': tiempo_val,
+                'distancia_km': distancia_val,
             }
         )
 
@@ -447,6 +504,7 @@ def guardar_serie_ajax(request):
             serie.repeticiones = reps_val
             serie.peso_kg = peso_val
             serie.tiempo_segundos = tiempo_val
+            serie.distancia_km = distancia_val
             serie.save()
 
         return JsonResponse({
@@ -563,10 +621,52 @@ def guardar_plan_recomendado_ajax(request):
                 ejercicios = r_item.get('ejercicios', [])
                 for index, ej_item in enumerate(ejercicios, start=1):
                     ej_id = ej_item.get('ejercicio_id')
-                    series = int(ej_item.get('series_objetivo') or 3)
-                    reps = int(ej_item.get('repeticiones_objetivo')) if ej_item.get('repeticiones_objetivo') else None
-                    tiempo = int(ej_item.get('tiempo_objetivo_segundos')) if ej_item.get('tiempo_objetivo_segundos') else None
-                    peso = float(ej_item['peso_objetivo']) if ej_item.get('peso_objetivo') else None
+
+                    # Series
+                    try:
+                        series = int(ej_item.get('series_objetivo') or 3)
+                    except (ValueError, TypeError):
+                        series = 3
+
+                    # Repeticiones
+                    reps_raw = ej_item.get('repeticiones_objetivo')
+                    reps = None
+                    if reps_raw not in (None, '', 'null'):
+                        try:
+                            reps = int(reps_raw)
+                        except (ValueError, TypeError):
+                            reps = None
+
+                    # Tiempo en segundos
+                    tiempo_raw = ej_item.get('tiempo_objetivo_segundos')
+                    tiempo = None
+                    if tiempo_raw not in (None, '', 'null'):
+                        try:
+                            tiempo = int(tiempo_raw)
+                        except (ValueError, TypeError):
+                            tiempo = None
+
+                    # Peso objetivo (kg)
+                    peso_raw = ej_item.get('peso_objetivo')
+                    peso = None
+                    if peso_raw not in (None, '', 'null'):
+                        try:
+                            peso_val = float(str(peso_raw).replace(',', '.').strip())
+                            if peso_val >= 0:
+                                peso = peso_val
+                        except (ValueError, TypeError):
+                            peso = None
+
+                    # Distancia objetivo (km)
+                    dist_raw = ej_item.get('distancia_objetivo_km')
+                    distancia = None
+                    if dist_raw not in (None, '', 'null'):
+                        try:
+                            dist_val = float(str(dist_raw).replace(',', '.').strip())
+                            if dist_val > 0:
+                                distancia = dist_val
+                        except (ValueError, TypeError):
+                            distancia = None
 
                     RutinaEjercicio.objects.create(
                         rutina=rutina,
@@ -575,7 +675,8 @@ def guardar_plan_recomendado_ajax(request):
                         series_objetivo=series,
                         repeticiones_objetivo=reps,
                         peso_objetivo=peso,
-                        tiempo_objetivo_segundos=tiempo
+                        tiempo_objetivo_segundos=tiempo,
+                        distancia_objetivo_km=distancia,
                     )
 
                 rutinas_creadas.append(rutina.nombre)

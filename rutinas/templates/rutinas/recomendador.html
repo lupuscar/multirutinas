@@ -87,13 +87,7 @@
                         </button>
                     </template>
                 </div>
-                <p class="text-[11px] text-gray-400">
-                    <span x-show="dias_semana === 2">Esquema Full Body A/B</span>
-                    <span x-show="dias_semana === 3">Esquema Push / Pull / Legs clásico</span>
-                    <span x-show="dias_semana === 4">Esquema Torso / Pierna (Frecuencia 2)</span>
-                    <span x-show="dias_semana === 5">Esquema PPL + Especialización</span>
-                    <span x-show="dias_semana === 6">Esquema PPL x2 Alto Rendimiento</span>
-                </p>
+                <p class="text-[11px] text-brand-light font-semibold truncate" x-text="plan && plan.descripcion_esquema ? plan.descripcion_esquema : 'Esquema de ' + dias_semana + ' días'"></p>
             </div>
 
             <!-- 2. OBJETIVO PRINCIPAL -->
@@ -282,12 +276,17 @@
     <!-- DESGLOSE DETALLADO DE RUTINAS Y EJERCICIOS -->
     <!-- ================================================================= -->
     <div class="space-y-6">
-        <div class="flex items-center justify-between">
-            <h3 class="text-lg sm:text-xl font-black text-gray-900 dark:text-white flex items-center">
-                <i class="fa-solid fa-list-check text-brand-light mr-2.5"></i>
-                Sesiones Incluidas en el Plan
-            </h3>
-            <span class="text-xs text-gray-400 font-bold" x-text="plan ? plan.total_rutinas + ' Rutinas' : ''"></span>
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+            <div>
+                <h3 class="text-lg sm:text-xl font-black text-gray-900 dark:text-white flex items-center">
+                    <i class="fa-solid fa-list-check text-brand-light mr-2.5"></i>
+                    Sesiones Incluidas en el Plan
+                </h3>
+                <p class="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
+                    <i class="fa-solid fa-sliders text-brand-light mr-1"></i> Puedes ajustar series, reps y pesos antes de guardar. Se guardarán tal como los configures.
+                </p>
+            </div>
+            <span class="text-xs text-gray-400 font-bold self-start sm:self-auto" x-text="plan ? plan.total_rutinas + ' Rutinas' : ''"></span>
         </div>
 
         <!-- Grid de Tarjetas de Rutinas -->
@@ -324,32 +323,124 @@
                         </button>
                     </div>
 
-                    <!-- Lista de Ejercicios -->
-                    <div class="p-5 flex-1 divide-y divide-gray-100 dark:divide-gray-700/50">
-                        <template x-for="ej in rutina.ejercicios" :key="ej.orden">
-                            <div class="py-3 first:pt-0 last:pb-0 flex items-center justify-between gap-3">
-                                <div class="flex items-center space-x-3 min-w-0">
-                                    <div class="w-8 h-8 rounded-xl bg-gray-100 dark:bg-gray-700/60 text-gray-600 dark:text-gray-300 flex items-center justify-center text-xs shrink-0">
-                                        <i :class="ej.icono"></i>
-                                    </div>
-                                    <div class="min-w-0">
-                                        <h5 class="text-xs sm:text-sm font-bold text-gray-800 dark:text-gray-200 truncate" x-text="ej.nombre"></h5>
-                                        <div class="flex items-center space-x-2 mt-0.5">
-                                            <span class="text-[10px] px-2 py-0.5 rounded-md bg-brand-light/10 text-brand-light font-bold" x-text="ej.grupo_muscular_display"></span>
-                                            <span class="text-[10px] text-gray-400" x-text="ej.tipo_display"></span>
+                    <!-- Lista de Ejercicios Editables -->
+                    <div class="p-4 sm:p-5 flex-1 divide-y divide-gray-100 dark:divide-gray-700/50 space-y-4">
+                        <template x-for="(ej, ejIdx) in rutina.ejercicios" :key="ej.ejercicio_id || ejIdx">
+                            <div class="pt-4 first:pt-0 space-y-2.5">
+                                <!-- Fila Superior: Icono, Nombre, Tags y Badge Origen -->
+                                <div class="flex items-start justify-between gap-2">
+                                    <div class="flex items-center space-x-2.5 min-w-0">
+                                        <div class="w-8 h-8 rounded-xl bg-gray-100 dark:bg-gray-700/60 text-gray-600 dark:text-gray-300 flex items-center justify-center text-xs shrink-0">
+                                            <i :class="ej.icono"></i>
                                         </div>
+                                        <div class="min-w-0">
+                                            <h5 class="text-xs sm:text-sm font-bold text-gray-800 dark:text-gray-200 truncate" x-text="ej.nombre"></h5>
+                                            <div class="flex items-center flex-wrap gap-1.5 mt-0.5">
+                                                <span class="text-[10px] px-1.5 py-0.5 rounded bg-brand-light/10 text-brand-light font-bold" x-text="ej.grupo_muscular_display"></span>
+                                                <span class="text-[10px] text-gray-400" x-text="ej.tipo_display"></span>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <!-- Badge de origen de peso / descanso -->
+                                    <div class="shrink-0 text-right">
+                                        <template x-if="ej.modalidad === 'REPS_PESO'">
+                                            <div>
+                                                <template x-if="ej.origen_peso === 'historial'">
+                                                    <span class="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20" title="Basado en tu última marca real en este ejercicio">
+                                                        <i class="fa-solid fa-star text-[9px] mr-1 text-emerald-500"></i> Tu récord
+                                                    </span>
+                                                </template>
+                                                <template x-if="ej.origen_peso === 'sugerido'">
+                                                    <span class="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold bg-brand-light/15 text-brand-dark dark:text-brand-light border border-brand-light/20" title="Carga de partida sugerida para tu nivel y género">
+                                                        <i class="fa-solid fa-wand-magic-sparkles text-[9px] mr-1"></i> Sugerido
+                                                    </span>
+                                                </template>
+                                                <template x-if="ej.origen_peso === 'corporal'">
+                                                    <span class="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold bg-gray-500/15 text-gray-600 dark:text-gray-400 border border-gray-500/20" title="Autocarga con peso corporal">
+                                                        <i class="fa-solid fa-person text-[9px] mr-1"></i> Corporal
+                                                    </span>
+                                                </template>
+                                                <template x-if="ej.origen_peso === 'modificado'">
+                                                    <span class="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold bg-blue-500/15 text-blue-600 dark:text-blue-400 border border-blue-500/20" title="Ajustado manualmente por ti">
+                                                        <i class="fa-solid fa-pen-to-square text-[9px] mr-1"></i> Personalizado
+                                                    </span>
+                                                </template>
+                                            </div>
+                                        </template>
+                                        <span class="block text-[10px] text-gray-400 mt-0.5" x-text="ej.descanso_segundos + 's descanso'"></span>
                                     </div>
                                 </div>
 
-                                <div class="text-right shrink-0">
-                                    <template x-if="ej.modalidad === 'TIEMPO'">
-                                        <span class="text-xs font-black text-brand-light" x-text="ej.series_objetivo + ' × ' + ej.tiempo_objetivo_segundos + 's'"></span>
-                                    </template>
-                                    <template x-if="ej.modalidad !== 'TIEMPO'">
-                                        <span class="text-xs font-black text-brand-light" x-text="ej.series_objetivo + ' × ' + ej.repeticiones_objetivo + ' reps'"></span>
-                                    </template>
-                                    <span class="block text-[10px] text-gray-400" x-text="ej.descanso_segundos + 's descanso'"></span>
-                                </div>
+                                <!-- Controles interactivos: REPS_PESO -->
+                                <template x-if="ej.modalidad === 'REPS_PESO'">
+                                    <div class="bg-gray-50/80 dark:bg-gray-900/50 rounded-2xl p-2.5 grid grid-cols-3 gap-2 border border-gray-100 dark:border-gray-800">
+                                        <!-- Series -->
+                                        <div class="text-center">
+                                            <span class="block text-[10px] font-bold uppercase tracking-wider text-gray-400 mb-1">Series</span>
+                                            <div class="flex items-center justify-center space-x-1">
+                                                <button type="button" @click="ajustarSeries(ej, -1)" class="w-6 h-6 rounded-lg bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-300 font-bold hover:bg-gray-100 dark:hover:bg-gray-700 text-xs flex items-center justify-center cursor-pointer active:scale-95 transition-all">-</button>
+                                                <input type="number" x-model.number="ej.series_objetivo" min="1" max="15" class="w-10 text-center font-black text-xs sm:text-sm bg-transparent border-0 p-0 text-gray-900 dark:text-white focus:ring-0">
+                                                <button type="button" @click="ajustarSeries(ej, 1)" class="w-6 h-6 rounded-lg bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-300 font-bold hover:bg-gray-100 dark:hover:bg-gray-700 text-xs flex items-center justify-center cursor-pointer active:scale-95 transition-all">+</button>
+                                            </div>
+                                        </div>
+
+                                        <!-- Reps -->
+                                        <div class="text-center">
+                                            <span class="block text-[10px] font-bold uppercase tracking-wider text-gray-400 mb-1">Reps</span>
+                                            <div class="flex items-center justify-center space-x-1">
+                                                <button type="button" @click="ajustarReps(ej, -1)" class="w-6 h-6 rounded-lg bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-300 font-bold hover:bg-gray-100 dark:hover:bg-gray-700 text-xs flex items-center justify-center cursor-pointer active:scale-95 transition-all">-</button>
+                                                <input type="number" x-model.number="ej.repeticiones_objetivo" min="1" max="100" class="w-10 text-center font-black text-xs sm:text-sm bg-transparent border-0 p-0 text-gray-900 dark:text-white focus:ring-0">
+                                                <button type="button" @click="ajustarReps(ej, 1)" class="w-6 h-6 rounded-lg bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-300 font-bold hover:bg-gray-100 dark:hover:bg-gray-700 text-xs flex items-center justify-center cursor-pointer active:scale-95 transition-all">+</button>
+                                            </div>
+                                        </div>
+
+                                        <!-- Peso (kg) -->
+                                        <div class="text-center">
+                                            <span class="block text-[10px] font-bold uppercase tracking-wider text-gray-400 mb-1">Peso (kg)</span>
+                                            <div class="flex items-center justify-center space-x-1">
+                                                <button type="button" @click="ajustarPeso(ej, -2.5)" class="w-6 h-6 rounded-lg bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-300 font-bold hover:bg-gray-100 dark:hover:bg-gray-700 text-[10px] flex items-center justify-center cursor-pointer active:scale-95 transition-all" title="-2.5 kg">-</button>
+                                                <input type="number" step="0.5" x-model="ej.peso_objetivo" @input="ej.origen_peso = 'modificado'" placeholder="0" class="w-12 text-center font-black text-xs sm:text-sm bg-transparent border-0 p-0 text-brand-light focus:ring-0">
+                                                <button type="button" @click="ajustarPeso(ej, 2.5)" class="w-6 h-6 rounded-lg bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-300 font-bold hover:bg-gray-100 dark:hover:bg-gray-700 text-[10px] flex items-center justify-center cursor-pointer active:scale-95 transition-all" title="+2.5 kg">+</button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </template>
+
+                                <!-- Controles interactivos: TIEMPO -->
+                                <template x-if="ej.modalidad === 'TIEMPO'">
+                                    <div class="bg-gray-50/80 dark:bg-gray-900/50 rounded-2xl p-2.5 flex flex-wrap items-center justify-between gap-2 border border-gray-100 dark:border-gray-800 text-xs">
+                                        <!-- Si admite o tiene distancia -->
+                                        <template x-if="ej.es_distancia || (ej.distancia_objetivo_km !== null && ej.distancia_objetivo_km !== undefined)">
+                                            <div class="flex items-center space-x-1.5">
+                                                <span class="text-[10px] font-bold uppercase tracking-wider text-gray-400">Distancia:</span>
+                                                <button type="button" @click="ajustarDistancia(ej, -0.5)" class="w-6 h-6 rounded-lg bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-300 font-bold hover:bg-gray-100 dark:hover:bg-gray-700 text-xs flex items-center justify-center cursor-pointer active:scale-95 transition-all">-</button>
+                                                <input type="number" step="0.5" x-model="ej.distancia_objetivo_km" placeholder="0" class="w-12 text-center font-black text-xs bg-transparent border-0 p-0 text-brand-light focus:ring-0">
+                                                <span class="text-[11px] font-bold text-gray-500">km</span>
+                                                <button type="button" @click="ajustarDistancia(ej, 0.5)" class="w-6 h-6 rounded-lg bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-300 font-bold hover:bg-gray-100 dark:hover:bg-gray-700 text-xs flex items-center justify-center cursor-pointer active:scale-95 transition-all">+</button>
+                                            </div>
+                                        </template>
+
+                                        <!-- Series si son repeticiones por bloques -->
+                                        <template x-if="ej.series_objetivo > 1 && !ej.es_distancia">
+                                            <div class="flex items-center space-x-1.5">
+                                                <span class="text-[10px] font-bold uppercase tracking-wider text-gray-400">Series:</span>
+                                                <button type="button" @click="ajustarSeries(ej, -1)" class="w-6 h-6 rounded-lg bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-300 font-bold hover:bg-gray-100 dark:hover:bg-gray-700 text-xs flex items-center justify-center cursor-pointer active:scale-95 transition-all">-</button>
+                                                <span class="font-black text-xs text-gray-800 dark:text-gray-200 min-w-[20px] text-center" x-text="ej.series_objetivo"></span>
+                                                <button type="button" @click="ajustarSeries(ej, 1)" class="w-6 h-6 rounded-lg bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-300 font-bold hover:bg-gray-100 dark:hover:bg-gray-700 text-xs flex items-center justify-center cursor-pointer active:scale-95 transition-all">+</button>
+                                            </div>
+                                        </template>
+
+                                        <!-- Duración -->
+                                        <div class="flex items-center space-x-1.5 ml-auto">
+                                            <span class="text-[10px] font-bold uppercase tracking-wider text-gray-400">Duración:</span>
+                                            <button type="button" @click="ajustarTiempo(ej, -30)" class="w-6 h-6 rounded-lg bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-300 font-bold hover:bg-gray-100 dark:hover:bg-gray-700 text-xs flex items-center justify-center cursor-pointer active:scale-95 transition-all" title="-30s">-</button>
+                                            <span class="font-black text-xs text-brand-light min-w-[50px] text-center" x-text="ej.tiempo_display || (ej.tiempo_objetivo_segundos ? (ej.tiempo_objetivo_segundos + 's') : '-')"></span>
+                                            <button type="button" @click="ajustarTiempo(ej, 30)" class="w-6 h-6 rounded-lg bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-300 font-bold hover:bg-gray-100 dark:hover:bg-gray-700 text-xs flex items-center justify-center cursor-pointer active:scale-95 transition-all" title="+30s">+</button>
+                                        </div>
+                                    </div>
+                                </template>
+
                             </div>
                         </template>
                     </div>
@@ -482,6 +573,44 @@ function recomendadorApp() {
             } catch (e) {
                 alert('Error al guardar la rutina');
                 this.guardando = false;
+            }
+        },
+
+        ajustarPeso(ej, delta) {
+            let actual = parseFloat(ej.peso_objetivo);
+            if (isNaN(actual) || actual === null) actual = 0;
+            let nuevo = Math.max(0, Math.round((actual + delta) * 10) / 10);
+            ej.peso_objetivo = nuevo > 0 ? nuevo : null;
+            ej.origen_peso = 'modificado';
+        },
+
+        ajustarSeries(ej, delta) {
+            let actual = parseInt(ej.series_objetivo) || 3;
+            ej.series_objetivo = Math.max(1, Math.min(15, actual + delta));
+        },
+
+        ajustarReps(ej, delta) {
+            let actual = parseInt(ej.repeticiones_objetivo) || 10;
+            ej.repeticiones_objetivo = Math.max(1, Math.min(100, actual + delta));
+        },
+
+        ajustarDistancia(ej, delta) {
+            let actual = parseFloat(ej.distancia_objetivo_km);
+            if (isNaN(actual) || actual === null) actual = 0;
+            let nuevo = Math.max(0, Math.round((actual + delta) * 10) / 10);
+            ej.distancia_objetivo_km = nuevo > 0 ? nuevo : null;
+        },
+
+        ajustarTiempo(ej, deltaSeg) {
+            let actual = parseInt(ej.tiempo_objetivo_segundos) || 60;
+            actual = Math.max(10, actual + deltaSeg);
+            ej.tiempo_objetivo_segundos = actual;
+            if (actual >= 60) {
+                let mins = Math.floor(actual / 60);
+                let s = actual % 60;
+                ej.tiempo_display = s === 0 ? `${mins} min` : `${mins}m ${s}s`;
+            } else {
+                ej.tiempo_display = `${actual}s`;
             }
         }
     };

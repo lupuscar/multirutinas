@@ -320,5 +320,81 @@ class EjerciciosAppTests(TestCase):
         json_resp = res.json()
         self.assertEqual(json_resp.get('status'), 'success')
 
+    def test_serie_distancia_y_ritmo(self):
+        """Verifica el cálculo de ritmo (min/km), velocidad (km/h) y representación de Serie con distancia"""
+        reg = RegistroEjercicio.objects.create(
+            usuario=self.user1,
+            ejercicio=self.ej_oficial
+        )
+        # 5 km en 25 minutos (1500 segundos) -> 5:00 min/km, 12.0 km/h
+        serie = Serie.objects.create(
+            registro=reg,
+            distancia_km=5.0,
+            tiempo_segundos=1500
+        )
+        self.assertEqual(serie.ritmo_min_km, "5:00 min/km")
+        self.assertEqual(serie.velocidad_kmh, 12.0)
+        self.assertIn("5.0 km", str(serie))
+        self.assertIn("25m", str(serie))
+        self.assertIn("5:00 min/km", str(serie))
 
+    def test_registrar_sesion_libre_con_distancia_km(self):
+        """Verifica que registrar una actividad de correr almacene correctamente los km recorridos"""
+        self.client.login(username='carlos', password='password123')
+        ej_correr = Ejercicio.objects.create(
+            nombre='Running Exterior',
+            modalidad='TIEMPO',
+            grupo_muscular='CAR',
+            tipo='OUT'
+        )
 
+        data = {
+            'duracion_minutos': '30',
+            'distancia_km': '6.0',
+            'notas': 'Entrenamiento de fondo',
+            'fecha': '2026-09-21'
+        }
+        res = self.client.post(
+            reverse('ejercicios:registrar_sesion_libre_ejercicio', args=[ej_correr.id]),
+            data
+        )
+        self.assertRedirects(res, reverse('ejercicios:detalle_ejercicio', args=[ej_correr.id]))
+
+        reg = RegistroEjercicio.objects.filter(usuario=self.user1, ejercicio=ej_correr).first()
+        self.assertIsNotNone(reg)
+        serie = reg.series_detalle.first()
+        self.assertIsNotNone(serie)
+        self.assertEqual(float(serie.distancia_km), 6.0)
+        self.assertEqual(serie.tiempo_segundos, 1800)
+        self.assertEqual(serie.ritmo_min_km, "5:00 min/km")
+        self.assertEqual(serie.velocidad_kmh, 12.0)
+
+    def test_registrar_sesion_libre_json_con_distancia(self):
+        """Verifica que el API JSON registre correctamente distancia_km en carrera"""
+        import json
+        self.client.login(username='carlos', password='password123')
+        ej_cinta = Ejercicio.objects.create(
+            nombre='Correr en Cinta',
+            modalidad='TIEMPO',
+            grupo_muscular='CAR',
+            tipo='CAR'
+        )
+
+        payload = {
+            'ejercicio_id': ej_cinta.id,
+            'duracion_minutos': 25,
+            'distancia_km': 5.0,
+            'notas': '5k en cinta a ritmo constante'
+        }
+        res = self.client.post(
+            reverse('ejercicios:registrar_sesion_libre'),
+            data=json.dumps(payload),
+            content_type='application/json'
+        )
+        self.assertEqual(res.status_code, 200)
+
+        reg = RegistroEjercicio.objects.filter(usuario=self.user1, ejercicio=ej_cinta).first()
+        self.assertIsNotNone(reg)
+        serie = reg.series_detalle.first()
+        self.assertEqual(float(serie.distancia_km), 5.0)
+        self.assertEqual(serie.ritmo_min_km, "5:00 min/km")

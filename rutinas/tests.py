@@ -166,17 +166,39 @@ class RutinaAppTests(TestCase):
         self.assertIsNotNone(serie_tiempo)
         self.assertEqual(serie_tiempo.tiempo_segundos, 60)
 
+        # Guardar serie con tiempo y distancia en km (carrera / cardio)
+        payload_distancia = {
+            'ejercicio_id': self.ejercicio_tiempo.id,
+            'numero_serie': 2,
+            'tiempo_segundos': 1200,
+            'distancia_km': 4.5,
+            'rutina_nombre': 'Torso y Core'
+        }
+        res3 = self.client.post(
+            reverse('rutinas:guardar_serie_ajax'),
+            data=json.dumps(payload_distancia),
+            content_type='application/json'
+        )
+        self.assertEqual(res3.status_code, 200)
+
+        serie_dist = Serie.objects.filter(registro__ejercicio=self.ejercicio_tiempo, numero_serie=2).first()
+        self.assertIsNotNone(serie_dist)
+        self.assertEqual(float(serie_dist.distancia_km), 4.5)
+        self.assertEqual(serie_dist.tiempo_segundos, 1200)
+
     def test_dashboard_view(self):
         """Verifica que el dashboard carga sin errores y calcula métricas"""
         # Crear un registro con serie para simular actividad
         reg = RegistroEjercicio.objects.create(usuario=self.user, ejercicio=self.ejercicio_peso)
-        Serie.objects.create(registro=reg, numero_serie=1, repeticiones=10, peso_kg=80.0)
+        Serie.objects.create(registro=reg, numero_serie=1, repeticiones=10, peso_kg=80.0, distancia_km=5.0)
 
         response = self.client.get(reverse('dashboard:dashboard'))
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, 'Tu Progreso')
         self.assertIn('volumen_total', response.context)
         self.assertEqual(response.context['volumen_total'], 800.0)
+        self.assertIn('km_total', response.context)
+        self.assertEqual(response.context['km_total'], 5.0)
 
     def test_rutina_dias_semana_model_methods(self):
         """Verifica los métodos y propiedades de días de la semana en el modelo Rutina"""
@@ -425,4 +447,198 @@ class RutinaAppTests(TestCase):
             self.assertGreater(r.ejercicios.count(), 0)
             self.assertTrue(bool(r.dias_semana))
 
+    def test_generar_plan_resistencia_cardiovascular_y_calistenia(self):
+        """Verifica que el plan de Resistencia (RES) incluya ejercicios cardiovasculares y calistenia con tiempos continuos"""
+        from rutinas.recomendador import generar_plan_recomendado
+
+        plan_res = generar_plan_recomendado(self.user, {'objetivo': 'RES', 'dias_semana': 3, 'nivel': 'IN'})
+        self.assertEqual(plan_res['objetivo_codigo'], 'RES')
+        self.assertTrue('Running' in plan_res['descripcion_esquema'] or 'Resistencia' in plan_res['descripcion_esquema'])
+
+        # Debe contener al menos un ejercicio cardiovascular con modalidad TIEMPO y >= 600 segundos (10 min)
+        todos_ejercicios = [ej for r in plan_res['rutinas'] for ej in r['ejercicios']]
+        ejercicios_cardio = [ej for ej in todos_ejercicios if ej['modalidad'] == 'TIEMPO' and (ej['tiempo_objetivo_segundos'] or 0) >= 600]
+        self.assertGreaterEqual(len(ejercicios_cardio), 1)
+        self.assertTrue(any('min' in (ej.get('tiempo_display') or '') for ej in ejercicios_cardio))
+
+    def test_generar_plan_salud_incluye_movilidad_y_cardio_suave(self):
+        """Verifica que el plan de Salud (SAL) incorpore movilidad/yoga, ejercicios guiados y descansos seguros"""
+        from rutinas.recomendador import generar_plan_recomendado
+
+        plan_sal = generar_plan_recomendado(self.user, {'objetivo': 'SAL', 'dias_semana': 3, 'nivel': 'PR'})
+        self.assertEqual(plan_sal['objetivo_codigo'], 'SAL')
+        self.assertTrue('Salud' in plan_sal['descripcion_esquema'] or 'Movilidad' in plan_sal['descripcion_esquema'])
+
+        todos_nombres = [ej['nombre'].lower() for r in plan_sal['rutinas'] for ej in r['ejercicios']]
+        tiene_movilidad_o_cardio = any(k in n for n in todos_nombres for k in ['yoga', 'movilidad', 'caminata', 'senderismo', 'bicicleta', 'prensa'])
+        self.assertTrue(tiene_movilidad_o_cardio)
+
+    def test_generar_plan_fuerza_prioriza_basicos_y_descansos_largos(self):
+        """Verifica que el plan de Fuerza (FUE) programe levantamientos pesados y descansos >= 120s"""
+        from rutinas.recomendador import generar_plan_recomendado
+
+        plan_fue = generar_plan_recomendado(self.user, {'objetivo': 'FUE', 'dias_semana': 3, 'nivel': 'AV'})
+        self.assertEqual(plan_fue['objetivo_codigo'], 'FUE')
+        self.assertGreaterEqual(plan_fue['descanso_promedio_seg'], 120)
+
+        primer_dia_ej = [ej['nombre'].lower() for ej in plan_fue['rutinas'][0]['ejercicios']]
+        # El primer día de fuerza debe incluir sentadilla o banca
+        tiene_basico = any('sentadilla' in n or 'banca' in n for n in primer_dia_ej)
+        self.assertTrue(tiene_basico)
+
+    def test_todos_los_objetivos_generan_planes_validos_en_todas_las_frecuencias(self):
+        """Verifica que todos los objetivos (HIP, FUE, DEF, RES, SAL) produzcan planes completos de 2 a 6 días"""
+        from rutinas.recomendador import generar_plan_recomendado
+
+        for obj in ['HIP', 'FUE', 'DEF', 'RES', 'SAL']:
+            for dias in [2, 3, 4, 5, 6]:
+                plan = generar_plan_recomendado(self.user, {'objetivo': obj, 'dias_semana': dias})
+                self.assertEqual(len(plan['rutinas']), dias, f"Fallo en objetivo {obj} con {dias} días")
+                self.assertTrue(bool(plan['descripcion_esquema']))
+                for r in plan['rutinas']:
+                    self.assertGreaterEqual(len(r['ejercicios']), 3)
+
+    def test_estimar_peso_partida_por_nivel_y_genero(self):
+        """Verifica que estimar_peso_partida calcule cargas realistas según nivel y género"""
+        from rutinas.recomendador import estimar_peso_partida
+
+        # Hombre Principiante vs Intermedio vs Avanzado en Press de Banca
+        peso_h_pr = estimar_peso_partida(self.ejercicio_peso, nivel='PR', genero='H')
+        peso_h_in = estimar_peso_partida(self.ejercicio_peso, nivel='IN', genero='H')
+        peso_h_av = estimar_peso_partida(self.ejercicio_peso, nivel='AV', genero='H')
+        self.assertEqual(peso_h_pr, 35.0)
+        self.assertEqual(peso_h_in, 60.0)
+        self.assertEqual(peso_h_av, 85.0)
+
+        # Mujer Principiante vs Intermedia en Press de Banca
+        peso_m_pr = estimar_peso_partida(self.ejercicio_peso, nivel='PR', genero='M')
+        peso_m_in = estimar_peso_partida(self.ejercicio_peso, nivel='IN', genero='M')
+        self.assertEqual(peso_m_pr, 17.5)
+        self.assertEqual(peso_m_in, 30.0)
+
+        # Ejercicio de tiempo o calistenia sin lastre devuelve None
+        ej_flex = Ejercicio.objects.create(nombre='Flexiones Clásicas', tipo='CAL', modalidad='REPS_PESO')
+        self.assertIsNone(estimar_peso_partida(ej_flex, nivel='IN', genero='H'))
+        self.assertIsNone(estimar_peso_partida(self.ejercicio_tiempo, nivel='IN', genero='H'))
+
+    def test_obtener_peso_objetivo_recomendado_prioriza_historial(self):
+        """Verifica que el recomendador use la última marca real del usuario si existe en su historial"""
+        from rutinas.recomendador import obtener_peso_objetivo_recomendado
+
+        # Sin historial: devuelve peso sugerido de partida
+        peso_sug, origen_sug = obtener_peso_objetivo_recomendado(self.user, self.ejercicio_peso, nivel='IN', genero='H')
+        self.assertEqual(peso_sug, 60.0)
+        self.assertEqual(origen_sug, 'sugerido')
+
+        # Creamos un registro anterior con serie real de 72.5 kg
+        reg = RegistroEjercicio.objects.create(usuario=self.user, ejercicio=self.ejercicio_peso)
+        Serie.objects.create(registro=reg, numero_serie=1, repeticiones=8, peso_kg=72.5)
+
+        # Con historial: devuelve la marca real de 72.5 kg con origen 'historial'
+        peso_hist, origen_hist = obtener_peso_objetivo_recomendado(self.user, self.ejercicio_peso, nivel='IN', genero='H')
+        self.assertEqual(peso_hist, 72.5)
+        self.assertEqual(origen_hist, 'historial')
+
+    def test_guardar_plan_recomendado_persiste_valores_modificados_por_usuario(self):
+        """Verifica que los pesos, series, repeticiones y distancias editados por el usuario se guarden fielmente"""
+        payload = {
+            'rutinas': [
+                {
+                    'nombre': 'Rutina Personalizada Recomendador',
+                    'descripcion': 'Ajustada por el usuario',
+                    'dias_semana': '0,2,4',
+                    'ejercicios': [
+                        {
+                            'ejercicio_id': self.ejercicio_peso.id,
+                            'series_objetivo': 4,
+                            'repeticiones_objetivo': 12,
+                            'peso_objetivo': '57.5',  # Modificado manualmente
+                            'distancia_objetivo_km': None,
+                            'tiempo_objetivo_segundos': None,
+                        },
+                        {
+                            'ejercicio_id': self.ejercicio_tiempo.id,
+                            'series_objetivo': 3,
+                            'repeticiones_objetivo': None,
+                            'peso_objetivo': None,
+                            'distancia_objetivo_km': '5.5',  # Modificado manualmente
+                            'tiempo_objetivo_segundos': 1800,
+                        }
+                    ]
+                }
+            ]
+        }
+
+        response = self.client.post(
+            reverse('rutinas:guardar_plan_recomendado_ajax'),
+            data=json.dumps(payload),
+            content_type='application/json'
+        )
+        self.assertEqual(response.status_code, 200)
+
+        rutina_guardada = Rutina.objects.filter(nombre='Rutina Personalizada Recomendador', usuario=self.user).first()
+        self.assertIsNotNone(rutina_guardada)
+
+        ej_peso_guardado = RutinaEjercicio.objects.get(rutina=rutina_guardada, ejercicio=self.ejercicio_peso)
+        self.assertEqual(ej_peso_guardado.series_objetivo, 4)
+        self.assertEqual(ej_peso_guardado.repeticiones_objetivo, 12)
+        self.assertEqual(float(ej_peso_guardado.peso_objetivo), 57.5)
+
+        ej_tiempo_guardado = RutinaEjercicio.objects.get(rutina=rutina_guardada, ejercicio=self.ejercicio_tiempo)
+        self.assertEqual(ej_tiempo_guardado.series_objetivo, 3)
+        self.assertEqual(ej_tiempo_guardado.tiempo_objetivo_segundos, 1800)
+        self.assertEqual(float(ej_tiempo_guardado.distancia_objetivo_km), 5.5)
+
+    def test_iniciar_rutina_tiempo_en_minutos_para_cardio_y_tiempos_largos(self):
+        """Verifica que al empezar una rutina con ejercicios de >= 5 min (como correr o bicicleta) se presenten en minutos"""
+        ej_correr = Ejercicio.objects.create(
+            nombre='Correr al Aire Libre',
+            tipo='OUT',
+            modalidad='TIEMPO'
+        )
+        RutinaEjercicio.objects.create(
+            rutina=self.rutina,
+            ejercicio=ej_correr,
+            orden=3,
+            series_objetivo=1,
+            tiempo_objetivo_segundos=1800,  # 30 minutos
+            distancia_objetivo_km=5.0
+        )
+
+        res = self.client.get(reverse('rutinas:iniciar_rutina', args=[self.rutina.id]))
+        self.assertEqual(res.status_code, 200)
+
+        # En el contexto JSON enviado a Alpine.js, verificar que el ejercicio de correr tenga tiempo_minutos=30 y unidad_tiempo='min'
+        rutina_prep = res.context['rutina_preparada']
+        item_correr = next(item for item in rutina_prep if item['ejercicio_id'] == ej_correr.id)
+        primera_serie = item_correr['series_sugeridas'][0]
+
+        self.assertEqual(primera_serie['tiempo_minutos'], 30)
+        self.assertEqual(primera_serie['tiempo_segundos'], 1800)
+        self.assertEqual(primera_serie['unidad_tiempo'], 'min')
+
+    def test_guardar_serie_ajax_tiempo_en_minutos(self):
+        """Verifica que guardar_serie_ajax acepte tiempo_minutos y lo convierta a segundos en la BD"""
+        payload = {
+            'ejercicio_id': self.ejercicio_tiempo.id,
+            'numero_serie': 1,
+            'repeticiones': None,
+            'peso': None,
+            'tiempo_minutos': '25',  # 25 minutos
+            'tiempo_segundos': None,
+            'distancia_km': None,
+            'rutina_nombre': 'Entreno Cardio'
+        }
+        res = self.client.post(
+            reverse('rutinas:guardar_serie_ajax'),
+            data=json.dumps(payload),
+            content_type='application/json'
+        )
+        self.assertEqual(res.status_code, 200)
+
+        reg = RegistroEjercicio.objects.filter(usuario=self.user, ejercicio=self.ejercicio_tiempo).first()
+        self.assertIsNotNone(reg)
+        serie = reg.series_detalle.filter(numero_serie=1).first()
+        self.assertIsNotNone(serie)
+        self.assertEqual(serie.tiempo_segundos, 1500)  # 25 * 60 = 1500 segundos
 

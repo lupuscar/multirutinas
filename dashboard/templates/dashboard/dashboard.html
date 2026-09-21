@@ -200,9 +200,16 @@
                 <span class="text-2xl sm:text-3xl font-black text-gray-900 dark:text-white">{{ tiempo_mes_str }}</span>
                 <span class="text-xs text-gray-500 dark:text-gray-400 block mt-0.5">activo este mes</span>
             </div>
-            <div class="mt-3 pt-2.5 border-t border-gray-100 dark:border-gray-700/60 flex items-center text-[11px] text-gray-400">
-                <i class="fa-solid fa-bolt text-emerald-500 mr-1.5"></i>
-                <span>{{ tiempo_sem_str }} esta semana</span>
+            <div class="mt-3 pt-2.5 border-t border-gray-100 dark:border-gray-700/60 flex items-center justify-between text-[11px] text-gray-400">
+                <div class="flex items-center">
+                    <i class="fa-solid fa-bolt text-emerald-500 mr-1.5"></i>
+                    <span>{{ tiempo_sem_str }} esta semana</span>
+                </div>
+                {% if km_mes > 0 %}
+                <span class="inline-flex items-center px-2 py-0.5 rounded-lg bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 font-black text-[10px]" title="Distancia acumulada este mes">
+                    <i class="fa-solid fa-person-running mr-1"></i>{{ km_mes }} km
+                </span>
+                {% endif %}
             </div>
         </div>
 
@@ -680,32 +687,80 @@
                            required>
                 </div>
 
-                <!-- Si la actividad es por TIEMPO -->
-                <template x-if="ejercicioSeleccionadoLibre && ejercicioSeleccionadoLibre.modalidad === 'TIEMPO'">
-                    <div>
-                        <div class="flex items-center justify-between mb-1.5">
-                            <label class="block text-xs font-bold text-gray-700 dark:text-gray-300 uppercase tracking-wider">
-                                <i class="fa-solid fa-stopwatch mr-1 text-amber-500"></i> Duración (Minutos)
-                            </label>
-                            <span class="text-xs text-emerald-600 dark:text-emerald-400 font-bold" x-text="duracionActividadMinutos + ' min'"></span>
+                <!-- Si la actividad es por TIEMPO o CARRERA/DISTANCIA -->
+                <template x-if="ejercicioSeleccionadoLibre && (ejercicioSeleccionadoLibre.modalidad === 'TIEMPO' || ejercicioSeleccionadoLibre.es_distancia)">
+                    <div class="space-y-4">
+                        <!-- Duración en Minutos -->
+                        <div>
+                            <div class="flex items-center justify-between mb-1.5">
+                                <label class="block text-xs font-bold text-gray-700 dark:text-gray-300 uppercase tracking-wider">
+                                    <i class="fa-solid fa-stopwatch mr-1 text-amber-500"></i> Duración (Minutos)
+                                </label>
+                                <span class="text-xs text-emerald-600 dark:text-emerald-400 font-bold" x-text="duracionActividadMinutos + ' min'"></span>
+                            </div>
+
+                            <div class="flex items-center space-x-2">
+                                <button type="button" @click="duracionActividadMinutos = Math.max(5, (parseInt(duracionActividadMinutos) || 30) - 5)" class="w-10 h-10 rounded-xl bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-200 font-bold hover:bg-gray-200 flex items-center justify-center text-lg">-</button>
+                                <input type="number" name="duracion_minutos" x-model="duracionActividadMinutos" min="1" step="1" 
+                                       class="flex-1 text-center font-black text-lg py-2 rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-white outline-none focus:ring-2 focus:ring-emerald-500"
+                                       required>
+                                <button type="button" @click="duracionActividadMinutos = (parseInt(duracionActividadMinutos) || 30) + 5" class="w-10 h-10 rounded-xl bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-200 font-bold hover:bg-gray-200 flex items-center justify-center text-lg">+</button>
+                            </div>
+
+                            <!-- Presets de tiempo rápido -->
+                            <div class="flex items-center justify-center gap-1.5 mt-2.5">
+                                <button type="button" @click="duracionActividadMinutos = 15" :class="duracionActividadMinutos == 15 ? 'bg-emerald-600 text-white font-bold' : 'bg-gray-100 dark:bg-gray-700/60 text-gray-600 dark:text-gray-300'" class="px-3 py-1 rounded-lg text-xs transition-colors">15m</button>
+                                <button type="button" @click="duracionActividadMinutos = 30" :class="duracionActividadMinutos == 30 ? 'bg-emerald-600 text-white font-bold' : 'bg-gray-100 dark:bg-gray-700/60 text-gray-600 dark:text-gray-300'" class="px-3 py-1 rounded-lg text-xs transition-colors">30m</button>
+                                <button type="button" @click="duracionActividadMinutos = 45" :class="duracionActividadMinutos == 45 ? 'bg-emerald-600 text-white font-bold' : 'bg-gray-100 dark:bg-gray-700/60 text-gray-600 dark:text-gray-300'" class="px-3 py-1 rounded-lg text-xs transition-colors">45m</button>
+                                <button type="button" @click="duracionActividadMinutos = 60" :class="duracionActividadMinutos == 60 ? 'bg-emerald-600 text-white font-bold' : 'bg-gray-100 dark:bg-gray-700/60 text-gray-600 dark:text-gray-300'" class="px-3 py-1 rounded-lg text-xs transition-colors">60m</button>
+                                <button type="button" @click="duracionActividadMinutos = 90" :class="duracionActividadMinutos == 90 ? 'bg-emerald-600 text-white font-bold' : 'bg-gray-100 dark:bg-gray-700/60 text-gray-600 dark:text-gray-300'" class="px-3 py-1 rounded-lg text-xs transition-colors">90m</button>
+                            </div>
                         </div>
 
-                        <div class="flex items-center space-x-2">
-                            <button type="button" @click="duracionActividadMinutos = Math.max(5, (parseInt(duracionActividadMinutos) || 30) - 5)" class="w-10 h-10 rounded-xl bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-200 font-bold hover:bg-gray-200 flex items-center justify-center text-lg">-</button>
-                            <input type="number" name="duracion_minutos" x-model="duracionActividadMinutos" min="1" step="1" 
-                                   class="flex-1 text-center font-black text-lg py-2 rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-white outline-none focus:ring-2 focus:ring-emerald-500"
-                                   required>
-                            <button type="button" @click="duracionActividadMinutos = (parseInt(duracionActividadMinutos) || 30) + 5" class="w-10 h-10 rounded-xl bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-200 font-bold hover:bg-gray-200 flex items-center justify-center text-lg">+</button>
-                        </div>
+                        <!-- Campo de DISTANCIA (KM) si el ejercicio involucra carrera o desplazamiento -->
+                        <template x-if="ejercicioSeleccionadoLibre && ejercicioSeleccionadoLibre.es_distancia">
+                            <div class="pt-3 border-t border-gray-100 dark:border-gray-700/60">
+                                <div class="flex items-center justify-between mb-1.5">
+                                    <label class="block text-xs font-bold text-gray-700 dark:text-gray-300 uppercase tracking-wider">
+                                        <i class="fa-solid fa-route mr-1 text-emerald-500"></i> Distancia Recorrida (km)
+                                    </label>
+                                    <span class="text-xs text-emerald-600 dark:text-emerald-400 font-bold" x-text="distanciaActividadKm ? (distanciaActividadKm + ' km') : 'Sin distancia'"></span>
+                                </div>
 
-                        <!-- Presets de tiempo rápido -->
-                        <div class="flex items-center justify-center gap-1.5 mt-2.5">
-                            <button type="button" @click="duracionActividadMinutos = 15" :class="duracionActividadMinutos == 15 ? 'bg-emerald-600 text-white font-bold' : 'bg-gray-100 dark:bg-gray-700/60 text-gray-600 dark:text-gray-300'" class="px-3 py-1 rounded-lg text-xs transition-colors">15m</button>
-                            <button type="button" @click="duracionActividadMinutos = 30" :class="duracionActividadMinutos == 30 ? 'bg-emerald-600 text-white font-bold' : 'bg-gray-100 dark:bg-gray-700/60 text-gray-600 dark:text-gray-300'" class="px-3 py-1 rounded-lg text-xs transition-colors">30m</button>
-                            <button type="button" @click="duracionActividadMinutos = 45" :class="duracionActividadMinutos == 45 ? 'bg-emerald-600 text-white font-bold' : 'bg-gray-100 dark:bg-gray-700/60 text-gray-600 dark:text-gray-300'" class="px-3 py-1 rounded-lg text-xs transition-colors">45m</button>
-                            <button type="button" @click="duracionActividadMinutos = 60" :class="duracionActividadMinutos == 60 ? 'bg-emerald-600 text-white font-bold' : 'bg-gray-100 dark:bg-gray-700/60 text-gray-600 dark:text-gray-300'" class="px-3 py-1 rounded-lg text-xs transition-colors">60m</button>
-                            <button type="button" @click="duracionActividadMinutos = 90" :class="duracionActividadMinutos == 90 ? 'bg-emerald-600 text-white font-bold' : 'bg-gray-100 dark:bg-gray-700/60 text-gray-600 dark:text-gray-300'" class="px-3 py-1 rounded-lg text-xs transition-colors">90m</button>
-                        </div>
+                                <div class="flex items-center space-x-2">
+                                    <button type="button" @click="distanciaActividadKm = Math.max(0, Math.round(((parseFloat(distanciaActividadKm) || 5) - 0.5) * 10) / 10)" class="w-10 h-10 rounded-xl bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-200 font-bold hover:bg-gray-200 flex items-center justify-center text-xs sm:text-sm">-0.5</button>
+                                    <input type="number" step="0.1" min="0" max="999" name="distancia_km" x-model="distanciaActividadKm" placeholder="0.0"
+                                           class="flex-1 text-center font-black text-lg py-2 rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-white outline-none focus:ring-2 focus:ring-emerald-500">
+                                    <button type="button" @click="distanciaActividadKm = Math.round(((parseFloat(distanciaActividadKm) || 0) + 0.5) * 10) / 10" class="w-10 h-10 rounded-xl bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-200 font-bold hover:bg-gray-200 flex items-center justify-center text-xs sm:text-sm">+0.5</button>
+                                </div>
+
+                                <!-- Presets de distancia rápida -->
+                                <div class="flex items-center justify-center gap-1.5 mt-2.5">
+                                    <button type="button" @click="distanciaActividadKm = 3" :class="distanciaActividadKm == 3 ? 'bg-emerald-600 text-white font-bold' : 'bg-gray-100 dark:bg-gray-700/60 text-gray-600 dark:text-gray-300'" class="px-2.5 py-1 rounded-lg text-xs transition-colors">3 km</button>
+                                    <button type="button" @click="distanciaActividadKm = 5" :class="distanciaActividadKm == 5 ? 'bg-emerald-600 text-white font-bold' : 'bg-gray-100 dark:bg-gray-700/60 text-gray-600 dark:text-gray-300'" class="px-2.5 py-1 rounded-lg text-xs transition-colors">5 km</button>
+                                    <button type="button" @click="distanciaActividadKm = 10" :class="distanciaActividadKm == 10 ? 'bg-emerald-600 text-white font-bold' : 'bg-gray-100 dark:bg-gray-700/60 text-gray-600 dark:text-gray-300'" class="px-2.5 py-1 rounded-lg text-xs transition-colors">10 km</button>
+                                    <button type="button" @click="distanciaActividadKm = 15" :class="distanciaActividadKm == 15 ? 'bg-emerald-600 text-white font-bold' : 'bg-gray-100 dark:bg-gray-700/60 text-gray-600 dark:text-gray-300'" class="px-2.5 py-1 rounded-lg text-xs transition-colors">15 km</button>
+                                    <button type="button" @click="distanciaActividadKm = 21.1" :class="distanciaActividadKm == 21.1 ? 'bg-emerald-600 text-white font-bold' : 'bg-gray-100 dark:bg-gray-700/60 text-gray-600 dark:text-gray-300'" class="px-2.5 py-1 rounded-lg text-xs transition-colors">21.1 km</button>
+                                </div>
+
+                                <!-- Badge de Ritmo y Velocidad Calculados en vivo -->
+                                <template x-if="ritmoCalculadoLibre">
+                                    <div class="mt-3 p-2.5 rounded-xl bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800/40 flex items-center justify-around text-xs">
+                                        <div class="flex items-center space-x-1.5 text-emerald-800 dark:text-emerald-300 font-bold">
+                                            <i class="fa-solid fa-bolt text-emerald-500"></i>
+                                            <span>Ritmo:</span>
+                                            <span class="font-black" x-text="ritmoCalculadoLibre"></span>
+                                        </div>
+                                        <span class="text-emerald-300 dark:text-emerald-700">•</span>
+                                        <div class="flex items-center space-x-1.5 text-emerald-800 dark:text-emerald-300 font-bold">
+                                            <i class="fa-solid fa-gauge-high text-emerald-500"></i>
+                                            <span>Velocidad:</span>
+                                            <span class="font-black" x-text="velocidadCalculadaLibre"></span>
+                                        </div>
+                                    </div>
+                                </template>
+                            </div>
+                        </template>
                     </div>
                 </template>
 
@@ -779,9 +834,34 @@ function dashboardAnalytics() {
         filtroBusquedaActividad: '',
         ejercicioSeleccionadoLibre: null,
         duracionActividadMinutos: 45,
+        distanciaActividadKm: 5.0,
         seriesActividadTotales: 3,
         repsActividad: 10,
         pesoActividad: '',
+
+        get ritmoCalculadoLibre() {
+            const mins = parseFloat(this.duracionActividadMinutos);
+            const km = parseFloat(this.distanciaActividadKm);
+            if (mins > 0 && km > 0) {
+                const segTotales = mins * 60;
+                const segPorKm = segTotales / km;
+                const m = Math.floor(segPorKm / 60);
+                const s = Math.round(segPorKm % 60);
+                const sStr = s < 10 ? '0' + s : s;
+                return `${m}:${sStr} min/km`;
+            }
+            return null;
+        },
+
+        get velocidadCalculadaLibre() {
+            const mins = parseFloat(this.duracionActividadMinutos);
+            const km = parseFloat(this.distanciaActividadKm);
+            if (mins > 0 && km > 0) {
+                const horas = mins / 60;
+                return (km / horas).toFixed(1) + ' km/h';
+            }
+            return null;
+        },
 
         get distribucionActual() {
             return this.tipoDistribucion === 'disciplina' ? this.distribucionDisciplinas : this.distribucionMuscular;
@@ -809,11 +889,16 @@ function dashboardAnalytics() {
         abrirModalActividadLibre() {
             this.filtroBusquedaActividad = '';
             this.ejercicioSeleccionadoLibre = null;
+            this.distanciaActividadKm = 5.0;
+            this.duracionActividadMinutos = 45;
             this.modalActividadLibre = true;
         },
 
         seleccionarEjercicioLibre(ej) {
             this.ejercicioSeleccionadoLibre = ej;
+            if (ej.es_distancia && (!this.distanciaActividadKm || this.distanciaActividadKm <= 0)) {
+                this.distanciaActividadKm = 5.0;
+            }
         },
 
         cambiarDistribucion(tipo) {

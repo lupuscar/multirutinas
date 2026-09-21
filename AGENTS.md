@@ -49,10 +49,11 @@ Este documento sirve como **memoria persistente y guía contextual** de **Multir
   - `modalidad`: Repeticiones + Peso (`REPS_PESO`), Tiempo (`TIEMPO`), Distancia (`DISTANCIA`).
   - `icono`: Asigna dinámicamente iconos FontAwesome según la disciplina.
 - **`RegistroEjercicio`:** Registro de una sesión de entrenamiento para un ejercicio y usuario.
-- **`Serie`:** Series individuales (`numero_serie`, `repeticiones`, `peso_kg`, `tiempo_segundos`, `distancia_metros`, `rpe`).
+  - Registro de distancia (`distancia_km`), ritmo medio (`ritmo_min_km`) y velocidad calculada para actividades outdoor, carrera y cardio.
+- **`Serie`:** Series individuales (`numero_serie`, `repeticiones`, `peso_kg`, `tiempo_segundos`, `distancia_metros`, `distancia_km`, `rpe`).
 - **Registro de Actividad Libre / Sesión Rápida (`registrar_sesion_libre`):**
   - Permite a los usuarios registrar entrenamientos independientes (running, pádel, series sueltas, etc.) sin vincularlos a ninguna rutina predefinida.
-  - Accesible desde la ficha del ejercicio (`/ejercicios/detalle/<id>/`) y directamente desde el Dashboard (`/dashboard/`) mediante modal interactivo en Alpine.js con búsqueda reactiva de ejercicios y presets de tiempo.
+  - Accesible desde la ficha del ejercicio (`/ejercicios/detalle/<id>/`) y directamente desde el Dashboard (`/dashboard/`) mediante modal interactivo en Alpine.js con búsqueda reactiva de ejercicios, selectores de km con ritmo automático y presets de tiempo.
   - Alimenta de forma automática la racha semanal, el calendario de 7 días, el volumen total y el cálculo de PRs/1RM.
 
 ### `rutinas` (Planificación, Calendarización y Modo Gym)
@@ -61,14 +62,15 @@ Este documento sirve como **memoria persistente y guía contextual** de **Multir
   - `lista_dias_numeros`: Propiedad que devuelve lista de enteros `[1, 4]`.
   - `badges_dias`: Propiedad estructurada con `num`, `corto` y `completo` para badges en UI.
   - `toca_hoy`: Determina si hoy (`timezone.now().date().weekday()`) toca entrenar esta rutina.
-- **`RutinaEjercicio`:** Tabla intermedia ordenable con `series_objetivo`, `repeticiones_objetivo`, `peso_objetivo` (kg opcional) o `tiempo_objetivo_segundos`.
-- **Modo Gym (`ejecutar_rutina.html`):** Interfaz en vivo con llamadas a `guardar_serie_ajax`, autopropagación inteligente de pesos a series siguientes, carga de valores de la última sesión con 1 toque, steppers ágiles (+/- 5kg), timers de descanso y audio synth.
-- **Formulario Reactivo (`form_rutina.html`):** Alpine.js controla la selección interactiva de los 7 días de la semana y la configuración de 3 columnas (Series x Reps @ Peso kg) con steppers y chips rápidos.
+- **`RutinaEjercicio`:** Tabla intermedia ordenable con `series_objetivo`, `repeticiones_objetivo`, `peso_objetivo` (kg opcional), `tiempo_objetivo_segundos` o `distancia_objetivo_km`.
+- **Modo Gym (`ejecutar_rutina.html`):** Interfaz en vivo con llamadas a `guardar_serie_ajax`, autopropagación inteligente de pesos a series siguientes, soporte de distancia en km con ritmo, modo minutos adaptativo para cardio/deportes ($\ge 5\text{ min}$), carga de valores de la última sesión con 1 toque, steppers ágiles (+/- 5kg), timers de descanso y audio synth.
+- **Formulario Reactivo (`form_rutina.html`):** Alpine.js controla la selección interactiva de los 7 días de la semana y la configuración dinámica por modalidad (Series x Reps @ Peso kg, o Tiempo en min/seg, o Distancia en km) con steppers y chips rápidos.
 - **Recomendador Automático e Inteligente de Rutinas (`rutinas/recomendador.py`, `/rutinas/recomendador/`):**
   - Motor algorítmico deportivo que genera planes semanales estructurados cruzando: meta de días (2 a 6 días: *Full Body A/B*, *Push/Pull/Legs*, *Torso/Pierna*, *PPL x2*), objetivo (`HIP`, `DEF`, `FUE`, `SAL`, `RES`), nivel (`PR`, `IN`, `AV`), edad ($\ge 50$ años prioriza protección articular con máquinas/poleas y $+15\text{s}$ descanso) y género (en mujeres prioriza glúteos `GLU`, cadena posterior y core).
+  - Pesos, repeticiones y tiempos iniciales personalizados: toma la mejor serie o última sesión del usuario si existe historial; en caso contrario, asigna pesos iniciales biomecánicamente coherentes calibrados por ejercicio, nivel y género.
   - Asignación ordenada de días de la semana (`dias_semana`).
   - Selección inteligente del catálogo oficial de 52 ejercicios sin duplicados por sesión.
-  - Interfaz reactiva en `templates/rutinas/recomendador.html` con Alpine.js desacoplado de forma segura mediante `json_script` (`plan-inicial-data`) y endpoint atómico `/rutinas/recomendador/guardar/` (`transaction.atomic`) para guardar el plan completo o rutinas individuales con 1 clic.
+  - Interfaz reactiva en `templates/rutinas/recomendador.html` con edición interactiva previa de series, reps, pesos y distancias, y endpoint atómico `/rutinas/recomendador/guardar/` (`transaction.atomic`) para guardar el plan completo o rutinas individuales con 1 clic.
 
 ### `dashboard` (Centro de Mando Analítico Híbrido y Multidisciplinar)
 - **Rachas y Calendario:** Algoritmo que calcula semanas continuas entrenando (`racha_semanas`) y desglose Lunes-Domingo de la semana en curso.
@@ -95,7 +97,7 @@ El entorno virtual se encuentra en `.venv`. Comandos ejecutables:
 # Aplicar migraciones pendientes
 .venv/bin/python manage.py migrate
 
-# Ejecutar la suite completa de pruebas unitarias (100% pasando, 83 tests)
+# Ejecutar la suite completa de pruebas unitarias (100% pasando, 95 tests)
 .venv/bin/python manage.py test core.tests users.tests dashboard.tests ejercicios.tests rutinas.tests
 
 # Sincronizar catálogo oficial de ejercicios predeterminados (+52 ejercicios)

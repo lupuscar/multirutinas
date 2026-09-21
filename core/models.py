@@ -75,13 +75,13 @@ class ConfiguracionSitio(models.Model):
     # --- 5. IDENTIDAD Y CONTACTO ---
     nombre_sitio = models.CharField(
         max_length=100,
-        default="FitApp",
+        default="OptiFitApp",
         verbose_name="Nombre de la Plataforma"
     )
     email_soporte = models.EmailField(
         max_length=100,
         blank=True,
-        default="soporte@fitapp.com",
+        default="soporte@optifit.es",
         verbose_name="Email de Soporte"
     )
 

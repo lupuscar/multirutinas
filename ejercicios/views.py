@@ -174,23 +174,31 @@ def detalle_ejercicio(request, ejercicio_id):
             ejercicio=ejercicio
         ).prefetch_related('series_detalle').order_by('-fecha')[:5]
 
-        # Récord personal: mayor peso levantado o mayor tiempo registrado
+        # Récord personal: mayor peso levantado, mayor tiempo registrado o mayor distancia en km
         series_usuario = Serie.objects.filter(registro__usuario=request.user, registro__ejercicio=ejercicio)
-        if ejercicio.modalidad == 'TIEMPO':
-            max_tiempo = series_usuario.aggregate(Max('tiempo_segundos'))['tiempo_segundos__max']
-            if max_tiempo:
-                mins, secs = divmod(max_tiempo, 60)
-                if mins >= 60:
-                    horas, mins = divmod(mins, 60)
-                    record_personal = f"{horas}h {mins}m" if mins else f"{horas}h"
-                elif mins:
-                    record_personal = f"{mins} min {secs}s" if secs else f"{mins} min"
-                else:
-                    record_personal = f"{secs} segundos"
-        else:
-            max_peso = series_usuario.aggregate(Max('peso_kg'))['peso_kg__max']
-            if max_peso:
-                record_personal = f"{max_peso} kg"
+        if ejercicio.es_distancia or series_usuario.filter(distancia_km__gt=0).exists():
+            max_dist = series_usuario.aggregate(Max('distancia_km'))['distancia_km__max']
+            if max_dist:
+                serie_max = series_usuario.filter(distancia_km=max_dist).order_by('-tiempo_segundos').first()
+                ritmo_txt = f" ({serie_max.ritmo_min_km})" if serie_max and serie_max.ritmo_min_km else ""
+                record_personal = f"{max_dist} km{ritmo_txt}"
+
+        if not record_personal:
+            if ejercicio.modalidad == 'TIEMPO':
+                max_tiempo = series_usuario.aggregate(Max('tiempo_segundos'))['tiempo_segundos__max']
+                if max_tiempo:
+                    mins, secs = divmod(max_tiempo, 60)
+                    if mins >= 60:
+                        horas, mins = divmod(mins, 60)
+                        record_personal = f"{horas}h {mins}m" if mins else f"{horas}h"
+                    elif mins:
+                        record_personal = f"{mins} min {secs}s" if secs else f"{mins} min"
+                    else:
+                        record_personal = f"{secs} segundos"
+            else:
+                max_peso = series_usuario.aggregate(Max('peso_kg'))['peso_kg__max']
+                if max_peso:
+                    record_personal = f"{max_peso} kg"
 
         historial_reciente = registros
 
@@ -249,6 +257,17 @@ def registrar_sesion_libre(request, ejercicio_id=None):
                 etiqueta=etiqueta
             )
 
+            # Distancia en km opcional (ej. running, cinta, ciclismo, senderismo)
+            distancia_raw = datos.get('distancia_km')
+            distancia_km = None
+            if distancia_raw not in (None, '', 'null'):
+                try:
+                    distancia_val = float(str(distancia_raw).replace(',', '.').strip())
+                    if distancia_val > 0:
+                        distancia_km = round(distancia_val, 2)
+                except (ValueError, TypeError):
+                    distancia_km = None
+
             # Si es por tiempo (running, senderismo, deportes, danza, etc.)
             if ejercicio.modalidad == 'TIEMPO':
                 duracion_minutos = float(datos.get('duracion_minutos') or 0)
@@ -262,7 +281,8 @@ def registrar_sesion_libre(request, ejercicio_id=None):
                     numero_serie=1,
                     tiempo_segundos=segundos_totales,
                     repeticiones=None,
-                    peso_kg=None
+                    peso_kg=None,
+                    distancia_km=distancia_km
                 )
             else:
                 # Modalidad Reps + Peso
@@ -271,11 +291,14 @@ def registrar_sesion_libre(request, ejercicio_id=None):
                     for idx, s in enumerate(series_data, start=1):
                         reps = int(s.get('repeticiones') or 10)
                         peso = float(s.get('peso_kg')) if s.get('peso_kg') not in (None, '', 'null') else None
+                        dist_s_raw = s.get('distancia_km')
+                        dist_s = float(dist_s_raw) if dist_s_raw not in (None, '', 'null') else distancia_km
                         Serie.objects.create(
                             registro=registro,
                             numero_serie=idx,
                             repeticiones=reps,
-                            peso_kg=peso
+                            peso_kg=peso,
+                            distancia_km=dist_s
                         )
                 else:
                     # Datos planos desde formulario simple
@@ -289,7 +312,8 @@ def registrar_sesion_libre(request, ejercicio_id=None):
                             registro=registro,
                             numero_serie=idx,
                             repeticiones=reps_gral,
-                            peso_kg=peso_gral
+                            peso_kg=peso_gral,
+                            distancia_km=distancia_km
                         )
 
         messages.success(request, f"¡Sesión de '{ejercicio.nombre}' registrada correctamente!")

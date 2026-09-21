@@ -3,7 +3,36 @@
 {% block title %}{{ ejercicio.nombre }} | Ficha Técnica{% endblock %}
 
 {% block content %}
-<div x-data="{ modalRegistro: false, duracionMinutos: 30, seriesTotales: 3, repeticiones: 10, pesoKg: '' }" class="max-w-3xl mx-auto pb-20 space-y-6">
+<div x-data="{ 
+    modalRegistro: false, 
+    duracionMinutos: 30, 
+    distanciaKm: 5.0, 
+    seriesTotales: 3, 
+    repeticiones: 10, 
+    pesoKg: '',
+    get ritmoCalculado() {
+        const mins = parseFloat(this.duracionMinutos);
+        const km = parseFloat(this.distanciaKm);
+        if (mins > 0 && km > 0) {
+            const segTotales = mins * 60;
+            const segPorKm = segTotales / km;
+            const m = Math.floor(segPorKm / 60);
+            const s = Math.round(segPorKm % 60);
+            const sStr = s < 10 ? '0' + s : s;
+            return `${m}:${sStr} min/km`;
+        }
+        return null;
+    },
+    get velocidadCalculada() {
+        const mins = parseFloat(this.duracionMinutos);
+        const km = parseFloat(this.distanciaKm);
+        if (mins > 0 && km > 0) {
+            const horas = mins / 60;
+            return (km / horas).toFixed(1) + ' km/h';
+        }
+        return null;
+    }
+}" class="max-w-3xl mx-auto pb-20 space-y-6">
 
     <!-- Cabecera -->
     <div class="flex items-center justify-between">
@@ -143,7 +172,13 @@
                     <div class="flex items-center space-x-1.5 justify-end">
                         {% for serie in reg.series_detalle.all %}
                         <span class="px-2 py-0.5 rounded-md bg-gray-100 dark:bg-gray-700 text-[11px] font-semibold text-gray-700 dark:text-gray-300">
-                            {% if serie.tiempo_segundos %}{{ serie.tiempo_segundos }}s{% else %}{{ serie.peso_kg|default:0 }}kg{% endif %}
+                            {% if serie.distancia_km %}
+                                {{ serie.distancia_km }} km{% if serie.ritmo_min_km %} <span class="text-brand-light font-bold">({{ serie.ritmo_min_km }})</span>{% endif %}
+                            {% elif serie.tiempo_segundos %}
+                                {{ serie.tiempo_segundos }}s
+                            {% else %}
+                                {{ serie.peso_kg|default:0 }}kg
+                            {% endif %}
                         </span>
                         {% endfor %}
                     </div>
@@ -202,30 +237,77 @@
 
                 {% if ejercicio.modalidad == 'TIEMPO' %}
                 <!-- MODO TIEMPO / DURACIÓN -->
-                <div>
-                    <div class="flex items-center justify-between mb-1.5">
-                        <label class="block text-xs font-bold text-gray-700 dark:text-gray-300 uppercase tracking-wider">
-                            <i class="fa-solid fa-stopwatch mr-1 text-amber-500"></i> Duración (Minutos)
-                        </label>
-                        <span class="text-xs text-brand-light font-bold" x-text="duracionMinutos + ' min'"></span>
+                <div class="space-y-4">
+                    <div>
+                        <div class="flex items-center justify-between mb-1.5">
+                            <label class="block text-xs font-bold text-gray-700 dark:text-gray-300 uppercase tracking-wider">
+                                <i class="fa-solid fa-stopwatch mr-1 text-amber-500"></i> Duración (Minutos)
+                            </label>
+                            <span class="text-xs text-brand-light font-bold" x-text="duracionMinutos + ' min'"></span>
+                        </div>
+
+                        <div class="flex items-center space-x-2">
+                            <button type="button" @click="duracionMinutos = Math.max(5, (parseInt(duracionMinutos) || 30) - 5)" class="w-10 h-10 rounded-xl bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-200 font-bold hover:bg-gray-200 flex items-center justify-center text-lg">-</button>
+                            <input type="number" name="duracion_minutos" x-model="duracionMinutos" min="1" step="1" 
+                                   class="flex-1 text-center font-black text-lg py-2 rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-white outline-none focus:ring-2 focus:ring-brand-light"
+                                   required>
+                            <button type="button" @click="duracionMinutos = (parseInt(duracionMinutos) || 30) + 5" class="w-10 h-10 rounded-xl bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-200 font-bold hover:bg-gray-200 flex items-center justify-center text-lg">+</button>
+                        </div>
+
+                        <!-- Presets de tiempo rápido -->
+                        <div class="flex items-center justify-center gap-1.5 mt-2.5">
+                            <button type="button" @click="duracionMinutos = 15" :class="duracionMinutos == 15 ? 'bg-brand-light text-white font-bold' : 'bg-gray-100 dark:bg-gray-700/60 text-gray-600 dark:text-gray-300'" class="px-3 py-1 rounded-lg text-xs transition-colors">15m</button>
+                            <button type="button" @click="duracionMinutos = 30" :class="duracionMinutos == 30 ? 'bg-brand-light text-white font-bold' : 'bg-gray-100 dark:bg-gray-700/60 text-gray-600 dark:text-gray-300'" class="px-3 py-1 rounded-lg text-xs transition-colors">30m</button>
+                            <button type="button" @click="duracionMinutos = 45" :class="duracionMinutos == 45 ? 'bg-brand-light text-white font-bold' : 'bg-gray-100 dark:bg-gray-700/60 text-gray-600 dark:text-gray-300'" class="px-3 py-1 rounded-lg text-xs transition-colors">45m</button>
+                            <button type="button" @click="duracionMinutos = 60" :class="duracionMinutos == 60 ? 'bg-brand-light text-white font-bold' : 'bg-gray-100 dark:bg-gray-700/60 text-gray-600 dark:text-gray-300'" class="px-3 py-1 rounded-lg text-xs transition-colors">60m</button>
+                            <button type="button" @click="duracionMinutos = 90" :class="duracionMinutos == 90 ? 'bg-brand-light text-white font-bold' : 'bg-gray-100 dark:bg-gray-700/60 text-gray-600 dark:text-gray-300'" class="px-3 py-1 rounded-lg text-xs transition-colors">90m</button>
+                        </div>
                     </div>
 
-                    <div class="flex items-center space-x-2">
-                        <button type="button" @click="duracionMinutos = Math.max(5, (parseInt(duracionMinutos) || 30) - 5)" class="w-10 h-10 rounded-xl bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-200 font-bold hover:bg-gray-200 flex items-center justify-center text-lg">-</button>
-                        <input type="number" name="duracion_minutos" x-model="duracionMinutos" min="1" step="1" 
-                               class="flex-1 text-center font-black text-lg py-2 rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-white outline-none focus:ring-2 focus:ring-brand-light"
-                               required>
-                        <button type="button" @click="duracionMinutos = (parseInt(duracionMinutos) || 30) + 5" class="w-10 h-10 rounded-xl bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-200 font-bold hover:bg-gray-200 flex items-center justify-center text-lg">+</button>
-                    </div>
+                    {% if ejercicio.es_distancia %}
+                    <!-- Campo de DISTANCIA (KM) -->
+                    <div class="pt-3 border-t border-gray-100 dark:border-gray-700/60">
+                        <div class="flex items-center justify-between mb-1.5">
+                            <label class="block text-xs font-bold text-gray-700 dark:text-gray-300 uppercase tracking-wider">
+                                <i class="fa-solid fa-route mr-1 text-brand-light"></i> Distancia Recorrida (km)
+                            </label>
+                            <span class="text-xs text-brand-light font-bold" x-text="distanciaKm ? (distanciaKm + ' km') : 'Sin distancia'"></span>
+                        </div>
 
-                    <!-- Presets de tiempo rápido -->
-                    <div class="flex items-center justify-center gap-1.5 mt-2.5">
-                        <button type="button" @click="duracionMinutos = 15" :class="duracionMinutos == 15 ? 'bg-brand-light text-white font-bold' : 'bg-gray-100 dark:bg-gray-700/60 text-gray-600 dark:text-gray-300'" class="px-3 py-1 rounded-lg text-xs transition-colors">15m</button>
-                        <button type="button" @click="duracionMinutos = 30" :class="duracionMinutos == 30 ? 'bg-brand-light text-white font-bold' : 'bg-gray-100 dark:bg-gray-700/60 text-gray-600 dark:text-gray-300'" class="px-3 py-1 rounded-lg text-xs transition-colors">30m</button>
-                        <button type="button" @click="duracionMinutos = 45" :class="duracionMinutos == 45 ? 'bg-brand-light text-white font-bold' : 'bg-gray-100 dark:bg-gray-700/60 text-gray-600 dark:text-gray-300'" class="px-3 py-1 rounded-lg text-xs transition-colors">45m</button>
-                        <button type="button" @click="duracionMinutos = 60" :class="duracionMinutos == 60 ? 'bg-brand-light text-white font-bold' : 'bg-gray-100 dark:bg-gray-700/60 text-gray-600 dark:text-gray-300'" class="px-3 py-1 rounded-lg text-xs transition-colors">60m</button>
-                        <button type="button" @click="duracionMinutos = 90" :class="duracionMinutos == 90 ? 'bg-brand-light text-white font-bold' : 'bg-gray-100 dark:bg-gray-700/60 text-gray-600 dark:text-gray-300'" class="px-3 py-1 rounded-lg text-xs transition-colors">90m</button>
+                        <div class="flex items-center space-x-2">
+                            <button type="button" @click="distanciaKm = Math.max(0, Math.round(((parseFloat(distanciaKm) || 5) - 0.5) * 10) / 10)" class="w-10 h-10 rounded-xl bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-200 font-bold hover:bg-gray-200 flex items-center justify-center text-xs sm:text-sm">-0.5</button>
+                            <input type="number" step="0.1" min="0" max="999" name="distancia_km" x-model="distanciaKm" placeholder="0.0"
+                                   class="flex-1 text-center font-black text-lg py-2 rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-white outline-none focus:ring-2 focus:ring-brand-light">
+                            <button type="button" @click="distanciaKm = Math.round(((parseFloat(distanciaKm) || 0) + 0.5) * 10) / 10" class="w-10 h-10 rounded-xl bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-200 font-bold hover:bg-gray-200 flex items-center justify-center text-xs sm:text-sm">+0.5</button>
+                        </div>
+
+                        <!-- Presets de distancia rápida -->
+                        <div class="flex items-center justify-center gap-1.5 mt-2.5">
+                            <button type="button" @click="distanciaKm = 3" :class="distanciaKm == 3 ? 'bg-brand-light text-white font-bold' : 'bg-gray-100 dark:bg-gray-700/60 text-gray-600 dark:text-gray-300'" class="px-2.5 py-1 rounded-lg text-xs transition-colors">3 km</button>
+                            <button type="button" @click="distanciaKm = 5" :class="distanciaKm == 5 ? 'bg-brand-light text-white font-bold' : 'bg-gray-100 dark:bg-gray-700/60 text-gray-600 dark:text-gray-300'" class="px-2.5 py-1 rounded-lg text-xs transition-colors">5 km</button>
+                            <button type="button" @click="distanciaKm = 10" :class="distanciaKm == 10 ? 'bg-brand-light text-white font-bold' : 'bg-gray-100 dark:bg-gray-700/60 text-gray-600 dark:text-gray-300'" class="px-2.5 py-1 rounded-lg text-xs transition-colors">10 km</button>
+                            <button type="button" @click="distanciaKm = 15" :class="distanciaKm == 15 ? 'bg-brand-light text-white font-bold' : 'bg-gray-100 dark:bg-gray-700/60 text-gray-600 dark:text-gray-300'" class="px-2.5 py-1 rounded-lg text-xs transition-colors">15 km</button>
+                            <button type="button" @click="distanciaKm = 21.1" :class="distanciaKm == 21.1 ? 'bg-brand-light text-white font-bold' : 'bg-gray-100 dark:bg-gray-700/60 text-gray-600 dark:text-gray-300'" class="px-2.5 py-1 rounded-lg text-xs transition-colors">21.1 km</button>
+                        </div>
+
+                        <!-- Badge de Ritmo y Velocidad Calculados en vivo -->
+                        <template x-if="ritmoCalculado">
+                            <div class="mt-3 p-2.5 rounded-xl bg-brand-light/10 border border-brand-light/20 flex items-center justify-around text-xs">
+                                <div class="flex items-center space-x-1.5 text-gray-900 dark:text-white font-bold">
+                                    <i class="fa-solid fa-bolt text-brand-light"></i>
+                                    <span>Ritmo:</span>
+                                    <span class="font-black text-brand-light" x-text="ritmoCalculado"></span>
+                                </div>
+                                <span class="text-gray-300 dark:text-gray-600">•</span>
+                                <div class="flex items-center space-x-1.5 text-gray-900 dark:text-white font-bold">
+                                    <i class="fa-solid fa-gauge-high text-brand-light"></i>
+                                    <span>Velocidad:</span>
+                                    <span class="font-black text-brand-light" x-text="velocidadCalculada"></span>
+                                </div>
+                            </div>
+                        </template>
                     </div>
+                    {% endif %}
                 </div>
                 {% else %}
                 <!-- MODO REPETICIONES Y PESO -->

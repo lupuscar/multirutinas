@@ -105,6 +105,26 @@ class RutinaEjercicio(models.Model):
         help_text="Carga en kg planificada para este ejercicio (dejar en blanco para peso corporal o libre)"
     )
     tiempo_objetivo_segundos = models.PositiveIntegerField(blank=True, null=True, help_text="Tiempo objetivo en segundos (ej. 45 para plancha)")
+    distancia_objetivo_km = models.DecimalField(
+        max_digits=6,
+        decimal_places=2,
+        null=True,
+        blank=True,
+        verbose_name="Distancia objetivo (km)",
+        help_text="Distancia planificada en km (ej. 5.0 para carrera)"
+    )
+
+    @property
+    def tiempo_display(self):
+        """Devuelve el tiempo formateado en minutos o segundos (ej. '30 min', '15 min', '45s')."""
+        if not self.tiempo_objetivo_segundos:
+            return ""
+        seg = self.tiempo_objetivo_segundos
+        if seg >= 60:
+            m = seg // 60
+            s = seg % 60
+            return f"{m} min" if s == 0 else f"{m}m {s}s"
+        return f"{seg}s"
 
 
     class Meta:

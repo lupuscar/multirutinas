@@ -170,6 +170,25 @@ def dashboard(request):
     tiempo_mes_str = formatear_segundos(tiempo_mes_seg)
     tiempo_sem_str = formatear_segundos(tiempo_sem_seg)
 
+    # Distancia Acumulada de Cardio / Carrera (km)
+    km_total = Serie.objects.filter(
+        registro__usuario=usuario,
+        distancia_km__isnull=False
+    ).aggregate(k=Sum('distancia_km'))['k'] or 0
+
+    km_mes = Serie.objects.filter(
+        registro__usuario=usuario,
+        registro__fecha__gte=inicio_mes,
+        distancia_km__isnull=False
+    ).aggregate(k=Sum('distancia_km'))['k'] or 0
+
+    km_sem = Serie.objects.filter(
+        registro__usuario=usuario,
+        registro__fecha__gte=inicio_semana,
+        registro__fecha__lte=fin_semana,
+        distancia_km__isnull=False
+    ).aggregate(k=Sum('distancia_km'))['k'] or 0
+
     # =====================================================================
     # 3. SALÓN DE RÉCORDS PERSONALES (PRS) ADAPTATIVO POR DISCIPLINA
     # =====================================================================
@@ -217,16 +236,38 @@ def dashboard(request):
                     rec['fecha'] = fecha_serie
                     rec['orden'] = un_rm
 
-        # 2. Récord de TIEMPO / CARDIO / DEPORTES (Running, Pádel, Danza, Yoga...)
-        if s.tiempo_segundos and s.tiempo_segundos > 0:
-            seg = s.tiempo_segundos
-            if ej_id not in records_tiempo or seg > records_tiempo[ej_id]['max_segundos']:
+        # 2. Récord de DISTANCIA / TIEMPO / CARDIO / DEPORTES (Running, Pádel, Danza, Yoga...)
+        if (s.distancia_km and s.distancia_km > 0) or (s.tiempo_segundos and s.tiempo_segundos > 0):
+            seg = s.tiempo_segundos or 0
+            dist = float(s.distancia_km) if s.distancia_km and s.distancia_km > 0 else 0.0
+
+            if dist > 0:
+                # Priorizar récord de distancia para corredores
+                rec_actual = records_tiempo.get(ej_id)
+                if not rec_actual or dist > rec_actual.get('max_distancia', 0):
+                    ritmo_str = f" • {s.ritmo_min_km}" if s.ritmo_min_km else ""
+                    duracion_txt = f"{round(seg / 60)} min" if seg else ""
+                    records_tiempo[ej_id] = {
+                        'ejercicio': ej,
+                        'categoria': 'tiempo',
+                        'categoria_label': 'Carrera & Cardio',
+                        'categoria_icono': ej.icono,
+                        'max_segundos': seg,
+                        'max_distancia': dist,
+                        'valor_principal': f"{dist:g} km",
+                        'valor_sub': "Mayor Distancia",
+                        'detalle': f"{duracion_txt}{ritmo_str}".strip(' • '),
+                        'fecha': fecha_serie,
+                        'orden': dist * 1000 + seg,
+                    }
+            elif ej_id not in records_tiempo or seg > records_tiempo[ej_id]['max_segundos']:
                 records_tiempo[ej_id] = {
                     'ejercicio': ej,
                     'categoria': 'tiempo',
                     'categoria_label': 'Cardio & Deporte',
                     'categoria_icono': ej.icono,
                     'max_segundos': seg,
+                    'max_distancia': 0.0,
                     'valor_principal': formatear_segundos(seg),
                     'valor_sub': "Mayor Duración",
                     'detalle': f"{round(seg / 60)} min continuos",
@@ -483,6 +524,9 @@ def dashboard(request):
         'series_sem_actual': series_sem_actual,
         'series_cambio_pct': series_cambio_pct,
         'total_rutinas': total_rutinas,
+        'km_total': round(float(km_total), 1),
+        'km_mes': round(float(km_mes), 1),
+        'km_sem': round(float(km_sem), 1),
 
         # Récords Adaptativos
         'records_personales': records_personales,
@@ -504,6 +548,7 @@ def dashboard(request):
                 'modalidad': ej.modalidad,
                 'tipo': ej.get_tipo_display(),
                 'grupo_muscular': ej.get_grupo_muscular_display(),
+                'es_distancia': ej.es_distancia,
             }
             for ej in Ejercicio.objects.filter(Q(creado_por=None) | Q(creado_por=usuario)).order_by('nombre')
         ]),

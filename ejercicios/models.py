@@ -98,6 +98,15 @@ class Ejercicio(models.Model):
         }
         return iconos.get(self.tipo, 'fa-solid fa-stopwatch' if self.modalidad == 'TIEMPO' else 'fa-solid fa-dumbbell')
 
+    @property
+    def es_distancia(self):
+        """Indica si el ejercicio involucra desplazamiento o medición de distancia (running, carrera, ciclismo, senderismo, etc.)"""
+        nombre_lower = (self.nombre or '').lower()
+        return any(w in nombre_lower for w in [
+            'correr', 'cinta', 'running', 'carrera', 'bici', 'ciclismo', 'spinning',
+            'senderismo', 'caminata', 'hiking', 'elíptica', 'eliptica', 'remo', 'nadar', 'natación'
+        ]) or self.tipo == 'OUT'
+
 
 
 # =====================================================================
@@ -136,6 +145,9 @@ class Serie(models.Model):
                                   verbose_name="Peso (kg)", help_text="Dejar en blanco si es Calistenia.")
     tiempo_segundos = models.PositiveIntegerField(verbose_name="Tiempo (segundos)", null=True, blank=True,
                                                   help_text="Duración en segundos para ejercicios por tiempo.")
+    distancia_km = models.DecimalField(max_digits=6, decimal_places=2, null=True, blank=True,
+                                      verbose_name="Distancia (km)",
+                                      help_text="Distancia recorrida en kilómetros (ej. 5.2 para carrera).")
     
 
     class Meta:
@@ -156,7 +168,31 @@ class Serie(models.Model):
         else:
             super().save(*args, **kwargs)
 
+    @property
+    def ritmo_min_km(self):
+        """Calcula el ritmo en min/km (ej. '5:15 min/km') si se dispone de distancia_km y tiempo_segundos."""
+        if self.distancia_km and self.distancia_km > 0 and self.tiempo_segundos and self.tiempo_segundos > 0:
+            total_seg_por_km = self.tiempo_segundos / float(self.distancia_km)
+            minutos = int(total_seg_por_km // 60)
+            segundos = int(round(total_seg_por_km % 60))
+            if segundos >= 60:
+                minutos += 1
+                segundos = 0
+            return f"{minutos}:{segundos:02d} min/km"
+        return None
+
+    @property
+    def velocidad_kmh(self):
+        """Calcula la velocidad media en km/h si se dispone de distancia_km y tiempo_segundos."""
+        if self.distancia_km and self.distancia_km > 0 and self.tiempo_segundos and self.tiempo_segundos > 0:
+            horas = self.tiempo_segundos / 3600.0
+            return round(float(self.distancia_km) / horas, 1)
+        return None
+
     def __str__(self):
+        partes = []
+        if self.distancia_km:
+            partes.append(f"{self.distancia_km} km")
         if self.tiempo_segundos:
             mins, secs = divmod(self.tiempo_segundos, 60)
             if mins >= 60:
@@ -166,7 +202,16 @@ class Serie(models.Model):
                 tiempo_str = f"{mins}m {secs}s" if secs else f"{mins}m"
             else:
                 tiempo_str = f"{secs}s"
-            peso_str = f" x {self.peso_kg} kg" if self.peso_kg else ""
-            return f"Serie {self.numero_serie}: {tiempo_str}{peso_str}"
-        peso_str = f"{self.peso_kg} kg" if self.peso_kg else "Peso corporal"
-        return f"Serie {self.numero_serie}: {self.repeticiones or 0} reps x {peso_str}"
+            partes.append(tiempo_str)
+        if self.ritmo_min_km:
+            partes.append(f"({self.ritmo_min_km})")
+        if self.peso_kg:
+            partes.append(f"{self.peso_kg} kg")
+        elif self.repeticiones and not (self.distancia_km or self.tiempo_segundos):
+            partes.append(f"{self.repeticiones} reps x Peso corporal")
+        elif self.repeticiones and self.peso_kg:
+            partes.append(f"{self.repeticiones} reps x {self.peso_kg} kg")
+
+        if partes:
+            return f"Serie {self.numero_serie}: {' • '.join(partes)}"
+        return f"Serie {self.numero_serie}"
